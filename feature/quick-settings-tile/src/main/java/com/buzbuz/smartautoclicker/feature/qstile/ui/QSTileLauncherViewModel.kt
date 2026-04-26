@@ -31,10 +31,15 @@ import com.buzbuz.smartautoclicker.core.common.permissions.model.PermissionAcces
 import com.buzbuz.smartautoclicker.core.common.permissions.model.PermissionOverlay
 import com.buzbuz.smartautoclicker.core.common.permissions.model.PermissionPostNotification
 import com.buzbuz.smartautoclicker.core.settings.SettingsRepository
+import com.buzbuz.smartautoclicker.feature.qstile.domain.QSTileRecentScenario
 import com.buzbuz.smartautoclicker.feature.qstile.domain.QSTileRepository
 
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -50,6 +55,38 @@ class QSTileLauncherViewModel @Inject constructor(
     private val appComponentsProvider: AppComponentsProvider,
 ) : ViewModel() {
 
+    internal val recentScenarios: StateFlow<List<QSTileRecentScenario>?> = combine(
+        dumbRepository.dumbScenarios,
+        smartRepository.scenarios,
+    ) { dumbScenarios, smartScenarios ->
+        buildList {
+            addAll(dumbScenarios.map { scenario ->
+                QSTileRecentScenario(
+                    scenarioId = scenario.id.databaseId,
+                    isSmart = false,
+                    name = scenario.name,
+                    lastStartTimestampMs = scenario.stats?.lastStartTimestampMs ?: 0,
+                )
+            })
+            addAll(smartScenarios.map { scenario ->
+                QSTileRecentScenario(
+                    scenarioId = scenario.id.databaseId,
+                    isSmart = true,
+                    name = scenario.name,
+                    lastStartTimestampMs = scenario.stats?.lastStartTimestampMs ?: 0,
+                )
+            })
+        }
+            .asSequence()
+            .filter { it.lastStartTimestampMs > 0 }
+            .sortedByDescending { it.lastStartTimestampMs }
+            .take(RECENT_SCENARIO_COUNT)
+            .toList()
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        null,
+    )
 
     fun startPermissionFlowIfNeeded(activity: AppCompatActivity, onAllGranted: () -> Unit, onMandatoryDenied: () -> Unit) {
         permissionController.startPermissionsUiFlow(
@@ -84,3 +121,5 @@ class QSTileLauncherViewModel @Inject constructor(
     fun isEntireScreenCaptureForced(): Boolean =
         settingsRepository.isEntireScreenCaptureForced()
 }
+
+private const val RECENT_SCENARIO_COUNT = 5

@@ -18,5 +18,9 @@
 <resources>
     <string name="tile_label_start_scenario">Start Klick\'r</string>
     <string name="tile_label_stop_scenario">Stop Klick\'r</string>
+    <string name="tile_label_recent_scenario">Recent Klick\'r</string>
     <string name="tile_subtext_unavailable">No Scenario defined</string>
+    <string name="tile_subtext_recent_scenario">Choose a scenario</string>
+    <string name="dialog_recent_scenarios_title">Start recent scenario</string>
+    <string name="dialog_recent_scenarios_empty">No recently used scenario.</string>
 </resources>
