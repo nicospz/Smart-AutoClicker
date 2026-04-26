@@ -28,6 +28,7 @@ import com.buzbuz.smartautoclicker.core.common.actions.AndroidActionExecutor
 import com.buzbuz.smartautoclicker.core.domain.model.AND
 import com.buzbuz.smartautoclicker.core.domain.model.EXACT
 import com.buzbuz.smartautoclicker.core.domain.model.OR
+import com.buzbuz.smartautoclicker.core.domain.model.action.DEFAULT_SWIPE_END_HOLD_DURATION_MS
 import com.buzbuz.smartautoclicker.core.domain.model.action.Action
 import com.buzbuz.smartautoclicker.core.domain.model.action.Click
 import com.buzbuz.smartautoclicker.core.domain.model.action.Pause
@@ -104,6 +105,16 @@ class ActionExecutorTests {
         gesture.getStroke(0).let { stroke ->
             assertEquals("Gesture duration is invalid", TEST_DURATION, stroke.duration)
             assertEquals("Gesture start time is invalid", 0, stroke.startTime)
+        }
+    }
+
+    private fun assertSwipeGesture(swipeGesture: GestureDescription, holdGesture: GestureDescription) {
+        assertActionGesture(swipeGesture)
+
+        assertEquals("Hold gesture should contains only one stroke", 1, holdGesture.strokeCount)
+        holdGesture.getStroke(0).let { stroke ->
+            assertEquals("Hold gesture duration is invalid", DEFAULT_SWIPE_END_HOLD_DURATION_MS, stroke.duration)
+            assertEquals("Hold gesture start time is invalid", 0, stroke.startTime)
         }
     }
 
@@ -219,8 +230,8 @@ class ActionExecutorTests {
         )
 
         val gestureCaptor = argumentCaptor<GestureDescription>()
-        verify(mockAndroidExecutor).dispatchGesture(gestureCaptor.capture())
-        assertActionGesture(gestureCaptor.lastValue)
+        verify(mockAndroidExecutor, times(2)).dispatchGesture(gestureCaptor.capture())
+        assertSwipeGesture(gestureCaptor.allValues[0], gestureCaptor.allValues[1])
     }
 
     @Test
@@ -251,9 +262,9 @@ class ActionExecutorTests {
         )
 
         // Verify the gestures executions
-        verify(mockAndroidExecutor, times(2)).dispatchGesture(gestureCaptor.capture())
-        assertActionGesture(gestureCaptor.firstValue)
-        assertActionGesture(gestureCaptor.lastValue)
+        verify(mockAndroidExecutor, times(3)).dispatchGesture(gestureCaptor.capture())
+        assertActionGesture(gestureCaptor.allValues[0])
+        assertSwipeGesture(gestureCaptor.allValues[1], gestureCaptor.allValues[2])
     }
 
     @Test

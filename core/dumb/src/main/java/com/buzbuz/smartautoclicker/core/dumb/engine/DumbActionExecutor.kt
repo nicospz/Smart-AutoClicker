@@ -23,8 +23,8 @@ import android.util.Log
 import com.buzbuz.smartautoclicker.core.base.workarounds.UnblockGestureScheduler
 import com.buzbuz.smartautoclicker.core.base.workarounds.buildUnblockGesture
 import com.buzbuz.smartautoclicker.core.common.actions.AndroidActionExecutor
+import com.buzbuz.smartautoclicker.core.common.actions.gesture.buildSwipeWithEndHold
 import com.buzbuz.smartautoclicker.core.common.actions.gesture.buildSingleStroke
-import com.buzbuz.smartautoclicker.core.common.actions.gesture.line
 import com.buzbuz.smartautoclicker.core.common.actions.gesture.moveTo
 import com.buzbuz.smartautoclicker.core.common.actions.utils.getPauseDurationMs
 import com.buzbuz.smartautoclicker.core.dumb.domain.model.DumbAction
@@ -77,28 +77,28 @@ class DumbActionExecutor @Inject constructor(
 
     private suspend fun executeDumbClick(dumbClick: DumbAction.DumbClick) {
         val clickGesture = GestureDescription.Builder().buildSingleStroke(
-            path = Path().apply { moveTo(dumbClick.position, random) },
+            path = Path().apply { moveTo(dumbClick.position, getRandom()) },
             durationMs = dumbClick.pressDurationMs,
-            random = random,
+            random = getRandom(),
         )
 
         executeRepeatableGesture(clickGesture, dumbClick)
     }
 
     private suspend fun executeDumbSwipe(dumbSwipe: DumbAction.DumbSwipe) {
-        val swipeGesture = GestureDescription.Builder().buildSingleStroke(
-            path = Path().apply {
-                line(
-                    from = dumbSwipe.fromPosition,
-                    to = dumbSwipe.toPosition,
-                    random = random,
-                )
-            },
-            durationMs = dumbSwipe.swipeDurationMs,
-            random = random,
+        val swipeGestures = buildSwipeWithEndHold(
+            from = dumbSwipe.fromPosition,
+            to = dumbSwipe.toPosition,
+            swipeDurationMs = dumbSwipe.swipeDurationMs,
+            holdDurationMs = dumbSwipe.swipeEndHoldDurationMs,
+            random = getRandom(),
         )
 
-        executeRepeatableGesture(swipeGesture, dumbSwipe)
+        dumbSwipe.repeat {
+            swipeGestures.forEach { gesture ->
+                executeGesture(gesture)
+            }
+        }
     }
 
     private suspend fun executeDumbPause(dumbPause: DumbAction.DumbPause) {
@@ -107,11 +107,18 @@ class DumbActionExecutor @Inject constructor(
 
     private suspend fun executeRepeatableGesture(gesture: GestureDescription, repeatable: Repeatable) {
         repeatable.repeat {
-            withContext(Dispatchers.Main) {
-                androidExecutor.dispatchGesture(gesture)
-            }
+            executeGesture(gesture)
         }
     }
+
+    private suspend fun executeGesture(gesture: GestureDescription) {
+        withContext(Dispatchers.Main) {
+            androidExecutor.dispatchGesture(gesture)
+        }
+    }
+
+    private fun getRandom(): Random? =
+        if (randomize) random else null
 }
 
 private const val TAG = "DumbActionExecutor"

@@ -52,6 +52,12 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="@dimen/margin_vertical_default"/>
 
+            <include layout="@layout/include_field_text_input"
+                android:id="@+id/field_end_hold_duration"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/margin_vertical_default"/>
+
             <include layout="@layout/include_field_text_input_with_checkbox"
                 android:id="@+id/field_repeat"
                 android:layout_width="match_parent"

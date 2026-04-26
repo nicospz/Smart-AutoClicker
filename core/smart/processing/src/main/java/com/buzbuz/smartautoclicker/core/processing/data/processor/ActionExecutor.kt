@@ -26,8 +26,8 @@ import android.util.Log
 import com.buzbuz.smartautoclicker.core.base.workarounds.UnblockGestureScheduler
 import com.buzbuz.smartautoclicker.core.base.workarounds.buildUnblockGesture
 import com.buzbuz.smartautoclicker.core.common.actions.AndroidActionExecutor
+import com.buzbuz.smartautoclicker.core.common.actions.gesture.buildSwipeWithEndHold
 import com.buzbuz.smartautoclicker.core.common.actions.gesture.buildSingleStroke
-import com.buzbuz.smartautoclicker.core.common.actions.gesture.line
 import com.buzbuz.smartautoclicker.core.common.actions.gesture.moveTo
 import com.buzbuz.smartautoclicker.core.common.actions.model.ActionNotificationRequest
 import com.buzbuz.smartautoclicker.core.common.actions.text.findCounterReferences
@@ -158,16 +158,21 @@ internal class ActionExecutor(
      * @param swipe the swipe to be executed.
      */
     private suspend fun executeSwipe(swipe: Swipe) {
-        val swipeGesture = GestureDescription.Builder().buildSingleStroke(
-            path =
-                if (swipe.from == null || swipe.to == null) return
-                else Path().apply { line(swipe.from, swipe.to, random) },
-            durationMs = swipe.swipeDuration!!,
+        val from = swipe.from ?: return
+        val to = swipe.to ?: return
+
+        val swipeGestures = buildSwipeWithEndHold(
+            from = from,
+            to = to,
+            swipeDurationMs = swipe.swipeDuration!!,
+            holdDurationMs = swipe.swipeEndHoldDuration ?: 0L,
             random = random,
         )
 
-        withContext(Dispatchers.Main) {
-            androidExecutor.dispatchGesture(swipeGesture)
+        swipeGestures.forEach { gesture ->
+            withContext(Dispatchers.Main) {
+                androidExecutor.dispatchGesture(gesture)
+            }
         }
     }
 

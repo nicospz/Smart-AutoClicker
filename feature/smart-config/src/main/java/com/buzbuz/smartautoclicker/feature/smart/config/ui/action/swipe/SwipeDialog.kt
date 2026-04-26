@@ -101,6 +101,15 @@ class SwipeDialog(
             }
             hideSoftInputOnFocusLoss(fieldSwipeDuration.textField)
 
+            fieldSwipeEndHoldDuration.apply {
+                textField.filters = arrayOf(MinMaxInputFilter(0, GESTURE_DURATION_MAX_VALUE.toInt()))
+                setLabel(R.string.input_field_label_swipe_end_hold_duration)
+                setOnTextChangedListener {
+                    viewModel.setSwipeEndHoldDuration(if (it.isNotEmpty()) it.toString().toLong() else null)
+                }
+            }
+            hideSoftInputOnFocusLoss(fieldSwipeEndHoldDuration.textField)
+
             fieldSelectionSwipePosition.apply {
                 setTitle(context.getString(R.string.field_swipe_positions_title))
                 setOnClickListener { debounceUserInteraction { showPositionSelector() } }
@@ -122,6 +131,8 @@ class SwipeDialog(
                 launch { viewModel.nameError.collect(viewBinding.fieldName::setError)}
                 launch { viewModel.swipeDuration.collect(::updateSwipeDuration) }
                 launch { viewModel.swipeDurationError.collect(viewBinding.fieldSwipeDuration::setError)}
+                launch { viewModel.swipeEndHoldDuration.collect(::updateSwipeEndHoldDuration) }
+                launch { viewModel.swipeEndHoldDurationError.collect(viewBinding.fieldSwipeEndHoldDuration::setError)}
                 launch { viewModel.positions.collect(::updateSwipePositionsField) }
                 launch { viewModel.isValidAction.collect(::updateSaveButton) }
             }
@@ -158,6 +169,10 @@ class SwipeDialog(
 
     private fun updateSwipeDuration(newDuration: String?) {
         viewBinding.fieldSwipeDuration.setText(newDuration, InputType.TYPE_CLASS_NUMBER)
+    }
+
+    private fun updateSwipeEndHoldDuration(newDuration: String?) {
+        viewBinding.fieldSwipeEndHoldDuration.setText(newDuration, InputType.TYPE_CLASS_NUMBER)
     }
 
     private fun updateSwipePositionsField(positions: Pair<Point, Point>?) {

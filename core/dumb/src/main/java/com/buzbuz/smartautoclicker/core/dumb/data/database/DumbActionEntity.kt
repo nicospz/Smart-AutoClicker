@@ -64,6 +64,7 @@ data class DumbActionEntity(
     @ColumnInfo(name = "fromY") val fromY: Int? = null,
     @ColumnInfo(name = "toX") val toX: Int? = null,
     @ColumnInfo(name = "toY") val toY: Int? = null,
+    @ColumnInfo(name = "swipe_end_hold_duration") val swipeEndHoldDuration: Long? = null,
 
     // ActionType.PAUSE
     @ColumnInfo(name = "pause_duration") val pauseDuration: Long? = null,

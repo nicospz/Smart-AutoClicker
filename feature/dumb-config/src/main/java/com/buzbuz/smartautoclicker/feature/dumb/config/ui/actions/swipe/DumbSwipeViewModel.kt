@@ -63,6 +63,14 @@ class DumbSwipeViewModel @Inject constructor(
     val swipeDurationError: Flow<Boolean> = editedDumbSwipe
         .map { it.swipeDurationMs <= 0 }
 
+    /** The duration to hold at the swipe end position before releasing. */
+    val swipeEndHoldDuration: Flow<String> = editedDumbSwipe
+        .map { it.swipeEndHoldDurationMs.toString() }
+        .take(1)
+    /** Tells if the end hold duration value is valid or not. */
+    val swipeEndHoldDurationError: Flow<Boolean> = editedDumbSwipe
+        .map { it.swipeEndHoldDurationMs < 0 }
+
     /** The number of times to repeat the action. */
     val repeatCount: Flow<String> = editedDumbSwipe
         .map { it.repeatCount.toString() }
@@ -106,6 +114,10 @@ class DumbSwipeViewModel @Inject constructor(
 
     fun setPressDurationMs(durationMs: Long) {
         _editedDumbSwipe.value = _editedDumbSwipe.value?.copy(swipeDurationMs = durationMs)
+    }
+
+    fun setSwipeEndHoldDurationMs(durationMs: Long) {
+        _editedDumbSwipe.value = _editedDumbSwipe.value?.copy(swipeEndHoldDurationMs = durationMs)
     }
 
     fun setRepeatCount(repeatCount: Int) {

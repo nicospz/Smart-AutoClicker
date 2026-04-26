@@ -26,6 +26,7 @@ import com.buzbuz.smartautoclicker.core.base.identifier.Identifier
  * @param eventId the identifier of the event for this action.
  * @param name the name of the action.
  * @param swipeDuration the duration between the swipe start and end in milliseconds.
+ * @param swipeEndHoldDuration the duration to keep the finger down at the swipe end position.
  * @param from the x position of the swipe start.
  * @param to the x position of the swipe end.
  */
@@ -37,13 +38,16 @@ data class Swipe(
     val swipeDuration: Long? = null,
     val from: Point? = null,
     val to: Point? = null,
+    val swipeEndHoldDuration: Long? = DEFAULT_SWIPE_END_HOLD_DURATION_MS,
 ) : Action() {
 
     override fun isComplete(): Boolean =
-        super.isComplete() && swipeDuration != null && from != null&& to != null
+        super.isComplete() && swipeDuration != null && swipeEndHoldDuration != null && from != null && to != null
 
     override fun hashCodeNoIds(): Int =
-        name.hashCode() + swipeDuration.hashCode() + from.hashCode() + to.hashCode()
+        name.hashCode() + swipeDuration.hashCode() + swipeEndHoldDuration.hashCode() + from.hashCode() + to.hashCode()
 
     override fun deepCopy(): Swipe = copy(name = "" + name)
 }
+
+const val DEFAULT_SWIPE_END_HOLD_DURATION_MS = 500L

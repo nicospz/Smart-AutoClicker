@@ -58,6 +58,8 @@ import kotlinx.serialization.Serializable
  * @param toY [ActionType.SWIPE] only: the swipe end y coordinates. Null for others [ActionType].
  * @param swipeDuration [ActionType.SWIPE] only: the delay between the swipe start and end in milliseconds.
  *  Null for others [ActionType].
+ * @param swipeEndHoldDuration [ActionType.SWIPE] only: the delay to keep the finger down at the swipe end position.
+ *  Null for others [ActionType].
  *
  * @param pauseDuration [ActionType.PAUSE] only: the duration of the pause in milliseconds.
  *
@@ -134,6 +136,7 @@ data class ActionEntity(
     @ColumnInfo(name = "toX") val toX: Int? = null,
     @ColumnInfo(name = "toY") val toY: Int? = null,
     @ColumnInfo(name = "swipeDuration") val swipeDuration: Long? = null,
+    @ColumnInfo(name = "swipeEndHoldDuration") val swipeEndHoldDuration: Long? = null,
 
     // ActionType.PAUSE
     @ColumnInfo(name = "pauseDuration") val pauseDuration: Long? = null,

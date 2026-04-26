@@ -72,6 +72,7 @@ private fun Swipe.toSwipeEntity(): ActionEntity =
         name = name!!,
         type = ActionType.SWIPE,
         swipeDuration = swipeDuration,
+        swipeEndHoldDuration = swipeEndHoldDuration,
         fromX = from?.x,
         fromY = from?.y,
         toX = to?.x,

@@ -113,6 +113,15 @@ class DumbSwipeDialog(
             }
             hideSoftInputOnFocusLoss(fieldDuration.textField)
 
+            fieldEndHoldDuration.apply {
+                textField.filters = arrayOf(MinMaxInputFilter(0, GESTURE_DURATION_MAX_VALUE.toInt()))
+                setLabel(R.string.input_field_label_swipe_end_hold_duration)
+                setOnTextChangedListener {
+                    viewModel.setSwipeEndHoldDurationMs(if (it.isNotEmpty()) it.toString().toLong() else 0)
+                }
+            }
+            hideSoftInputOnFocusLoss(fieldEndHoldDuration.textField)
+
             fieldRepeat.apply {
                 textField.filters = arrayOf(MinMaxInputFilter(
                     REPEAT_COUNT_MIN_VALUE,
@@ -154,6 +163,8 @@ class DumbSwipeDialog(
                 launch { viewModel.nameError.collect(viewBinding.fieldName::setError)}
                 launch { viewModel.swipeDuration.collect(::updateDumbSwipePressDuration) }
                 launch { viewModel.swipeDurationError.collect(viewBinding.fieldDuration::setError)}
+                launch { viewModel.swipeEndHoldDuration.collect(::updateDumbSwipeEndHoldDuration) }
+                launch { viewModel.swipeEndHoldDurationError.collect(viewBinding.fieldEndHoldDuration::setError)}
                 launch { viewModel.repeatCount.collect(viewBinding.fieldRepeat::setNumericValue) }
                 launch { viewModel.repeatCountError.collect(viewBinding.fieldRepeat::setError) }
                 launch { viewModel.repeatInfiniteState.collect(viewBinding.fieldRepeat::setChecked) }
@@ -186,6 +197,10 @@ class DumbSwipeDialog(
 
     private fun updateDumbSwipePressDuration(duration: String) {
         viewBinding.fieldDuration.setText(duration, InputType.TYPE_CLASS_NUMBER)
+    }
+
+    private fun updateDumbSwipeEndHoldDuration(duration: String) {
+        viewBinding.fieldEndHoldDuration.setText(duration, InputType.TYPE_CLASS_NUMBER)
     }
 
     private fun updateDumbSwipeRepeatDelay(delay: String) {

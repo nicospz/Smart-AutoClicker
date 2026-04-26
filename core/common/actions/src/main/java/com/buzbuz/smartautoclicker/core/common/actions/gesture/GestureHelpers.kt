@@ -19,6 +19,7 @@ package com.buzbuz.smartautoclicker.core.common.actions.gesture
 import android.accessibilityservice.GestureDescription
 import android.graphics.Path
 import android.graphics.Point
+import android.os.Build
 import com.buzbuz.smartautoclicker.core.base.extensions.nextIntInOffset
 import com.buzbuz.smartautoclicker.core.base.extensions.nextLongInOffset
 import com.buzbuz.smartautoclicker.core.base.extensions.safeLineTo
@@ -82,6 +83,69 @@ fun GestureDescription.Builder.buildSingleStroke(
 
     return build()
 }
+
+fun buildSwipeWithEndHold(
+    from: Point,
+    to: Point,
+    swipeDurationMs: Long,
+    holdDurationMs: Long,
+    random: Random?,
+): List<GestureDescription> {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || holdDurationMs <= 0) {
+        return listOf(
+            GestureDescription.Builder().buildSingleStroke(
+                path = Path().apply { line(from, to, random) },
+                durationMs = swipeDurationMs,
+                random = random,
+            )
+        )
+    }
+
+    val actualFrom = from.withOffset(random)
+    val actualTo = to.withOffset(random)
+    val actualSwipeDurationMs = swipeDurationMs.withOffset(random)
+    val actualHoldDurationMs = holdDurationMs.withOffset(random)
+
+    val swipePath = Path().apply {
+        safeMoveTo(actualFrom.x, actualFrom.y)
+        safeLineTo(actualTo.x, actualTo.y)
+    }
+    val holdPath = Path().apply {
+        safeMoveTo(actualTo.x, actualTo.y)
+    }
+
+    val swipeStroke = GestureDescription.StrokeDescription(
+        swipePath,
+        0,
+        actualSwipeDurationMs.toNormalizedStrokeDurationMs(),
+        true,
+    )
+    val holdStroke = swipeStroke.continueStroke(
+        holdPath,
+        0,
+        actualHoldDurationMs.toNormalizedStrokeDurationMs(),
+        false,
+    )
+
+    return listOf(
+        GestureDescription.Builder()
+            .addStroke(swipeStroke)
+            .build(),
+        GestureDescription.Builder()
+            .addStroke(holdStroke)
+            .build(),
+    )
+}
+
+private fun Point.withOffset(random: Random?): Point =
+    if (random == null) this
+    else Point(
+        random.nextIntInOffset(x, RANDOMIZATION_POSITION_MAX_OFFSET_PX),
+        random.nextIntInOffset(y, RANDOMIZATION_POSITION_MAX_OFFSET_PX),
+    )
+
+private fun Long.withOffset(random: Random?): Long =
+    random?.nextLongInOffset(this, RANDOMIZATION_DURATION_MAX_OFFSET_MS) ?: this
 
 private fun Long.toNormalizedStrokeStartTime(): Long =
     max(0, this)

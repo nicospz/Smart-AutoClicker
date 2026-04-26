@@ -52,6 +52,12 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="@dimen/margin_vertical_default"/>
 
+            <include layout="@layout/include_field_text_input"
+                android:id="@+id/field_swipe_end_hold_duration"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/margin_vertical_default"/>
+
             <com.google.android.material.card.MaterialCardView
                 style="@style/AppTheme.Widget.Card"
                 android:layout_width="match_parent"

@@ -14,6 +14,7 @@ import com.buzbuz.smartautoclicker.core.domain.model.CounterOperationValue
 import com.buzbuz.smartautoclicker.core.domain.model.action.Action
 import com.buzbuz.smartautoclicker.core.domain.model.action.ChangeCounter
 import com.buzbuz.smartautoclicker.core.domain.model.action.Click
+import com.buzbuz.smartautoclicker.core.domain.model.action.DEFAULT_SWIPE_END_HOLD_DURATION_MS
 import com.buzbuz.smartautoclicker.core.domain.model.action.Intent
 import com.buzbuz.smartautoclicker.core.domain.model.action.Notification
 import com.buzbuz.smartautoclicker.core.domain.model.action.Pause
@@ -57,6 +58,7 @@ private fun CompleteActionEntity.toDomainSwipe(cleanIds: Boolean = false) = Swip
     name = action.name,
     priority = action.priority,
     swipeDuration = action.swipeDuration!!,
+    swipeEndHoldDuration = action.swipeEndHoldDuration ?: DEFAULT_SWIPE_END_HOLD_DURATION_MS,
     from = getPositionIfValid(action.fromX, action.fromY),
     to = getPositionIfValid(action.toX, action.toY),
 )

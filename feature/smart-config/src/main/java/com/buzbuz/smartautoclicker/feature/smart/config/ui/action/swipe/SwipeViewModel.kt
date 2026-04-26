@@ -81,6 +81,13 @@ class SwipeViewModel @Inject constructor(
     /** Tells if the swipe duration value is valid or not. */
     val swipeDurationError: Flow<Boolean> = configuredSwipe.map { (it.swipeDuration ?: -1) <= 0 }
 
+    /** The duration to hold at the swipe end position before releasing. */
+    val swipeEndHoldDuration: Flow<String?> = configuredSwipe
+        .map { it.swipeEndHoldDuration?.toString() }
+        .take(1)
+    /** Tells if the swipe end hold duration value is valid or not. */
+    val swipeEndHoldDurationError: Flow<Boolean> = configuredSwipe.map { (it.swipeEndHoldDuration ?: -1) < 0 }
+
     /** The start and end positions of the swipe. */
     val positions: Flow<Pair<Point, Point>?> = configuredSwipe
         .map { swipe ->
@@ -128,6 +135,16 @@ class SwipeViewModel @Inject constructor(
     fun setSwipeDuration(durationMs: Long?) {
         editionRepository.editionState.getEditedAction<Swipe>()?.let { swipe ->
             editionRepository.updateEditedAction(swipe.copy(swipeDuration = durationMs))
+        }
+    }
+
+    /**
+     * Set the duration to hold at the swipe end position before releasing.
+     * @param durationMs the new duration in milliseconds, or 0 to disable.
+     */
+    fun setSwipeEndHoldDuration(durationMs: Long?) {
+        editionRepository.editionState.getEditedAction<Swipe>()?.let { swipe ->
+            editionRepository.updateEditedAction(swipe.copy(swipeEndHoldDuration = durationMs))
         }
     }
 

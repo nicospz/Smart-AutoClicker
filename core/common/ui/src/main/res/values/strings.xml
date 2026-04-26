@@ -68,6 +68,7 @@
     <string name="input_field_label_pause_duration">Pause duration</string>
     <string name="input_field_label_scenario_name">Scenario name</string>
     <string name="input_field_label_swipe_duration">Swipe duration (ms)</string>
+    <string name="input_field_label_swipe_end_hold_duration">End hold duration (ms)</string>
     <string name="input_field_error_required">Required</string>
 
 
