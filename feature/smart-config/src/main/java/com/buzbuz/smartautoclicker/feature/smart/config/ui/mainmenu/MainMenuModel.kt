@@ -193,6 +193,9 @@ class MainMenuModel @Inject constructor(
     fun shouldRestartMediaProjection(): Boolean =
         !isMediaProjectionStarted.value
 
+    fun isTouchProbeFeatureEnabled(): Boolean =
+        debuggingRepository.isDebugViewEnabled()
+
     private fun UserBillingState.isAdRequested(): Boolean =
         this == UserBillingState.AD_REQUESTED
 }

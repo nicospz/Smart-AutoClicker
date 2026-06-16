@@ -24,14 +24,16 @@ internal fun EventToggle.toEntity(): EventToggleEntity =
     EventToggleEntity(
         id = id.databaseId,
         actionId = actionId.databaseId,
-        toggleEventId = targetEventId!!.databaseId,
+        toggleEventId = targetEventId?.databaseId,
         type = toggleType.toEntity(),
+        eventNamePrefix = eventNamePrefix,
     )
 
 internal fun EventToggleEntity.toDomain(cleanIds: Boolean = false): EventToggle =
     EventToggle(
         id = Identifier(id, cleanIds),
         actionId = Identifier(actionId, cleanIds),
-        targetEventId = Identifier(toggleEventId, cleanIds),
+        targetEventId = toggleEventId?.let { Identifier(it, cleanIds) },
+        eventNamePrefix = eventNamePrefix,
         toggleType = ToggleEvent.ToggleType.valueOf(type.name),
     )

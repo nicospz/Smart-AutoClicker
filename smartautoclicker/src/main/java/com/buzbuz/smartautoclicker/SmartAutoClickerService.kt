@@ -31,6 +31,7 @@ import com.buzbuz.smartautoclicker.core.base.notifications.NotificationIds
 import com.buzbuz.smartautoclicker.core.bitmaps.BitmapRepository
 import com.buzbuz.smartautoclicker.core.common.actions.AndroidActionExecutor
 import com.buzbuz.smartautoclicker.core.common.overlays.manager.OverlayManager
+import com.buzbuz.smartautoclicker.core.common.overlays.manager.OverlayServiceContext
 import com.buzbuz.smartautoclicker.core.common.quality.domain.QualityMetricsMonitor
 import com.buzbuz.smartautoclicker.core.common.quality.domain.QualityRepository
 import com.buzbuz.smartautoclicker.core.display.config.DisplayConfigManager
@@ -88,12 +89,14 @@ class SmartAutoClickerService : AccessibilityService() {
     @Inject lateinit var appComponentsProvider: AppComponentsProvider
     @Inject lateinit var actionExecutor: AndroidActionExecutor
     @Inject lateinit var debuggingRepository: DebuggingRepository
+    @Inject lateinit var overlayServiceContext: OverlayServiceContext
 
     override fun onServiceConnected() {
         super.onServiceConnected()
 
         qualityMetricsMonitor.onServiceConnected()
         actionExecutor.init(this)
+        overlayServiceContext.attach(this)
 
         tileRepository.setTileActionHandler(
             object : QSTileActionHandler {
@@ -127,6 +130,7 @@ class SmartAutoClickerService : AccessibilityService() {
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
+        overlayServiceContext.detach(this)
         localServiceProvider.localServiceInstance?.apply {
             stop()
             release()

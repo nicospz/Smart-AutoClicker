@@ -48,6 +48,7 @@ internal class OverlayMenuResizeController(
     private val resizedContainer: ViewGroup,
     private val maximumSize: Size,
     private val windowResizer: (size: Size) -> Unit,
+    private val onAllLayoutResizeAnimationsCompleted: (() -> Unit)? = null,
 ) {
 
     /** True if the window resize animation is running, false if not. */
@@ -89,6 +90,7 @@ internal class OverlayMenuResizeController(
                 windowResizer(measureMenuSize())
 
                 isAnimating = false
+                onAllLayoutResizeAnimationsCompleted?.invoke()
             }
         }
     }

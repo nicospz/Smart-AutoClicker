@@ -33,6 +33,7 @@ import com.buzbuz.smartautoclicker.R
 import com.buzbuz.smartautoclicker.core.base.extensions.setLeftCompoundDrawable
 import com.buzbuz.smartautoclicker.core.ui.bindings.dialogs.DialogNavigationButton
 import com.buzbuz.smartautoclicker.core.ui.bindings.dialogs.setButtonEnabledState
+import com.buzbuz.smartautoclicker.core.ui.bindings.fields.enableEasyOverwriteOnFocus
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setError
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setLabel
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setOnTextChangedListener
@@ -124,6 +125,7 @@ class ScenarioCreationDialog : DialogFragment() {
         textField.filters = arrayOf<InputFilter>(
             InputFilter.LengthFilter(requireContext().resources.getInteger(R.integer.name_max_length))
         )
+        enableEasyOverwriteOnFocus()
     }
 
     private fun IncludeScenarioTypeViewBinding.initScenarioTypeCard(type: ScenarioTypeSelection) {

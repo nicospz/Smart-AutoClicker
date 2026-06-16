@@ -32,6 +32,7 @@ import com.buzbuz.smartautoclicker.core.ui.bindings.dropdown.DropdownItem
 import com.buzbuz.smartautoclicker.core.ui.bindings.dropdown.setItems
 import com.buzbuz.smartautoclicker.core.ui.bindings.dropdown.setSelectedItem
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setButtonVisibility
+import com.buzbuz.smartautoclicker.core.ui.bindings.fields.enableEasyOverwriteOnFocus
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setLabel
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setOnTextChangedListener
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setText
@@ -78,6 +79,7 @@ class AdvancedIntentContent(appContext: Context) : NavBarDialogContent(appContex
                 )
             }
             dialogController.hideSoftInputOnFocusLoss(fieldName.textField)
+            fieldName.enableEasyOverwriteOnFocus()
 
             intentSendingTypeField.setItems(
                 label = context.getString(R.string.dropdown_intent_sending_type_label),

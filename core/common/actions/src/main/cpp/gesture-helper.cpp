@@ -36,14 +36,14 @@
 
 namespace {
 
-constexpr int kDefaultPort = 49321;
+constexpr int kDefaultPort = 49323;
 constexpr int kMaxEvents = 50000;
 constexpr int64_t kMaxRecordMs = 5000;
 constexpr int kGestureWaitMs = 15000;
 constexpr int64_t kMinLatestSwipeMs = 50;
 constexpr int64_t kLatestSwipeFreshMs = 30000;
 constexpr int kBattleTapJitterPx = 6;
-constexpr const char* kLogPath = "/data/local/tmp/gesture-helper.log";
+constexpr const char* kLogPath = "/data/local/tmp/sac-gesture-helper.log";
 constexpr int kBitsPerLong = static_cast<int>(sizeof(unsigned long) * 8);
 constexpr size_t kAbsBitsLongs = (ABS_MAX + kBitsPerLong) / kBitsPerLong;
 constexpr size_t kKeyBitsLongs = (KEY_MAX + kBitsPerLong) / kBitsPerLong;
@@ -1274,7 +1274,7 @@ Args parseArgs(int argc, char** argv) {
         } else if (arg == "--device" && i + 1 < argc) {
             args.devicePath = argv[++i];
         } else if (arg == "--help") {
-            printf("usage: gesture-helper [--port 49321] [--device /dev/input/eventX]\n");
+            printf("usage: sac-gesture-helper [--port 49323] [--device /dev/input/eventX]\n");
             exit(0);
         }
     }

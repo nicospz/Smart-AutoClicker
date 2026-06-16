@@ -30,6 +30,9 @@
 
 
     <string name="activity_scenario_title">Scenarios</string>
+    <string name="shortcut_favorite_scenarios_short">Favorites</string>
+    <string name="shortcut_favorite_scenarios_long">Favorite scenarios</string>
+    <string name="shortcut_favorite_scenarios_disabled">Favorite scenarios shortcut is unavailable</string>
     <string name="dialog_title_favorite_scenarios">Favorite scenarios</string>
     <string name="message_no_favorite_scenarios">No runnable favorite scenarios.</string>
     <string name="item_favorite_scenario_smart">%1$s - Smart</string>
@@ -140,6 +143,9 @@
 
     <string name="field_input_block_workaround_title">Unblock touch screen</string>
     <string name="field_input_block_workaround_desc">On Pixel Devices With Android 15, using an auto clicker can block the touch screen.\nTo unblock it, you need to touch the screen with multiple fingers at the same time. This setting tries to simulate this every 10s.</string>
+
+    <string name="input_field_label_split_screen_y_offset">Split-screen Y offset (px)</string>
+    <string name="field_split_screen_y_offset_desc">Vertical pixel distance between the top and bottom panes when the same app runs in split-screen. Set once per device (for example 1502 or 1493).</string>
 
     <string name="field_shizuku_helper_status_title">Precision gesture helper</string>
     <string name="field_shizuku_helper_status_running">Running: %1$s</string>

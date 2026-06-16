@@ -25,13 +25,20 @@ import java.lang.reflect.Field
 
 
 fun WindowManager.safeAddView(view: View?, params: WindowManager.LayoutParams?): Boolean {
-    if (view == null || params == null) return false
+    if (view == null || params == null) {
+        Log.e(TAG, "safeAddView skipped: view=$view params=$params")
+        return false
+    }
 
     return try {
         addView(view, params)
+        Log.i(TAG, "safeAddView ok: view=${view.javaClass.simpleName} size=${params.width}x${params.height}")
         true
     } catch (ex: WindowManager.BadTokenException) {
-        Log.e(TAG, "Can't add view to window manager, permission is denied !")
+        Log.e(TAG, "Can't add view ${view.javaClass.simpleName} to window manager, permission is denied!", ex)
+        false
+    } catch (ex: Exception) {
+        Log.e(TAG, "Can't add view ${view.javaClass.simpleName} to window manager", ex)
         false
     }
 }

@@ -292,11 +292,13 @@ class EditedItemsBuilder internal constructor(
     fun createNewEventToggle(
         id: Identifier = eventTogglesIdCreator.generateNewIdentifier(),
         targetEventId: Identifier? = null,
+        eventNamePrefix: String? = null,
         toggleType: ToggleEvent.ToggleType = defaultValues.eventToggleType(),
     ) = EventToggle(
             id = id,
             actionId = getEditedActionIdOrThrow(),
             targetEventId = targetEventId,
+            eventNamePrefix = eventNamePrefix,
             toggleType = toggleType,
         )
 

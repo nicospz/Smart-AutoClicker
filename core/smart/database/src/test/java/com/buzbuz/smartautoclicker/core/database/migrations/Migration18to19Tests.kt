@@ -68,7 +68,7 @@ class Migration18to19Tests {
             dbV18.insertV18ClickAction()
         }
 
-        helper.runMigrationsAndValidate(dbPath, NEW_DB_VERSION, true).use { dbV19 ->
+        helper.runMigrationsAndValidate(dbPath, NEW_DB_VERSION, true, Migration18to19).use { dbV19 ->
             dbV19.query("SELECT * FROM scenario_table").use { scenarioCursor ->
                 scenarioCursor.assertCountEquals(1)
                 scenarioCursor.moveToFirst()

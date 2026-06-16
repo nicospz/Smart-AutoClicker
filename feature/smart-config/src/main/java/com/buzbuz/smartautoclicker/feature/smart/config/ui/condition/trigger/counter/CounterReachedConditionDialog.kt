@@ -31,6 +31,7 @@ import com.buzbuz.smartautoclicker.core.ui.bindings.dropdown.setItems
 import com.buzbuz.smartautoclicker.core.ui.bindings.dropdown.setSelectedItem
 import com.buzbuz.smartautoclicker.core.ui.bindings.dialogs.setButtonEnabledState
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setError
+import com.buzbuz.smartautoclicker.core.ui.bindings.fields.enableEasyOverwriteOnFocus
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setLabel
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setOnCheckboxClickedListener
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setOnTextChangedListener
@@ -98,6 +99,7 @@ class CounterReachedConditionDialog(
                 )
             }
             hideSoftInputOnFocusLoss(fieldName.textField)
+            fieldName.enableEasyOverwriteOnFocus()
 
             editCounterNameLayout.apply {
                 setup(R.string.field_counter_name_label, R.drawable.ic_search, false)

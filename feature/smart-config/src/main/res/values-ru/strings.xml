@@ -133,7 +133,7 @@
 
     <string name="field_scenario_quality_title">Detection quality</string>
     <string name="field_scenario_quality_description">Чтобы добиться более быстрого обнаружения, Klick\'r уменьшает масштаб изображения перед обнаружением.\n\nЕсли вы увеличите разрешение, обнаружение будет медленнее, но более точным. Если вы уменьшите разрешение, обнаружение будет быстрее, но менее точно. Найдите хорошее соотношение между разрешением обнаружения и пороговыми значениями условий, чтобы получить максимальную отдачу от своих сценариев!</string>
-    <string name="field_scenario_quality_resolution" translatable="false">%1$d x %2$d</string>
+    <string name="field_scenario_quality_resolution" translatable="false">%1$d%%</string>
 
 
     <string name="field_show_debug_view_title">Show debug view</string>

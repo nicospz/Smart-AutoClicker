@@ -34,6 +34,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.math.roundToInt
 
 
 /** View model for the [ScenarioConfigContent]. */
@@ -159,14 +160,14 @@ class ScenarioConfigViewModel @Inject constructor(
 
     private fun Context.getUiDetectionQuality(displaySize: Point, resolution: Int): UiDetectionQuality {
         val maxVal = maxOf(displaySize.x, displaySize.y, 1).toFloat()
-        val minVal = minOf(displaySize.x, displaySize.y).toFloat()
         val quality = resolution.toFloat().coerceIn(DETECTION_QUALITY_MIN.toFloat(), maxVal)
+        val resolutionRatio = (quality / maxVal).coerceIn(0f, 1f)
+        val resolutionPercent = (resolutionRatio * 100f).roundToInt()
 
         return UiDetectionQuality(
             displayText = getString(
                 R.string.field_scenario_quality_resolution,
-                quality.toInt(),
-                (minVal * (quality / maxVal)).toInt(),
+                resolutionPercent,
             ),
             qualityValue = quality,
             min = DETECTION_QUALITY_MIN.toFloat(),

@@ -79,6 +79,11 @@ data class EventEntity(
     val imageDetectionMode: ImageEventDetectionMode = ImageEventDetectionMode.STANDARD,
     @ColumnInfo(name = "anchor_condition_id") val anchorConditionId: Long? = null,
     @ColumnInfo(name = "cooldown_ms", defaultValue = "0") val cooldownMs: Long = 0,
+    @ColumnInfo(name = "offset_repeat_count", defaultValue = "0") val offsetRepeatCount: Int = 0,
+    @ColumnInfo(name = "offset_repeat_x", defaultValue = "0") val offsetRepeatX: Int = 0,
+    @ColumnInfo(name = "offset_repeat_y", defaultValue = "0") val offsetRepeatY: Int = 0,
+    @ColumnInfo(name = "offset_repeat_match_mode", defaultValue = "'FIRST_MATCH'")
+    val offsetRepeatMatchMode: OffsetRepeatMatchMode = OffsetRepeatMatchMode.FIRST_MATCH,
 ) : EntityWithId
 
 /**

@@ -20,6 +20,7 @@ import android.app.Notification
 import android.content.Context
 import android.content.Intent
 import android.media.projection.MediaProjectionManager
+import android.util.Log
 import android.view.KeyEvent
 
 import com.buzbuz.smartautoclicker.core.base.data.AppComponentsProvider
@@ -162,6 +163,7 @@ class LocalService(
         )
 
         startJob = serviceScope.launch {
+            Log.i(TAG, "startSmartScenario: creating MainMenu for scenario=${scenario.name} id=${scenario.id.databaseId}")
             val mainMenu = MainMenu { stop() }
 
             smartProcessingRepository.apply {
@@ -169,11 +171,19 @@ class LocalService(
                 setProjectionErrorHandler { mainMenu.onMediaProjectionLost() }
             }
 
+            Log.i(TAG, "startSmartScenario: navigating to MainMenu")
             overlayManager.navigateTo(
                 context = context,
                 newOverlay = mainMenu,
             )
+            val topOverlay = overlayManager.getBackStackTop()
+            Log.i(
+                TAG,
+                "startSmartScenario: navigateTo done top=${topOverlay?.javaClass?.simpleName} " +
+                    "lifecycle=${topOverlay?.lifecycle?.currentState}",
+            )
 
+            Log.i(TAG, "startSmartScenario: starting screen record")
             smartProcessingRepository.startScreenRecord(
                 resultCode = resultCode,
                 data = data,
@@ -299,3 +309,5 @@ private data class LocalServiceState(
     val isStarted: Boolean,
     val isSmartLoaded: Boolean
 )
+
+private const val TAG = "LocalService"

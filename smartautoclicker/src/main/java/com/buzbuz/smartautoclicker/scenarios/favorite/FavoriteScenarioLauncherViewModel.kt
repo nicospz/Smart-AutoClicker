@@ -48,6 +48,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
@@ -110,6 +111,9 @@ class FavoriteScenarioLauncherViewModel @Inject constructor(
 
     fun isEntireScreenCaptureForced(): Boolean =
         settingsRepository.isEntireScreenCaptureForced()
+
+    suspend fun getSmartScenario(scenarioId: Long): Scenario? =
+        smartRepository.scenarios.first().find { it.id.databaseId == scenarioId }
 
     fun loadSmartScenario(resultCode: Int, data: Intent, scenario: Scenario): Boolean {
         if (!hasForegroundServicePermission()) return false

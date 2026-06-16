@@ -33,6 +33,7 @@ import com.buzbuz.smartautoclicker.core.ui.bindings.dialogs.setButtonEnabledStat
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setChecked
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setDescription
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setError
+import com.buzbuz.smartautoclicker.core.ui.bindings.fields.enableEasyOverwriteOnFocus
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setLabel
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setOnCheckboxClickedListener
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setOnClickListener
@@ -91,6 +92,7 @@ class SetTextDialog(
                 setOnTextChangedListener { viewModel.setName(it.toString()) }
             }
             hideSoftInputOnFocusLoss(fieldName.textField)
+            fieldName.enableEasyOverwriteOnFocus()
 
             fieldTextToWrite.apply {
                 setup(

@@ -17,11 +17,14 @@
 package com.buzbuz.smartautoclicker.feature.smart.config.ui.mainmenu
 
 import android.content.DialogInterface
+import android.util.Log
 import android.util.Size
 import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.view.View
+
+import androidx.core.content.ContextCompat
 
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -34,6 +37,7 @@ import com.buzbuz.smartautoclicker.core.common.overlays.manager.OverlayManager.C
 import com.buzbuz.smartautoclicker.core.common.overlays.menu.OverlayMenu
 import com.buzbuz.smartautoclicker.core.ui.utils.AnimatedStatesImageButtonController
 import com.buzbuz.smartautoclicker.core.ui.utils.getDynamicColorsContext
+import com.buzbuz.smartautoclicker.core.ui.views.touchprobe.TouchProbeOverlayView
 import com.buzbuz.smartautoclicker.feature.smart.config.R
 import com.buzbuz.smartautoclicker.feature.smart.config.databinding.OverlayMenuBinding
 import com.buzbuz.smartautoclicker.feature.smart.config.di.ScenarioConfigViewModelsEntryPoint
@@ -55,8 +59,8 @@ import kotlinx.coroutines.launch
  * once the user has selected a scenario to be used. It allows the user to start the detection on the currently loaded
  * scenario, as well as editing the attached list of events.
  *
- * There is no overlay views attached to this overlay menu, meaning that the user will always be able to clicks on the
- * Activities displayed below it.
+ * When the debug view setting is enabled, a touch probe overlay can be toggled to preview taps and swipes without
+ * forwarding them to the application below.
  */
 class MainMenu(private val onStopClicked: () -> Unit) : OverlayMenu() {
 
@@ -84,6 +88,9 @@ class MainMenu(private val onStopClicked: () -> Unit) : OverlayMenu() {
     /** The coroutine job for the observable used in debug mode. Null when not in debug mode. */
     private var debugObservableJob: Job? = null
 
+    /** Tells if the touch probe overlay is currently active. */
+    private var isTouchProbeActive: Boolean = false
+
     /**
      * Tells if this service has handled onKeyEvent with ACTION_DOWN for a key in order to return
      * the correct value when ACTION_UP is received.
@@ -105,6 +112,7 @@ class MainMenu(private val onStopClicked: () -> Unit) : OverlayMenu() {
     }
 
     override fun onCreate() {
+        Log.i(TAG, "onCreate lifecycle=${lifecycle.currentState}")
         super.onCreate()
 
         // Ensure the debug view state is correct
@@ -112,7 +120,11 @@ class MainMenu(private val onStopClicked: () -> Unit) : OverlayMenu() {
         viewBinding.actionList.adapter = debugLiveActionsAdapter
         viewBinding.actionList.itemAnimator = null
 
-        setOverlayViewVisibility(false)
+        Log.i(
+            TAG,
+            "onCreate complete touchProbeEnabled=${viewModel.isTouchProbeFeatureEnabled()} " +
+                "lifecycle=${lifecycle.currentState}",
+        )
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.CREATED) {
@@ -132,7 +144,10 @@ class MainMenu(private val onStopClicked: () -> Unit) : OverlayMenu() {
     }
 
     override fun onStart() {
+        Log.i(TAG, "onStart lifecycle=${lifecycle.currentState} touchProbeActive=$isTouchProbeActive")
         super.onStart()
+
+        if (isTouchProbeActive) restoreTouchProbeOverlay()
 
         viewModel.monitorViews(
             playMenuButton = viewBinding.btnPlay,
@@ -143,12 +158,25 @@ class MainMenu(private val onStopClicked: () -> Unit) : OverlayMenu() {
         viewModel.loadAdIfNeeded(context)
     }
 
+    override fun onResume() {
+        super.onResume()
+
+        updateTouchProbeFeatureVisibility()
+        Log.i(
+            TAG,
+            "onResume menuLayout=${viewBinding.root.visibility} menuBackground=${viewBinding.menuBackground.visibility} " +
+                "size=${viewBinding.root.width}x${viewBinding.root.height} lifecycle=${lifecycle.currentState}",
+        )
+    }
+
     override fun onStop() {
+        Log.i(TAG, "onStop lifecycle=${lifecycle.currentState}")
         super.onStop()
         viewModel.stopViewMonitoring()
     }
 
     override fun onDestroy() {
+        Log.i(TAG, "onDestroy lifecycle=${lifecycle.currentState}")
         super.onDestroy()
         playPauseButtonController.detachView()
     }
@@ -180,6 +208,7 @@ class MainMenu(private val onStopClicked: () -> Unit) : OverlayMenu() {
             R.id.btn_play -> onPlayPauseClicked()
             R.id.btn_click_list -> onConfigureClicked()
             R.id.btn_stop -> onStopClicked()
+            R.id.btn_touch_probe -> onTouchProbeClicked()
         }
     }
 
@@ -216,6 +245,79 @@ class MainMenu(private val onStopClicked: () -> Unit) : OverlayMenu() {
         }
 
         viewModel.toggleDetection(context)
+    }
+
+    private fun onTouchProbeClicked() {
+        if (isTouchProbeActive) disableTouchProbe()
+        else enableTouchProbe()
+    }
+
+    private fun enableTouchProbe() {
+        Log.d(TAG, "enableTouchProbe")
+        if (!attachScreenOverlayView(TouchProbeOverlayView(context))) {
+            Log.e(TAG, "enableTouchProbe failed: attachScreenOverlayView returned false")
+            return
+        }
+
+        isTouchProbeActive = true
+        setOverlayViewVisibility(true)
+        updateTouchProbeButtonState(isActive = true)
+        Log.i(TAG, "enableTouchProbe success")
+    }
+
+    private fun disableTouchProbe() {
+        Log.d(TAG, "disableTouchProbe")
+        isTouchProbeActive = false
+        (screenOverlayView as? TouchProbeOverlayView)?.clearMarkers()
+        setOverlayViewVisibility(false)
+        detachScreenOverlayView()
+        updateTouchProbeButtonState(isActive = false)
+    }
+
+    private fun restoreTouchProbeOverlay() {
+        Log.d(TAG, "restoreTouchProbeOverlay screenOverlayAttached=${screenOverlayView != null}")
+        if (screenOverlayView == null && !attachScreenOverlayView(TouchProbeOverlayView(context))) {
+            Log.e(TAG, "restoreTouchProbeOverlay failed: attachScreenOverlayView returned false")
+            isTouchProbeActive = false
+            updateTouchProbeButtonState(isActive = false)
+            return
+        }
+
+        setOverlayViewVisibility(true)
+        updateTouchProbeButtonState(isActive = true)
+    }
+
+    private fun updateTouchProbeFeatureVisibility() {
+        val enabled = viewModel.isTouchProbeFeatureEnabled()
+        Log.d(TAG, "updateTouchProbeFeatureVisibility enabled=$enabled touchProbeActive=$isTouchProbeActive")
+        if (enabled) {
+            setMenuItemVisibility(viewBinding.btnTouchProbe, true)
+            refreshTouchProbeButtonState()
+        } else {
+            if (isTouchProbeActive) disableTouchProbe()
+            setMenuItemVisibility(viewBinding.btnTouchProbe, false)
+        }
+    }
+
+    override fun onMenuLayoutResizeAnimationsCompleted() {
+        super.onMenuLayoutResizeAnimationsCompleted()
+        refreshTouchProbeButtonState()
+    }
+
+    private fun refreshTouchProbeButtonState() {
+        if (viewBinding.btnTouchProbe.visibility != View.VISIBLE) return
+        updateTouchProbeButtonState(isActive = isTouchProbeActive)
+    }
+
+    private fun updateTouchProbeButtonState(isActive: Boolean) {
+        setMenuItemViewEnabled(viewBinding.btnTouchProbe, enabled = isActive, clickable = true)
+        if (isActive) {
+            viewBinding.btnTouchProbe.setColorFilter(
+                ContextCompat.getColor(context, com.buzbuz.smartautoclicker.core.ui.R.color.overlayViewPrimary),
+            )
+        } else {
+            viewBinding.btnTouchProbe.clearColorFilter()
+        }
     }
 
     /** Refresh the play menu item according to the scenario state. */
@@ -256,6 +358,7 @@ class MainMenu(private val onStopClicked: () -> Unit) : OverlayMenu() {
     }
 
     private fun updateVisibilityForPaywall(isHidden: Boolean) {
+        Log.d(TAG, "updateVisibilityForPaywall isHidden=$isHidden wasHiddenForPaywall=$isHiddenForPaywall")
         if (isHidden) {
             isHiddenForPaywall = true
             hide()
@@ -324,8 +427,16 @@ class MainMenu(private val onStopClicked: () -> Unit) : OverlayMenu() {
         overlayManager.navigateTo(
             context = context,
             newOverlay = ScenarioDialog(
-                onConfigDiscarded = viewModel::cancelScenarioChanges,
-                onConfigSaved = { viewModel.saveScenarioChanges { success -> if (!success) showScenarioSaveErrorDialog() } },
+                onConfigDiscarded = {
+                    viewModel.cancelScenarioChanges()
+                    updateTouchProbeFeatureVisibility()
+                },
+                onConfigSaved = {
+                    viewModel.saveScenarioChanges { success ->
+                        updateTouchProbeFeatureVisibility()
+                        if (!success) showScenarioSaveErrorDialog()
+                    }
+                },
             ),
             hideCurrent = true,
         )
@@ -363,5 +474,9 @@ class MainMenu(private val onStopClicked: () -> Unit) : OverlayMenu() {
             newOverlay = newRestartMediaProjectionStarterOverlay(context),
             hideCurrent = true,
         )
+    }
+
+    private companion object {
+        private const val TAG = "MainMenu"
     }
 }

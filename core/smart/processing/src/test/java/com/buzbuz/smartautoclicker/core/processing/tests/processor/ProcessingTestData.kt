@@ -131,6 +131,7 @@ internal object ProcessingTestData {
         @ConditionOperator conditionOperator: Int = AND,
         conditions: List<TestImageCondition>,
         actions: List<Action>,
+        name: String = "TestImageEvent",
     ) = ImageEvent(
         id = eventId,
         scenarioId = scenarioId,
@@ -139,7 +140,7 @@ internal object ProcessingTestData {
         conditionOperator = conditionOperator,
         conditions = conditions.map { it.imageCondition },
         actions = actions,
-        name = "TestImageEvent",    // No impact on processor
+        name = name,
         priority = 0,               // Set correctly once added to a test scenario
     )
 
@@ -242,6 +243,7 @@ internal object ProcessingTestData {
                     id = newEventToggleId(),
                     actionId = actionId,
                     targetEventId = toggle.targetId,
+                    eventNamePrefix = toggle.eventNamePrefix,
                     toggleType = toggle.toggleType,
                 )
             }

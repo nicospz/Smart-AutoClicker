@@ -12,6 +12,7 @@ import androidx.lifecycle.lifecycleScope
 import com.buzbuz.smartautoclicker.core.common.overlays.base.viewModels
 import com.buzbuz.smartautoclicker.core.common.overlays.dialog.OverlayDialog
 import com.buzbuz.smartautoclicker.core.dumb.domain.model.DumbAction
+import com.buzbuz.smartautoclicker.core.ui.bindings.fields.enableEasyOverwriteOnFocus
 import com.buzbuz.smartautoclicker.core.ui.utils.formatDuration
 import com.buzbuz.smartautoclicker.feature.dumb.config.R
 import com.buzbuz.smartautoclicker.feature.dumb.config.di.DumbConfigViewModelsEntryPoint
@@ -67,11 +68,14 @@ class DumbPrecisionGestureDialog(
             }
         }
 
-        nameField = root.findInputField(R.id.field_name).apply {
+        val nameLayout = root.findViewById<TextInputLayout>(R.id.field_name).apply {
+            hint = context.getString(R.string.input_field_label_name)
+        }
+        nameField = nameLayout.findViewById<TextInputEditText>(R.id.text_field).apply {
             setSingleLine(true)
             setOnFocusChangeListener { _, hasFocus -> if (!hasFocus) viewModel.setName(text.toString()) }
         }
-        root.findViewById<TextInputLayout>(R.id.field_name).hint = context.getString(R.string.input_field_label_name)
+        nameLayout.enableEasyOverwriteOnFocus()
 
         repeatCountField = root.findInputField(R.id.field_repeat_count).apply {
             inputType = InputType.TYPE_CLASS_NUMBER

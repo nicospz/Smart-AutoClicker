@@ -13,6 +13,7 @@ import com.buzbuz.smartautoclicker.core.common.actions.precision.PrecisionTextMo
 import com.buzbuz.smartautoclicker.core.common.overlays.base.viewModels
 import com.buzbuz.smartautoclicker.core.common.overlays.dialog.OverlayDialog
 import com.buzbuz.smartautoclicker.core.domain.model.action.PrecisionText
+import com.buzbuz.smartautoclicker.core.ui.bindings.fields.enableEasyOverwriteOnFocus
 import com.buzbuz.smartautoclicker.feature.smart.config.R
 import com.buzbuz.smartautoclicker.feature.smart.config.di.ScenarioConfigViewModelsEntryPoint
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.action.OnActionConfigCompleteListener
@@ -47,8 +48,11 @@ class PrecisionTextDialog(
             setOnClickListener { commitFields(); listener.onConfirmClicked(); closeWithoutDismiss() }
         }
 
-        nameField = root.findInputField(R.id.field_name).apply { setSingleLine(true) }
-        root.findViewById<TextInputLayout>(R.id.field_name).hint = context.getString(R.string.generic_name)
+        val nameLayout = root.findViewById<TextInputLayout>(R.id.field_name).apply {
+            hint = context.getString(R.string.generic_name)
+        }
+        nameField = nameLayout.findViewById<TextInputEditText>(R.id.text_field).apply { setSingleLine(true) }
+        nameLayout.enableEasyOverwriteOnFocus()
         textField = root.findInputField(R.id.field_text)
         root.findViewById<TextInputLayout>(R.id.field_text).hint = context.getString(R.string.input_field_label_precision_text)
         statusText = root.findViewById(R.id.text_status)

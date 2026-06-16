@@ -33,7 +33,6 @@ import kotlinx.coroutines.Job
 
 internal class EventImageConditionsAdapter(
     private val itemClickedListener: (index: Int) -> Unit,
-    private val itemLongClickedListener: (index: Int) -> Boolean,
     private val bitmapProvider: (ImageCondition, onBitmapLoaded: (Bitmap?) -> Unit) -> Job?,
 ) : ListAdapter<UiImageCondition, EventImageConditionViewHolder>(ImageConditionDiffUtilCallback) {
 
@@ -42,7 +41,6 @@ internal class EventImageConditionsAdapter(
             ItemImageConditionListBinding.inflate(LayoutInflater.from(parent.context), parent, false),
             bitmapProvider,
             itemClickedListener,
-            itemLongClickedListener,
         )
 
     override fun onBindViewHolder(holder: EventImageConditionViewHolder, position: Int) {
@@ -58,7 +56,6 @@ internal class EventImageConditionViewHolder (
     private val viewBinding: ItemImageConditionListBinding,
     private val bitmapProvider: (ImageCondition, onBitmapLoaded: (Bitmap?) -> Unit) -> Job?,
     private val itemClickedListener: (index: Int) -> Unit,
-    private val itemLongClickedListener: (index: Int) -> Boolean,
 ): ViewHolder(viewBinding.root) {
 
     /** Job for the loading of the condition bitmap. Null until bound. */
@@ -69,15 +66,11 @@ internal class EventImageConditionViewHolder (
         bitmapLoadingJob = viewBinding.cardImageCondition.bind(condition, bitmapProvider) {
             itemClickedListener(bindingAdapterPosition)
         }
-        viewBinding.root.setOnLongClickListener {
-            itemLongClickedListener(bindingAdapterPosition)
-        }
     }
 
     fun onUnbind() {
         bitmapLoadingJob?.cancel()
         bitmapLoadingJob = null
-        viewBinding.root.setOnLongClickListener(null)
     }
 }
 

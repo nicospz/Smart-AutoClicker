@@ -16,15 +16,15 @@
  */
 package com.buzbuz.smartautoclicker.feature.smart.config.ui.event.copy
 
-import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 
+import com.buzbuz.smartautoclicker.core.base.identifier.Identifier
+import com.buzbuz.smartautoclicker.core.domain.IRepository
 import com.buzbuz.smartautoclicker.core.domain.model.action.ToggleEvent
 import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEvent
 import com.buzbuz.smartautoclicker.core.domain.model.event.Event
 import com.buzbuz.smartautoclicker.core.domain.model.event.TriggerEvent
-import com.buzbuz.smartautoclicker.feature.smart.config.R
 import com.buzbuz.smartautoclicker.feature.smart.config.domain.EditionRepository
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.common.model.action.getIconRes
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.common.model.event.UiEvent
@@ -45,6 +45,7 @@ import javax.inject.Inject
 @OptIn(ExperimentalCoroutinesApi::class)
 class EventCopyModel @Inject constructor(
     private val editionRepository: EditionRepository,
+    private val repository: IRepository,
 ) : ViewModel() {
 
     private val requestTriggerEvents: MutableStateFlow<Boolean?> = MutableStateFlow(null)
@@ -57,24 +58,38 @@ class EventCopyModel @Inject constructor(
         }
 
     private val allCopyItems: Flow<List<EventCopyItem>> =
-        combine(editionRepository.editionState.scenarioState, requestedCopyItems) { scenario, events ->
-            val editedScenarioId = scenario.value?.id ?: return@combine emptyList()
+        combine(
+            editionRepository.editionState.scenarioState,
+            requestedCopyItems,
+            repository.scenarios,
+        ) { scenarioState, events, scenarios ->
+            val editedScenario = scenarioState.value ?: return@combine emptyList()
+            val editedScenarioId = editedScenario.id
 
-            val editedEvents = mutableListOf<Event>()
-            val otherEvents = mutableListOf<Event>()
-            events.forEach { event ->
-                if (event.scenarioId == editedScenarioId) editedEvents.add(event)
-                else otherEvents.add(event)
+            val scenarioNames = scenarios.associate { scenario -> scenario.id to scenario.name }
+                .toMutableMap()
+                .apply { put(editedScenarioId, editedScenario.name) }
+
+            val eventsByScenario = events.groupBy { event -> event.scenarioId }
+            val orderedScenarioIds = buildList {
+                if (eventsByScenario.containsKey(editedScenarioId)) add(editedScenarioId)
+                addAll(
+                    eventsByScenario.keys
+                        .filter { scenarioId -> scenarioId != editedScenarioId }
+                        .sortedBy { scenarioId -> scenarioNames[scenarioId].orEmpty() },
+                )
             }
 
             buildList {
-                if (editedEvents.isNotEmpty()) {
-                    add(EventCopyItem.Header(R.string.list_header_copy_event_this))
-                    addAll(editedEvents.toCopyItems().sortedBy { it.name })
-                }
-                if (otherEvents.isNotEmpty()) {
-                    add(EventCopyItem.Header(R.string.list_header_copy_event_all))
-                    addAll(otherEvents.toCopyItems().sortedBy { it.name })
+                orderedScenarioIds.forEach { scenarioId ->
+                    val scenarioEvents = eventsByScenario[scenarioId] ?: return@forEach
+                    add(
+                        EventCopyItem.Header(
+                            scenarioId = scenarioId,
+                            title = scenarioNames[scenarioId].orEmpty(),
+                        ),
+                    )
+                    addAll(scenarioEvents.toCopyItems().sortedBy { eventItem -> eventItem.name })
                 }
             }
         }
@@ -124,11 +139,13 @@ class EventCopyModel @Inject constructor(
     sealed class EventCopyItem {
 
         /**
-         * Header item, delimiting sections.
-         * @param title the title for the header.
+         * Header item, delimiting sections by scenario.
+         * @param scenarioId the scenario identifier for this section.
+         * @param title the scenario name displayed in the header.
          */
         data class Header(
-            @field:StringRes val title: Int,
+            val scenarioId: Identifier,
+            val title: String,
         ) : EventCopyItem()
 
         sealed class EventItem : EventCopyItem() {

@@ -33,6 +33,7 @@ import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setImageDrawable
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setOnClickListener
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setTitle
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setError
+import com.buzbuz.smartautoclicker.core.ui.bindings.fields.enableEasyOverwriteOnFocus
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setLabel
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setOnTextChangedListener
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setText
@@ -64,6 +65,7 @@ class SimpleIntentContent(appContext: Context) : NavBarDialogContent(appContext)
                 )
             }
             dialogController.hideSoftInputOnFocusLoss(fieldName.textField)
+            fieldName.enableEasyOverwriteOnFocus()
 
             fieldSelectionApplication.apply {
                 setOnClickListener { debounceUserInteraction { showApplicationSelectionDialog() } }

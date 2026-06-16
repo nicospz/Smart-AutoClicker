@@ -22,6 +22,7 @@ import com.buzbuz.smartautoclicker.core.base.identifier.Identifier
 import com.buzbuz.smartautoclicker.core.base.interfaces.sortedByPriority
 import com.buzbuz.smartautoclicker.core.database.entity.EventType
 import com.buzbuz.smartautoclicker.core.database.entity.ImageEventDetectionMode as EntityImageEventDetectionMode
+import com.buzbuz.smartautoclicker.core.database.entity.OffsetRepeatMatchMode as EntityOffsetRepeatMatchMode
 import com.buzbuz.smartautoclicker.core.domain.model.action.mapper.toDomain
 import com.buzbuz.smartautoclicker.core.domain.model.condition.ImageCondition
 import com.buzbuz.smartautoclicker.core.domain.model.condition.TriggerCondition
@@ -45,7 +46,10 @@ private fun ImageEvent.toEntity() = EventEntity(
     cooldownMs = cooldownMs,
     type = EventType.IMAGE_EVENT,
     imageDetectionMode = detectionMode.toEntity(),
-    anchorConditionId = anchorConditionId?.databaseId?.takeIf { it != 0L },
+    offsetRepeatCount = offsetRepeatCount,
+    offsetRepeatX = offsetRepeatX,
+    offsetRepeatY = offsetRepeatY,
+    offsetRepeatMatchMode = offsetRepeatMatchMode.toEntity(),
 )
 
 private fun TriggerEvent.toEntity() : EventEntity =
@@ -80,7 +84,10 @@ internal fun CompleteEventEntity.toDomainImageEvent(cleanIds: Boolean = false): 
         cooldownMs = event.cooldownMs.coerceAtLeast(0),
         keepDetecting = event.keepDetecting == true,
         detectionMode = event.imageDetectionMode.toDomain(),
-        anchorConditionId = event.anchorConditionId?.takeIf { it != 0L }?.let { Identifier(id = it, asTemporary = cleanIds) },
+        offsetRepeatCount = event.offsetRepeatCount,
+        offsetRepeatX = event.offsetRepeatX,
+        offsetRepeatY = event.offsetRepeatY,
+        offsetRepeatMatchMode = event.offsetRepeatMatchMode.toDomain(),
         actions = actions.map { it.toDomain(cleanIds) }.sortedByPriority().toMutableList(),
         conditions = conditions.map { it.toDomain(cleanIds) as ImageCondition }.sortedByPriority().toMutableList(),
     )
@@ -103,3 +110,9 @@ private fun ImageEventDetectionMode.toEntity(): EntityImageEventDetectionMode =
 
 private fun EntityImageEventDetectionMode.toDomain(): ImageEventDetectionMode =
     ImageEventDetectionMode.valueOf(name)
+
+private fun OffsetRepeatMatchMode.toEntity(): EntityOffsetRepeatMatchMode =
+    EntityOffsetRepeatMatchMode.valueOf(name)
+
+private fun EntityOffsetRepeatMatchMode.toDomain(): OffsetRepeatMatchMode =
+    OffsetRepeatMatchMode.valueOf(name)

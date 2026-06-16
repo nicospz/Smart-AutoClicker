@@ -169,11 +169,11 @@
 
     <string name="field_scenario_quality_title">Detection resolution</string>
     <string name="field_scenario_quality_description">To achieve faster detection, Klick\'r is downscaling the images before detecting.\n\nIf you increase the resolution, the detection will be slower, but more accurate. If you decrease the resolution, the detection will be faster, but less accurate. Find the good ratio between the detection resolution and the conditions thresholds to get the best of your scenarios!</string>
-    <string name="field_scenario_quality_resolution" translatable="false">%1$d x %2$d</string>
+    <string name="field_scenario_quality_resolution" translatable="false">%1$d%%</string>
 
 
     <string name="field_show_debug_view_title">Show debug view</string>
-    <string name="field_show_debug_view_desc">Display the events triggered while detecting.</string>
+    <string name="field_show_debug_view_desc">Display the events triggered while detecting, and enable the touch probe on the control menu.</string>
     <string name="item_title_debug_generate_report">Generate a report</string>
     <string name="item_desc_debug_generate_report">Capture your scenario behaviour while detecting to create a report.</string>
 
@@ -246,7 +246,6 @@
     <string name="field_detection_area_coord_top">Top</string>
     <string name="field_detection_area_coord_right">Right</string>
     <string name="field_detection_area_coord_bottom">Bottom</string>
-
 
     <string name="field_title_condition_threshold">Tolerated difference</string>
 
@@ -393,7 +392,12 @@
 
     <string name="field_select_toggle_events_title">%1$d changes</string>
     <string name="field_select_toggle_events_title_empty">No changes</string>
-    <string name="field_select_toggle_events_desc_empty">Select at least one event to change to state of</string>
+    <string name="field_select_toggle_events_desc_empty">Select at least one event or prefix rule to change state</string>
+    <string name="list_header_prefix_rules">Prefix rules</string>
+    <string name="field_event_name_prefix_hint">Event name prefix</string>
+    <string name="button_add_prefix_rule">Add prefix rule</string>
+    <string name="content_desc_remove_prefix_rule">Remove prefix rule</string>
+    <string name="field_prefix_rules_desc">Enable, disable or invert all events whose name starts with the prefix</string>
 
 
     <!-- Dialogs Notification ===================================================================================== -->
@@ -465,14 +469,27 @@
     <string name="content_desc_actions_count">The number of actions in this event</string>
     <string name="content_desc_image_condition">The image to be detected</string>
     <string name="content_desc_open_event_list">Open the event list</string>
+    <string name="content_desc_touch_probe">Preview taps without clicking</string>
     <string name="content_desc_application_icon">The icon of the application to start.</string>
 
 
     <string name="field_image_detection_mode_title">Detection mode</string>
     <string name="field_image_detection_mode_normal">Normal</string>
-    <string name="field_image_detection_mode_anchored">Anchor + relative</string>
+    <string name="field_image_detection_mode_offset_repeat">Offset repeat</string>
     <string name="field_image_detection_mode_desc_normal">Checks each image condition independently.</string>
-    <string name="field_image_detection_mode_desc_anchored">Finds an anchor image, then checks the other conditions around the same item.</string>
-    <string name="item_image_condition_anchor_badge">Anchor</string>
-    <string name="message_anchor_condition_selected">Anchor condition selected</string>
+    <string name="field_image_detection_mode_desc_offset_repeat">Re-checks this event at the same layout shifted by a fixed step. Useful for identical rows.</string>
+    <string name="field_image_detection_mode_split_screen">Split screen</string>
+    <string name="field_image_detection_mode_desc_split_screen">Checks the top split-screen pane, then the bottom pane using this device\'s Y offset from Settings.</string>
+    <string name="field_split_screen_detection_desc">Detects in the top pane and again in the bottom pane. The Y offset is configured per device in Settings, not in this scenario.</string>
+    <string name="field_split_screen_detection_device_offset">Device Y offset: %1$d px</string>
+    <string name="field_split_screen_detection_offset_warning">Set a split-screen Y offset in Settings to also check the bottom pane.</string>
+    <string name="field_split_screen_detection_settings">Configure offset in Settings</string>
+    <string name="input_field_label_offset_repeat_count">Additional copies</string>
+    <string name="input_field_label_offset_repeat_x">Offset X (px)</string>
+    <string name="input_field_label_offset_repeat_y">Offset Y (px)</string>
+    <string name="field_offset_repeat_match_mode_title">Matching rows</string>
+    <string name="field_offset_repeat_match_mode_first">First match</string>
+    <string name="field_offset_repeat_match_mode_all">Every match</string>
+    <string name="field_offset_repeat_match_mode_desc_first">Stop at the first matching row and execute once.</string>
+    <string name="field_offset_repeat_match_mode_desc_all">Execute actions for every matching row in the same frame.</string>
 </resources>

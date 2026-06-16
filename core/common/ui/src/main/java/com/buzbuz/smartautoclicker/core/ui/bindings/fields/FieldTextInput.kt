@@ -18,13 +18,16 @@ package com.buzbuz.smartautoclicker.core.ui.bindings.fields
 
 import android.text.Editable
 import android.text.InputType
+import android.view.View
 import android.view.inputmethod.EditorInfo
+import android.widget.EditText
 
 import androidx.annotation.StringRes
 
 import com.buzbuz.smartautoclicker.core.ui.R
 import com.buzbuz.smartautoclicker.core.ui.databinding.IncludeFieldTextInputBinding
 import com.buzbuz.smartautoclicker.core.ui.utils.OnAfterTextChangedListener
+import com.google.android.material.textfield.TextInputLayout
 
 
 fun IncludeFieldTextInputBinding.setLabel(@StringRes labelResId: Int) {
@@ -49,4 +52,39 @@ fun IncludeFieldTextInputBinding.setError(@StringRes messageId: Int, isError: Bo
 
 fun IncludeFieldTextInputBinding.setOnTextChangedListener(listener: (Editable) -> Unit) {
     textField.addTextChangedListener(OnAfterTextChangedListener(listener))
+}
+
+/**
+ * Selects all text on focus so it can be overwritten immediately, and shows the clear icon as soon
+ * as the field is focused when it already contains text (including programmatically set values).
+ *
+ * Call after any other [View.setOnFocusChangeListener] setup so existing listeners are preserved.
+ */
+fun IncludeFieldTextInputBinding.enableEasyOverwriteOnFocus() {
+    root.enableEasyOverwriteOnFocus()
+}
+
+fun TextInputLayout.enableEasyOverwriteOnFocus() {
+    val editText = editText ?: return
+    val previousListener = editText.onFocusChangeListener
+    editText.setOnFocusChangeListener { view, hasFocus ->
+        previousListener?.onFocusChange(view, hasFocus)
+
+        if (hasFocus) {
+            view.post {
+                editText.selectAll()
+                refreshClearIconVisibility(editText)
+            }
+        } else {
+            refreshClearIconVisibility(editText)
+        }
+    }
+
+    editText.addTextChangedListener(OnAfterTextChangedListener {
+        if (editText.hasFocus()) refreshClearIconVisibility(editText)
+    })
+}
+
+private fun TextInputLayout.refreshClearIconVisibility(editText: EditText) {
+    isEndIconVisible = editText.hasFocus() && !editText.text.isNullOrEmpty()
 }

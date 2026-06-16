@@ -136,8 +136,8 @@ class ProcessingTests {
                         testsData.newToggleEventAction(
                             eventId = eventId1,
                             toggles = listOf(
-                                TestEventToggle(eventId1, ToggleEvent.ToggleType.DISABLE),
-                                TestEventToggle(eventId2, ToggleEvent.ToggleType.ENABLE)
+                                TestEventToggle(targetId = eventId1, toggleType = ToggleEvent.ToggleType.DISABLE),
+                                TestEventToggle(targetId = eventId2, toggleType = ToggleEvent.ToggleType.ENABLE)
                             ),
                         )
                     ),
@@ -151,8 +151,8 @@ class ProcessingTests {
                         testsData.newToggleEventAction(
                             eventId = eventId2,
                             toggles = listOf(
-                                TestEventToggle(eventId1, ToggleEvent.ToggleType.ENABLE),
-                                TestEventToggle(eventId2, ToggleEvent.ToggleType.DISABLE)
+                                TestEventToggle(targetId = eventId1, toggleType = ToggleEvent.ToggleType.ENABLE),
+                                TestEventToggle(targetId = eventId2, toggleType = ToggleEvent.ToggleType.DISABLE)
                             ),
                         )
                     ),
@@ -435,7 +435,7 @@ class ProcessingTests {
                 testsData.newToggleEventAction(
                     eventId = eventId1,
                     toggles = listOf(
-                        TestEventToggle(eventId2, ToggleEvent.ToggleType.DISABLE)
+                        TestEventToggle(targetId = eventId2, toggleType = ToggleEvent.ToggleType.DISABLE)
                     ),
                 )
             ),
@@ -460,5 +460,95 @@ class ProcessingTests {
         // Then: Should not crash (ConcurrentModification), event1 is fulfilled, event2 is disabled by event1
         mockProcessingListener.verifyTriggerEventFulfilled(testEvent1, true)
         mockProcessingListener.verifyTriggerEventNotProcessed(testEvent2)
+    }
+
+    @Test
+    fun `Prefix toggle disables all matching events`() = runTest {
+        val scenarioId = testsData.newScenarioId()
+        val controllerEventId = testsData.newEventId()
+        val modeAEventId = testsData.newEventId()
+        val modeBEventId = testsData.newEventId()
+        val otherEventId = testsData.newEventId()
+
+        val controllerCondition = testsData.newTestImageCondition(controllerEventId)
+        val modeACondition = testsData.newTestImageCondition(modeAEventId)
+        val modeBCondition = testsData.newTestImageCondition(modeBEventId)
+        val otherCondition = testsData.newTestImageCondition(otherEventId)
+
+        val testScenario = testsData.newTestScenario(
+            scenarioId = scenarioId,
+            imageEvents = listOf(
+                testsData.newTestImageEvent(
+                    eventId = controllerEventId,
+                    scenarioId = scenarioId,
+                    enabledOnStart = true,
+                    conditions = listOf(controllerCondition),
+                    actions = listOf(
+                        testsData.newToggleEventAction(
+                            eventId = controllerEventId,
+                            toggles = listOf(
+                                TestEventToggle(
+                                    toggleType = ToggleEvent.ToggleType.DISABLE,
+                                    eventNamePrefix = "mode_a_",
+                                ),
+                                TestEventToggle(
+                                    toggleType = ToggleEvent.ToggleType.ENABLE,
+                                    eventNamePrefix = "mode_b_",
+                                ),
+                            ),
+                        )
+                    ),
+                    name = "controller",
+                ),
+                testsData.newTestImageEvent(
+                    eventId = modeAEventId,
+                    scenarioId = scenarioId,
+                    enabledOnStart = true,
+                    conditions = listOf(modeACondition),
+                    actions = emptyList(),
+                    name = "mode_a_event",
+                ),
+                testsData.newTestImageEvent(
+                    eventId = modeBEventId,
+                    scenarioId = scenarioId,
+                    enabledOnStart = false,
+                    conditions = listOf(modeBCondition),
+                    actions = emptyList(),
+                    name = "mode_b_event",
+                ),
+                testsData.newTestImageEvent(
+                    eventId = otherEventId,
+                    scenarioId = scenarioId,
+                    enabledOnStart = true,
+                    conditions = listOf(otherCondition),
+                    actions = emptyList(),
+                    name = "other_event",
+                ),
+            ),
+        )
+
+        mockBitmapSupplier.apply {
+            mockBitmapProviding(controllerCondition)
+            mockBitmapProviding(modeACondition)
+            mockBitmapProviding(modeBCondition)
+            mockBitmapProviding(otherCondition)
+        }
+        mockScalingManager.apply {
+            mockScaling(controllerCondition)
+            mockScaling(modeACondition)
+            mockScaling(modeBCondition)
+            mockScaling(otherCondition)
+        }
+        mockImageDetector.mockAllDetectionResult(
+            testConditions = listOf(controllerCondition, modeACondition, modeBCondition, otherCondition),
+            areAllDetected = true,
+        )
+
+        scenarioProcessor = createScenarioProcessor(testScenario)
+        scenarioProcessor.process(testsData.newMockedScreenBitmap())
+
+        assertFalse(scenarioProcessor.processingState.isEventEnabled(modeAEventId.databaseId))
+        assertTrue(scenarioProcessor.processingState.isEventEnabled(modeBEventId.databaseId))
+        assertTrue(scenarioProcessor.processingState.isEventEnabled(otherEventId.databaseId))
     }
 }

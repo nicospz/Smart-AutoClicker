@@ -41,8 +41,9 @@ internal data class TestImageCondition(
 )
 
 internal data class TestEventToggle(
-    val targetId: Identifier,
     val toggleType: ToggleEvent.ToggleType,
+    val targetId: Identifier? = null,
+    val eventNamePrefix: String? = null,
 )
 
 internal fun TestImageCondition.expectedResult(detected: Boolean) = ProcessedConditionResult.Image(

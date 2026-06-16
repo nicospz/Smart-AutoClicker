@@ -9,6 +9,7 @@ import com.buzbuz.smartautoclicker.core.common.actions.precision.PrecisionTextMo
 import com.buzbuz.smartautoclicker.core.common.overlays.base.viewModels
 import com.buzbuz.smartautoclicker.core.common.overlays.dialog.OverlayDialog
 import com.buzbuz.smartautoclicker.core.dumb.domain.model.DumbAction
+import com.buzbuz.smartautoclicker.core.ui.bindings.fields.enableEasyOverwriteOnFocus
 import com.buzbuz.smartautoclicker.feature.dumb.config.R
 import com.buzbuz.smartautoclicker.feature.dumb.config.di.DumbConfigViewModelsEntryPoint
 import com.google.android.material.button.MaterialButton
@@ -52,8 +53,11 @@ class DumbPrecisionTextDialog(
             setOnClickListener { commitFields(); viewModel.action.value?.let(onConfirmClicked); closeWithoutDismiss() }
         }
 
-        nameField = root.findInputField(R.id.field_name).apply { setSingleLine(true) }
-        root.findViewById<TextInputLayout>(R.id.field_name).hint = context.getString(R.string.input_field_label_name)
+        val nameLayout = root.findViewById<TextInputLayout>(R.id.field_name).apply {
+            hint = context.getString(R.string.input_field_label_name)
+        }
+        nameField = nameLayout.findViewById<TextInputEditText>(R.id.text_field).apply { setSingleLine(true) }
+        nameLayout.enableEasyOverwriteOnFocus()
         textField = root.findInputField(R.id.field_text)
         root.findViewById<TextInputLayout>(R.id.field_text).hint = context.getString(R.string.input_field_label_precision_text)
         repeatCountField = root.findInputField(R.id.field_repeat_count).apply { inputType = InputType.TYPE_CLASS_NUMBER }

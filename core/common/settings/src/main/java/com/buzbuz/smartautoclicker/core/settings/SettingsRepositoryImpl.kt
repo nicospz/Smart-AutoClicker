@@ -58,6 +58,10 @@ internal class SettingsRepositoryImpl @Inject constructor(
         .stateIn(coroutineScope, SharingStarted.Eagerly, false)
     override val isInputBlockWorkaroundEnabledFlow: Flow<Boolean> = _isInputBlockWorkaroundEnabledFlow
 
+    private val _splitScreenYOffsetPxFlow: StateFlow<Int> = dataSource.splitScreenYOffsetPx()
+        .stateIn(coroutineScope, SharingStarted.Eagerly, 0)
+    override val splitScreenYOffsetPxFlow: Flow<Int> = _splitScreenYOffsetPxFlow
+
 
     override fun isFilterScenarioUiEnabled(): Boolean =
         _isFilterScenarioUiEnabled.value
@@ -106,6 +110,15 @@ internal class SettingsRepositoryImpl @Inject constructor(
     override fun toggleInputBlockWorkaround() {
         coroutineScope.launch {
             dataSource.toggleInputBlockWorkaround()
+        }
+    }
+
+    override fun getSplitScreenYOffsetPx(): Int =
+        _splitScreenYOffsetPxFlow.value
+
+    override fun setSplitScreenYOffsetPx(offsetPx: Int) {
+        coroutineScope.launch {
+            dataSource.setSplitScreenYOffsetPx(offsetPx)
         }
     }
 }

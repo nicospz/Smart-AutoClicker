@@ -30,6 +30,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.appcompat.app.AlertDialog
 
 import com.buzbuz.smartautoclicker.R
+import com.buzbuz.smartautoclicker.core.ui.bindings.fields.enableEasyOverwriteOnFocus
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setError
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setLabel
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setOnTextChangedListener
@@ -106,6 +107,7 @@ class ScenarioCopyDialog : DialogFragment() {
                     InputFilter.LengthFilter(requireContext().resources.getInteger(R.integer.name_max_length))
                 )
             }
+            fieldScenarioName.enableEasyOverwriteOnFocus()
         }
 
         val dialog = MaterialAlertDialogBuilder(requireContext())

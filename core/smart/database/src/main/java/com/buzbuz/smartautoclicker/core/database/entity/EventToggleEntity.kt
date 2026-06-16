@@ -37,6 +37,8 @@ import kotlinx.serialization.Serializable
  * @param actionId unique identifier the action containing this toggle. Reference the key [ActionEntity.id] in action_table.
  * @param type the type of manipulation to apply to the event.
  * @param eventId unique identifier of the event to apply the toggle to. Reference the key [EventEntity.id] in event_table.
+ * Null when [eventNamePrefix] is used instead.
+ * @param eventNamePrefix when set, the toggle is applied to all events whose name starts with this prefix.
  */
 @Entity(
     tableName = EVENT_TOGGLE_TABLE,
@@ -61,6 +63,7 @@ data class EventToggleEntity(
     @PrimaryKey(autoGenerate = true) override var id: Long,
     @ColumnInfo(name = "action_id") var actionId: Long,
     @ColumnInfo(name = "toggle_type") val type: EventToggleType,
-    @ColumnInfo(name = "toggle_event_id") var toggleEventId: Long,
+    @ColumnInfo(name = "toggle_event_id") var toggleEventId: Long? = null,
+    @ColumnInfo(name = "event_name_prefix") val eventNamePrefix: String? = null,
 ) : EntityWithId
 

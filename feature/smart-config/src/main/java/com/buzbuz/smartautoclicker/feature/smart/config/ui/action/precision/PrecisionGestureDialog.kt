@@ -11,6 +11,7 @@ import androidx.lifecycle.lifecycleScope
 import com.buzbuz.smartautoclicker.core.common.overlays.base.viewModels
 import com.buzbuz.smartautoclicker.core.common.overlays.dialog.OverlayDialog
 import com.buzbuz.smartautoclicker.core.domain.model.action.PrecisionGesture
+import com.buzbuz.smartautoclicker.core.ui.bindings.fields.enableEasyOverwriteOnFocus
 import com.buzbuz.smartautoclicker.core.ui.utils.formatDuration
 import com.buzbuz.smartautoclicker.feature.smart.config.R
 import com.buzbuz.smartautoclicker.feature.smart.config.di.ScenarioConfigViewModelsEntryPoint
@@ -70,6 +71,7 @@ class PrecisionGestureDialog(
                 if (!hasFocus) viewModel.setName(text.toString())
             }
         }
+        nameLayout.enableEasyOverwriteOnFocus()
 
         statusText = root.findViewById(R.id.text_status)
         root.findViewById<MaterialButton>(R.id.button_record).setOnClickListener { record() }

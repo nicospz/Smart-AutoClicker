@@ -32,6 +32,10 @@ import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setChecked
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setDescription
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setOnClickListener
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setTitle
+import android.text.InputType
+import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setLabel
+import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setOnTextChangedListener
+import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setText
 
 import com.buzbuz.smartautoclicker.databinding.FragmentSettingsBinding
 
@@ -82,6 +86,15 @@ class SettingsFragment : Fragment() {
             setOnClickListener(viewModel::toggleInputBlockWorkaround)
         }
 
+        viewBinding.fieldSplitScreenYOffset.apply {
+            setLabel(R.string.input_field_label_split_screen_y_offset)
+            textField.contentDescription = getString(R.string.field_split_screen_y_offset_desc)
+            setOnTextChangedListener { editable ->
+                val value = editable.toString().toIntOrNull() ?: 0
+                viewModel.setSplitScreenYOffsetPx(value)
+            }
+        }
+
         viewBinding.fieldShizukuHelperStatus.apply {
             setTitle(requireContext().getString(R.string.field_shizuku_helper_status_title))
             setDescription(requireContext().getString(R.string.field_shizuku_helper_status_checking))
@@ -110,6 +123,7 @@ class SettingsFragment : Fragment() {
                 launch { viewModel.isLegacyNotificationUiEnabled.collect(viewBinding.fieldLegacyNotificationUi::setChecked) }
                 launch { viewModel.isEntireScreenCaptureForced.collect(viewBinding.fieldForceEntireScreen::setChecked) }
                 launch { viewModel.isInputWorkaroundEnabled.collect(viewBinding.fieldInputBlockWorkaround::setChecked) }
+                launch { viewModel.splitScreenYOffsetPx.collect(::updateSplitScreenYOffset) }
                 launch { viewModel.shouldShowInputBlockWorkaround.collect(::updateInputBlockWorkaroundVisibility) }
                 launch { viewModel.shouldShowEntireScreenCapture.collect(::updateForceEntireScreenVisibility) }
                 launch { viewModel.shouldShowPrivacySettings.collect(::updatePrivacySettingsVisibility) }
@@ -148,6 +162,12 @@ class SettingsFragment : Fragment() {
                 )
             }
         )
+    }
+
+    private fun updateSplitScreenYOffset(offsetPx: String) {
+        if (viewBinding.fieldSplitScreenYOffset.textField.text?.toString() != offsetPx) {
+            viewBinding.fieldSplitScreenYOffset.setText(offsetPx, InputType.TYPE_CLASS_NUMBER)
+        }
     }
 
     private fun updateForceEntireScreenVisibility(shouldBeVisible: Boolean) {

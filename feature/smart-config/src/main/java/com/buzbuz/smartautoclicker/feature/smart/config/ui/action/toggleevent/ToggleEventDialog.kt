@@ -26,6 +26,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 
+import com.buzbuz.smartautoclicker.core.ui.bindings.fields.enableEasyOverwriteOnFocus
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setLabel
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setOnTextChangedListener
 import com.buzbuz.smartautoclicker.core.ui.bindings.dialogs.setButtonEnabledState
@@ -92,6 +93,7 @@ class ToggleEventDialog(
                 )
             }
             hideSoftInputOnFocusLoss(fieldName.textField)
+            fieldName.enableEasyOverwriteOnFocus()
 
             fieldMultiStateToggleAll.apply {
                 setTitle(context.getString(R.string.field_change_all_title))

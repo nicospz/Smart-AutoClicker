@@ -173,6 +173,12 @@ abstract class OverlayMenu(
     protected open fun animateOverlayView(): Boolean = true
 
     /**
+     * Tells if the [screenOverlayView] should be shown together with the menu at startup.
+     * True by default. Override to false when the overlay must only be shown on demand.
+     */
+    protected open fun shouldShowOverlayViewWithMenu(): Boolean = true
+
+    /**
      * Creates the layout parameters for the [screenOverlayView].
      * Default implementation uses the same parameters as the floating menu, but in fullscreen.
      *
@@ -222,23 +228,39 @@ abstract class OverlayMenu(
             resizedContainer = buttonsContainer,
             maximumSize = getWindowMaximumSize(menuBackground),
             windowResizer = ::onNewWindowSize,
+            onAllLayoutResizeAnimationsCompleted = ::onMenuLayoutResizeAnimationsCompleted,
         )
 
         // Add the overlay, if any. It needs to be below the menu or user won't be able to click on the menu.
-        screenOverlayView?.let {
-            if (animateOverlayView()) it.visibility = View.GONE
-            if (!windowManager.safeAddView(it, overlayLayoutParams)) {
+        screenOverlayView?.let { overlayView ->
+            if (animateOverlayView()) overlayView.visibility = View.GONE
+            if (!windowManager.safeAddView(overlayView, overlayLayoutParams)) {
+                Log.e(
+                    TAG,
+                    "onCreate failed: could not add screenOverlayView for ${javaClass.simpleName}#${hashCode()}, finishing",
+                )
                 finish()
                 return
             }
+            Log.d(TAG, "onCreate added screenOverlayView for ${javaClass.simpleName}#${hashCode()}")
         }
 
         // Add the menu view to the window manager, but hidden
         if (animateOverlayView()) menuBackground.visibility = View.GONE
         if (!windowManager.safeAddView(menuLayout, menuLayoutParams)) {
+            Log.e(
+                TAG,
+                "onCreate failed: could not add menuLayout for ${javaClass.simpleName}#${hashCode()}, finishing",
+            )
             finish()
             return
         }
+
+        Log.i(
+            TAG,
+            "onCreate complete ${javaClass.simpleName}#${hashCode()} " +
+                "hasScreenOverlay=${screenOverlayView != null} animateOverlayView=${animateOverlayView()}",
+        )
     }
 
     private fun setupButtons(buttonsContainer: ViewGroup) {
@@ -265,21 +287,42 @@ abstract class OverlayMenu(
     }
 
     final override fun start() {
-        if (lifecycle.currentState != Lifecycle.State.CREATED) return
-        if (animations.showAnimationIsRunning) return
+        if (lifecycle.currentState != Lifecycle.State.CREATED) {
+            Log.w(
+                TAG,
+                "start() skipped: lifecycle=${lifecycle.currentState} overlay=${javaClass.simpleName}#${hashCode()}",
+            )
+            return
+        }
+        if (animations.showAnimationIsRunning) {
+            Log.w(TAG, "start() skipped: show animation running overlay=${javaClass.simpleName}#${hashCode()}")
+            return
+        }
 
         super.start()
         loadMenuPosition(displayConfigManager.displayConfig.orientation)
 
         // Start the show animation for the menu
-        Log.d(TAG, "Start show overlay ${hashCode()} animation...")
+        Log.d(TAG, "Start show overlay ${javaClass.simpleName}#${hashCode()} animation...")
 
         val animatedOverlayView = if (animateOverlayView()) screenOverlayView else null
+        val overlayViewToShow = if (shouldShowOverlayViewWithMenu()) animatedOverlayView else null
         menuLayout.visibility = View.VISIBLE
         menuBackground.visibility = View.VISIBLE
-        animatedOverlayView?.visibility = View.VISIBLE
-        animations.startShowAnimation(menuBackground, animatedOverlayView) {
-            Log.d(TAG, "Show overlay ${hashCode()} animation ended")
+        overlayViewToShow?.visibility = View.VISIBLE
+        Log.d(
+            TAG,
+            "start() showing menu ${javaClass.simpleName}#${hashCode()} " +
+                "menuLayout=${menuLayout.visibility} menuBackground=${menuBackground.visibility} " +
+                "screenOverlay=${screenOverlayView?.visibility} showOverlayWithMenu=${shouldShowOverlayViewWithMenu()}",
+        )
+        animations.startShowAnimation(menuBackground, overlayViewToShow) {
+            Log.i(
+                TAG,
+                "Show overlay ${javaClass.simpleName}#${hashCode()} animation ended; " +
+                    "menuLayout=${menuLayout.visibility} menuAlpha=${menuBackground.alpha} " +
+                    "size=${menuLayout.width}x${menuLayout.height} pos=(${menuLayoutParams.x},${menuLayoutParams.y})",
+            )
 
             if (resumeOnceShown) {
                 resumeOnceShown = false
@@ -484,6 +527,9 @@ abstract class OverlayMenu(
         resizeController.animateLayoutChanges(layoutChanges)
     }
 
+    /** Called after menu layout resize animations complete. Override to refresh child view state. */
+    protected open fun onMenuLayoutResizeAnimationsCompleted() = Unit
+
     private fun forceWindowResize() {
         Log.d(TAG, "Force window resize")
         onNewWindowSize(resizeController.measureMenuSize())
@@ -509,6 +555,53 @@ abstract class OverlayMenu(
         screenOverlayView?.let { view ->
             setOverlayViewVisibility(view.visibility != View.VISIBLE)
         }
+    }
+
+    /**
+     * Attach a [screenOverlayView] below the menu window.
+     * The menu is temporarily removed and re-added to keep it above the overlay for touch handling.
+     *
+     * @return true if the view was attached successfully.
+     */
+    protected fun attachScreenOverlayView(view: View): Boolean {
+        if (screenOverlayView != null) {
+            Log.w(TAG, "attachScreenOverlayView skipped: already attached ${javaClass.simpleName}#${hashCode()}")
+            return false
+        }
+
+        screenOverlayView = view
+        overlayLayoutParams = onCreateOverlayViewLayoutParams().apply {
+            gravity = Gravity.TOP or Gravity.START
+        }
+        view.visibility = View.GONE
+
+        Log.d(TAG, "attachScreenOverlayView ${javaClass.simpleName}#${hashCode()} re-stacking menu below overlay")
+        windowManager.removeView(menuLayout)
+        if (!windowManager.safeAddView(view, overlayLayoutParams)) {
+            Log.e(TAG, "attachScreenOverlayView failed: could not add overlay view ${javaClass.simpleName}#${hashCode()}")
+            screenOverlayView = null
+            windowManager.safeAddView(menuLayout, menuLayoutParams)
+            return false
+        }
+        if (!windowManager.safeAddView(menuLayout, menuLayoutParams)) {
+            Log.e(TAG, "attachScreenOverlayView failed: could not re-add menu ${javaClass.simpleName}#${hashCode()}")
+            windowManager.removeView(view)
+            screenOverlayView = null
+            return false
+        }
+
+        Log.i(TAG, "attachScreenOverlayView success ${javaClass.simpleName}#${hashCode()}")
+        return true
+    }
+
+    /** Detach and remove the [screenOverlayView], if any. */
+    protected fun detachScreenOverlayView() {
+        val view = screenOverlayView ?: return
+
+        Log.d(TAG, "detachScreenOverlayView ${javaClass.simpleName}#${hashCode()}")
+        view.visibility = View.GONE
+        windowManager.removeView(view)
+        screenOverlayView = null
     }
 
     /**

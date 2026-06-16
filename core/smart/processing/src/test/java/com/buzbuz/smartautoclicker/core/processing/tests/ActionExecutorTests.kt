@@ -36,6 +36,7 @@ import com.buzbuz.smartautoclicker.core.domain.model.condition.ImageCondition
 import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEvent
 import com.buzbuz.smartautoclicker.core.processing.data.processor.ActionExecutor
 import com.buzbuz.smartautoclicker.core.processing.data.processor.ConditionsResults
+import com.buzbuz.smartautoclicker.core.processing.data.processor.OffsetRepeatMatch
 import com.buzbuz.smartautoclicker.core.processing.data.processor.state.ProcessingState
 import com.buzbuz.smartautoclicker.core.processing.utils.anyNotNull
 import com.buzbuz.smartautoclicker.core.processing.domain.model.ProcessedConditionResult
@@ -302,5 +303,51 @@ class ActionExecutorTests {
 
             assertTrue("Action execution have not completed yet", isCompleted)
         }.join()
+    }
+
+    @Test
+    fun execute_click_withOffsetRepeat_translatesUserSelectedPosition() = runTest {
+        val clickAction = getNewDefaultClickUserPos(1)
+        val event = getNewDefaultEvent(actions = listOf(clickAction))
+        val results = ConditionsResults().apply {
+            setOffsetRepeatMatches(
+                listOf(
+                    OffsetRepeatMatch(
+                        instanceIndex = 1,
+                        dx = 10,
+                        dy = 20,
+                        results = emptyMap(),
+                    ),
+                ),
+            )
+        }
+
+        actionExecutor.executeActions(event, results)
+
+        val gestureCaptor = argumentCaptor<GestureDescription>()
+        verify(mockAndroidExecutor).dispatchGesture(gestureCaptor.capture())
+        assertActionGesture(gestureCaptor.lastValue)
+    }
+
+    @Test
+    fun execute_swipe_withOffsetRepeat_translatesEndpoints() = runTest {
+        val swipeAction = getNewDefaultSwipe(1)
+        val event = getNewDefaultEvent(actions = listOf(swipeAction))
+        val results = ConditionsResults().apply {
+            setOffsetRepeatMatches(
+                listOf(
+                    OffsetRepeatMatch(
+                        instanceIndex = 2,
+                        dx = 5,
+                        dy = 15,
+                        results = emptyMap(),
+                    ),
+                ),
+            )
+        }
+
+        actionExecutor.executeActions(event, results)
+
+        verify(mockAndroidExecutor).dispatchGesture(anyNotNull())
     }
 }

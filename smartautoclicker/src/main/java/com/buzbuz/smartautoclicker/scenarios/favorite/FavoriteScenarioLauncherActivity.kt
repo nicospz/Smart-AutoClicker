@@ -16,6 +16,7 @@
  */
 package com.buzbuz.smartautoclicker.scenarios.favorite
 
+import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
@@ -37,9 +38,22 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
 
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class FavoriteScenarioLauncherActivity : AppCompatActivity() {
+
+    companion object {
+        private const val EXTRA_SMART_SCENARIO_ID =
+            "com.buzbuz.smartautoclicker.scenarios.favorite.EXTRA_SMART_SCENARIO_ID"
+
+        fun getSmartProjectionIntent(context: Context, scenarioId: Long): Intent =
+            Intent(context, FavoriteScenarioLauncherActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
+                .putExtra(EXTRA_SMART_SCENARIO_ID, scenarioId)
+    }
+
+    @Inject lateinit var pickerController: FavoriteScenarioPickerController
 
     private val viewModel: FavoriteScenarioLauncherViewModel by viewModels()
 
@@ -50,8 +64,59 @@ class FavoriteScenarioLauncherActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        overridePendingTransition(0, 0)
 
-        projectionActivityResult = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val smartScenarioId = intent.getLongExtra(EXTRA_SMART_SCENARIO_ID, -1L)
+        if (smartScenarioId != -1L) {
+            startSmartScenarioProjectionFlow(smartScenarioId)
+            return
+        }
+
+        pickerController.show(
+            onUnavailable = { startActivityFavoritesPicker() },
+            onShown = { window.decorView.post { moveTaskToBack(true) } },
+            onDismiss = { finish() },
+        )
+    }
+
+    private fun startActivityFavoritesPicker() {
+        projectionActivityResult = registerProjectionResult()
+
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.favoriteScenarios.collect { scenarios ->
+                    scenarios ?: return@collect
+                    if (!dialogShown) showFavoritesActivityDialog(scenarios)
+                }
+            }
+        }
+    }
+
+    private fun startSmartScenarioProjectionFlow(scenarioId: Long) {
+        projectionActivityResult = registerProjectionResult()
+
+        lifecycleScope.launch {
+            val scenario = viewModel.getSmartScenario(scenarioId) ?: run {
+                finish()
+                return@launch
+            }
+
+            val item = FavoriteScenarioItem.Smart(scenario)
+            viewModel.startPermissionFlowIfNeeded(
+                activity = this@FavoriteScenarioLauncherActivity,
+                onMandatoryDenied = ::finish,
+                onAllGranted = {
+                    viewModel.startTroubleshootingFlowIfNeeded(this@FavoriteScenarioLauncherActivity) {
+                        requestedScenario = item
+                        requestSmartScenarioProjection(item)
+                    }
+                },
+            )
+        }
+    }
+
+    private fun registerProjectionResult(): ActivityResultLauncher<Intent> =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode != RESULT_OK) {
                 finish()
                 return@registerForActivityResult
@@ -60,17 +125,7 @@ class FavoriteScenarioLauncherActivity : AppCompatActivity() {
             requestedScenario?.let { startSmartScenario(result, it.scenario) } ?: finish()
         }
 
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.favoriteScenarios.collect { scenarios ->
-                    scenarios ?: return@collect
-                    if (!dialogShown) showFavoritesDialog(scenarios)
-                }
-            }
-        }
-    }
-
-    private fun showFavoritesDialog(scenarios: List<FavoriteScenarioItem>) {
+    private fun showFavoritesActivityDialog(scenarios: List<FavoriteScenarioItem>) {
         dialogShown = true
 
         if (scenarios.isEmpty()) {
@@ -85,7 +140,7 @@ class FavoriteScenarioLauncherActivity : AppCompatActivity() {
 
         MaterialAlertDialogBuilder(this)
             .setTitle(R.string.dialog_title_favorite_scenarios)
-            .setItems(scenarios.map { it.getDisplayName() }.toTypedArray()) { _, which ->
+            .setItems(scenarios.map { it.getDisplayName(this) }.toTypedArray()) { _, which ->
                 startScenario(scenarios[which])
             }
             .setNegativeButton(android.R.string.cancel) { _: DialogInterface, _: Int -> finish() }
@@ -136,9 +191,9 @@ class FavoriteScenarioLauncherActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun FavoriteScenarioItem.getDisplayName(): String =
+    private fun FavoriteScenarioItem.getDisplayName(context: Context): String =
         when (this) {
-            is FavoriteScenarioItem.Dumb -> getString(R.string.item_favorite_scenario_dumb, name)
-            is FavoriteScenarioItem.Smart -> getString(R.string.item_favorite_scenario_smart, name)
+            is FavoriteScenarioItem.Dumb -> context.getString(R.string.item_favorite_scenario_dumb, name)
+            is FavoriteScenarioItem.Smart -> context.getString(R.string.item_favorite_scenario_smart, name)
         }
 }

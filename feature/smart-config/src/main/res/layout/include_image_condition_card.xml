@@ -35,22 +35,6 @@
         android:contentDescription="@string/content_desc_image_condition"
         tools:src="@drawable/ic_condition" />
 
-    <com.google.android.material.textview.MaterialTextView
-        android:id="@+id/condition_anchor_badge"
-        style="@style/TextAppearance.Material3.LabelSmall"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_margin="@dimen/margin_horizontal_mini"
-        android:background="?attr/colorPrimaryContainer"
-        android:paddingHorizontal="@dimen/margin_horizontal_mini"
-        android:paddingVertical="1dp"
-        android:text="@string/item_image_condition_anchor_badge"
-        android:textColor="?attr/colorOnPrimaryContainer"
-        android:visibility="gone"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        tools:visibility="visible" />
-
     <com.google.android.material.divider.MaterialDivider
         android:id="@+id/divider"
         android:layout_width="match_parent"

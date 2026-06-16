@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "android-emulator-skill": {
+      "source": "new-silvermoon/awesome-android-agent-skills",
+      "sourceType": "github",
+      "skillPath": ".github/skills/testing_and_automation/android-emulator-skill/SKILL.md",
+      "computedHash": "b553aee78c03df76cc50af99775a4c9981dbafe2bf52a4c3b7b5f9169e4185a9"
+    }
+  }
+}

@@ -52,7 +52,7 @@ class PrecisionGestureHelperSetup @Inject constructor(
             val helperBytes = context.assets.open(HELPER_ASSET_PATH).use { it.readBytes() }
             writeHelper(helperBytes, timeoutMs = 30_000)
             runShizukuShell("chmod 755 $HELPER_REMOTE_PATH", timeoutMs = 10_000)
-            runShizukuShell("for pid in \$(pidof gesture-helper 2>/dev/null); do kill \$pid; done 2>/dev/null || true", timeoutMs = 10_000)
+            runShizukuShell("for pid in \$(pidof $HELPER_PROCESS_NAME 2>/dev/null); do kill \$pid; done 2>/dev/null || true", timeoutMs = 10_000)
             runShizukuShell("rm -f $HELPER_LOG_PATH", timeoutMs = 10_000)
             val deviceArg = detectTouchDevicePath()?.let { path -> "--device '$path' " }.orEmpty()
             runShizukuShell(
@@ -215,11 +215,12 @@ class PrecisionGestureHelperSetup @Inject constructor(
     private data class ShellResult(val exitCode: Int, val stdout: String, val stderr: String)
 
     companion object {
-        private const val REQUEST_CODE = 49321
+        private const val REQUEST_CODE = 49323
         private const val SUPPORTED_ABI = "arm64-v8a"
         private const val HELPER_ASSET_PATH = "helper/arm64-v8a/gesture-helper"
-        private const val HELPER_REMOTE_PATH = "/data/local/tmp/gesture-helper"
-        private const val HELPER_LOG_PATH = "/data/local/tmp/gesture-helper.log"
+        private const val HELPER_REMOTE_PATH = "/data/local/tmp/sac-gesture-helper"
+        private const val HELPER_LOG_PATH = "/data/local/tmp/sac-gesture-helper.log"
+        private const val HELPER_PROCESS_NAME = "sac-gesture-helper"
     }
 }
 

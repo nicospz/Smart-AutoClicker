@@ -295,7 +295,14 @@ internal object ActionTestsData {
     fun getNewEventToggleExtra(
         id: Long = EVENT_TOGGLE_ID,
         actionId: Long = EVENT_TOGGLE_ACTION_ID,
-        targetEventId: Long = EVENT_TOGGLE_TARGET_ID,
+        targetEventId: Long? = EVENT_TOGGLE_TARGET_ID,
+        eventNamePrefix: String? = null,
         type: ToggleEvent.ToggleType = EVENT_TOGGLE_TYPE,
-    ) = EventToggle(id.asIdentifier(), actionId.asIdentifier(), targetEventId.asIdentifier(), type)
+    ) = EventToggle(
+        id.asIdentifier(),
+        actionId.asIdentifier(),
+        targetEventId?.asIdentifier(),
+        eventNamePrefix,
+        type,
+    )
 }

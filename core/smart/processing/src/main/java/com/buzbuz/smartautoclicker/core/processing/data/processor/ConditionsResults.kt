@@ -18,12 +18,27 @@ package com.buzbuz.smartautoclicker.core.processing.data.processor
 
 import com.buzbuz.smartautoclicker.core.processing.domain.model.ProcessedConditionResult
 
+internal data class OffsetRepeatMatch(
+    val instanceIndex: Int,
+    val dx: Int,
+    val dy: Int,
+    val results: Map<Long, ProcessedConditionResult>,
+)
 
 internal class ConditionsResults {
 
     private val _results: MutableMap<Long, ProcessedConditionResult> = mutableMapOf()
 
     var fulfilled: Boolean? = null
+        private set
+
+    var offsetRepeatMatches: List<OffsetRepeatMatch> = emptyList()
+        private set
+
+    var offsetRepeatDx: Int = 0
+        private set
+
+    var offsetRepeatDy: Int = 0
         private set
 
     fun getImageConditionResult(conditionId: Long): ProcessedConditionResult.Image? =
@@ -42,6 +57,9 @@ internal class ConditionsResults {
     fun reset() {
         _results.clear()
         fulfilled = null
+        offsetRepeatMatches = emptyList()
+        offsetRepeatDx = 0
+        offsetRepeatDy = 0
     }
 
     fun addResult(conditionId: Long, result: ProcessedConditionResult) {
@@ -58,4 +76,22 @@ internal class ConditionsResults {
     fun setFulfilledState(state: Boolean) {
         fulfilled = state
     }
+
+    fun setOffsetRepeatMatches(matches: List<OffsetRepeatMatch>) {
+        offsetRepeatMatches = matches
+        val primary = matches.firstOrNull()
+        if (primary != null) {
+            setResults(primary.results.map { (id, result) -> id to result }, fulfilledState = true)
+            offsetRepeatDx = primary.dx
+            offsetRepeatDy = primary.dy
+        }
+    }
+
+    fun forOffsetRepeatMatch(match: OffsetRepeatMatch): ConditionsResults =
+        ConditionsResults().apply {
+            setResults(match.results.map { (id, result) -> id to result }, fulfilledState = true)
+            offsetRepeatDx = match.dx
+            offsetRepeatDy = match.dy
+            offsetRepeatMatches = listOf(match)
+        }
 }

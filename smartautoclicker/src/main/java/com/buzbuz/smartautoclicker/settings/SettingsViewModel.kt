@@ -83,6 +83,10 @@ class SettingsViewModel @Inject constructor(
     val shouldShowInputBlockWorkaround: Flow<Boolean> =
         flowOf(isImpactedByInputBlock())
 
+    val splitScreenYOffsetPx: Flow<String> =
+        settingsRepository.splitScreenYOffsetPxFlow
+            .map { offset -> offset.toString() }
+
 
     fun refreshPrecisionGestureHelperStatus() {
         viewModelScope.launch {
@@ -118,6 +122,10 @@ class SettingsViewModel @Inject constructor(
 
     fun toggleInputBlockWorkaround() {
         settingsRepository.toggleInputBlockWorkaround()
+    }
+
+    fun setSplitScreenYOffsetPx(offsetPx: Int) {
+        settingsRepository.setSplitScreenYOffsetPx(offsetPx)
     }
 
     fun showPrivacySettings(activity: Activity) {

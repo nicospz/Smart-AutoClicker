@@ -40,4 +40,8 @@ interface SettingsRepository {
     val isInputBlockWorkaroundEnabledFlow: Flow<Boolean>
     fun isInputBlockWorkaroundEnabled(): Boolean
     fun toggleInputBlockWorkaround()
+
+    val splitScreenYOffsetPxFlow: Flow<Int>
+    fun getSplitScreenYOffsetPx(): Int
+    fun setSplitScreenYOffsetPx(offsetPx: Int)
 }

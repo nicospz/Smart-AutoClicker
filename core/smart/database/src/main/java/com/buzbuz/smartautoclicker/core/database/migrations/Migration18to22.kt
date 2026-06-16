@@ -58,6 +58,60 @@ object Migration22to23 : Migration(22, 23) {
     }
 }
 
+object Migration23to24 : Migration(23, 24) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.addColumnIfMissing("event_table", "offset_repeat_count", "INTEGER NOT NULL DEFAULT 0")
+        db.addColumnIfMissing("event_table", "offset_repeat_x", "INTEGER NOT NULL DEFAULT 0")
+        db.addColumnIfMissing("event_table", "offset_repeat_y", "INTEGER NOT NULL DEFAULT 0")
+        db.addColumnIfMissing("event_table", "offset_repeat_match_mode", "TEXT NOT NULL DEFAULT 'FIRST_MATCH'")
+    }
+}
+
+object Migration24to25 : Migration(24, 25) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            UPDATE event_table
+            SET image_detection_mode = 'STANDARD',
+                anchor_condition_id = NULL
+            WHERE image_detection_mode = 'ANCHORED_REPEAT'
+            """.trimIndent()
+        )
+    }
+}
+
+object Migration25to26 : Migration(25, 26) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS event_toggle_table_new (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                action_id INTEGER NOT NULL,
+                toggle_type TEXT NOT NULL,
+                toggle_event_id INTEGER,
+                event_name_prefix TEXT,
+                FOREIGN KEY(action_id) REFERENCES action_table(id) ON DELETE CASCADE,
+                FOREIGN KEY(toggle_event_id) REFERENCES event_table(id) ON DELETE CASCADE
+            )
+            """.trimIndent()
+        )
+        db.execSQL(
+            """
+            INSERT INTO event_toggle_table_new (id, action_id, toggle_type, toggle_event_id, event_name_prefix)
+            SELECT id, action_id, toggle_type, toggle_event_id, NULL FROM event_toggle_table
+            """.trimIndent()
+        )
+        db.execSQL("DROP TABLE event_toggle_table")
+        db.execSQL("ALTER TABLE event_toggle_table_new RENAME TO event_toggle_table")
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS index_event_toggle_table_action_id ON event_toggle_table (action_id)"
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS index_event_toggle_table_toggle_event_id ON event_toggle_table (toggle_event_id)"
+        )
+    }
+}
+
 internal fun SupportSQLiteDatabase.sanitizeAnchoredRepeatEventAnchors() {
     execSQL(
         """

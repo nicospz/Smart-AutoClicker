@@ -61,7 +61,7 @@ class PrecisionGestureHelperClient @Inject constructor() {
 
     companion object {
         const val HELPER_HOST = "127.0.0.1"
-        const val HELPER_PORT = 49321
+        const val HELPER_PORT = 49323
     }
 }
 

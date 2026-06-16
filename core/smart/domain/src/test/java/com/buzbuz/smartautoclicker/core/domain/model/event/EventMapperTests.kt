@@ -22,6 +22,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 
 import com.buzbuz.smartautoclicker.core.database.entity.CompleteEventEntity
 import com.buzbuz.smartautoclicker.core.database.entity.ImageEventDetectionMode as EntityImageEventDetectionMode
+import com.buzbuz.smartautoclicker.core.database.entity.OffsetRepeatMatchMode as EntityOffsetRepeatMatchMode
 import com.buzbuz.smartautoclicker.core.domain.model.action.ActionTestsData
 import com.buzbuz.smartautoclicker.core.domain.model.condition.ConditionTestsData
 
@@ -58,48 +59,6 @@ class EventMapperTests {
     }
 
     @Test
-    fun imageEvent_toEntity_anchoredRepeat() {
-        assertEquals(
-            EventTestsData.getNewImageEventEntity(
-                scenarioId = EventTestsData.EVENT_SCENARIO_ID,
-                priority = 0,
-                imageDetectionMode = EntityImageEventDetectionMode.ANCHORED_REPEAT,
-                anchorConditionId = 42L,
-            ),
-            EventTestsData.getNewImageEvent(
-                scenarioId = EventTestsData.EVENT_SCENARIO_ID,
-                priority = 0,
-                detectionMode = ImageEventDetectionMode.ANCHORED_REPEAT,
-                anchorConditionId = 42L,
-            ).toEntity()
-        )
-    }
-
-    @Test
-    fun imageEvent_toDomain_anchoredRepeat() {
-        val completeEvent = CompleteEventEntity(
-            event = EventTestsData.getNewImageEventEntity(
-                scenarioId = EventTestsData.EVENT_SCENARIO_ID,
-                priority = 0,
-                imageDetectionMode = EntityImageEventDetectionMode.ANCHORED_REPEAT,
-                anchorConditionId = 42L,
-            ),
-            actions = emptyList(),
-            conditions = emptyList(),
-        )
-
-        assertEquals(
-            EventTestsData.getNewImageEvent(
-                scenarioId = EventTestsData.EVENT_SCENARIO_ID,
-                priority = 0,
-                detectionMode = ImageEventDetectionMode.ANCHORED_REPEAT,
-                anchorConditionId = 42L,
-            ),
-            completeEvent.toDomainImageEvent()
-        )
-    }
-
-    @Test
     fun imageEvent_toDomain_complete() {
         val imageEvent = CompleteEventEntity(
             event = EventTestsData.getNewImageEventEntity(scenarioId = EventTestsData.EVENT_SCENARIO_ID, priority = 0),
@@ -115,6 +74,98 @@ class EventMapperTests {
                 conditions = listOf(ConditionTestsData.getNewImageCondition(eventId = EventTestsData.EVENT_ID)),
             ),
             imageEvent,
+        )
+    }
+
+    @Test
+    fun imageEvent_toEntity_offsetRepeat() {
+        assertEquals(
+            EventTestsData.getNewImageEventEntity(
+                scenarioId = EventTestsData.EVENT_SCENARIO_ID,
+                priority = 0,
+                imageDetectionMode = EntityImageEventDetectionMode.OFFSET_REPEAT,
+                offsetRepeatCount = 3,
+                offsetRepeatX = 10,
+                offsetRepeatY = 120,
+                offsetRepeatMatchMode = EntityOffsetRepeatMatchMode.ALL_MATCHES,
+            ),
+            EventTestsData.getNewImageEvent(
+                scenarioId = EventTestsData.EVENT_SCENARIO_ID,
+                priority = 0,
+                detectionMode = ImageEventDetectionMode.OFFSET_REPEAT,
+                offsetRepeatCount = 3,
+                offsetRepeatX = 10,
+                offsetRepeatY = 120,
+                offsetRepeatMatchMode = OffsetRepeatMatchMode.ALL_MATCHES,
+            ).toEntity()
+        )
+    }
+
+    @Test
+    fun imageEvent_toDomain_offsetRepeat() {
+        val completeEvent = CompleteEventEntity(
+            event = EventTestsData.getNewImageEventEntity(
+                scenarioId = EventTestsData.EVENT_SCENARIO_ID,
+                priority = 0,
+                imageDetectionMode = EntityImageEventDetectionMode.OFFSET_REPEAT,
+                offsetRepeatCount = 2,
+                offsetRepeatX = 5,
+                offsetRepeatY = 80,
+                offsetRepeatMatchMode = EntityOffsetRepeatMatchMode.ALL_MATCHES,
+            ),
+            actions = emptyList(),
+            conditions = emptyList(),
+        )
+
+        assertEquals(
+            EventTestsData.getNewImageEvent(
+                scenarioId = EventTestsData.EVENT_SCENARIO_ID,
+                priority = 0,
+                detectionMode = ImageEventDetectionMode.OFFSET_REPEAT,
+                offsetRepeatCount = 2,
+                offsetRepeatX = 5,
+                offsetRepeatY = 80,
+                offsetRepeatMatchMode = OffsetRepeatMatchMode.ALL_MATCHES,
+            ),
+            completeEvent.toDomainImageEvent(),
+        )
+    }
+
+    @Test
+    fun imageEvent_toEntity_splitScreen() {
+        assertEquals(
+            EventTestsData.getNewImageEventEntity(
+                scenarioId = EventTestsData.EVENT_SCENARIO_ID,
+                priority = 0,
+                imageDetectionMode = EntityImageEventDetectionMode.SPLIT_SCREEN,
+            ),
+            EventTestsData.getNewImageEvent(
+                scenarioId = EventTestsData.EVENT_SCENARIO_ID,
+                priority = 0,
+                detectionMode = ImageEventDetectionMode.SPLIT_SCREEN,
+            ).toEntity()
+        )
+    }
+
+    @Test
+    fun imageEvent_toDomain_splitScreen() {
+        val completeEvent = CompleteEventEntity(
+            event = EventTestsData.getNewImageEventEntity(
+                scenarioId = EventTestsData.EVENT_SCENARIO_ID,
+                priority = 0,
+                imageDetectionMode = EntityImageEventDetectionMode.SPLIT_SCREEN,
+            ),
+            actions = emptyList(),
+            conditions = emptyList(),
+        )
+
+        assertEquals(
+            EventTestsData.getNewImageEvent(
+                scenarioId = EventTestsData.EVENT_SCENARIO_ID,
+                priority = 0,
+                detectionMode = ImageEventDetectionMode.SPLIT_SCREEN,
+            ),
+            completeEvent.toDomainImageEvent(),
         )
     }
 

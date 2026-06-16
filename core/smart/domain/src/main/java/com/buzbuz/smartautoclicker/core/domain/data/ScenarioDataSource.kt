@@ -320,7 +320,6 @@ internal class ScenarioDataSource @Inject constructor(
             event.toEntity().copy(
                 id = eventDbId,
                 scenarioId = scenarioDbId,
-                anchorConditionId = scenarioUpdateState.getAnchorConditionDatabaseId(event),
             )
         ))
     }
@@ -467,7 +466,7 @@ internal class ScenarioDataSource @Inject constructor(
             mappingClosure = { item ->
                 item.toEntity().apply {
                     actionId = actionDbId
-                    toggleEventId = scenarioUpdateState.getEventDbId(item.targetEventId)
+                    toggleEventId = item.targetEventId?.let { scenarioUpdateState.getEventDbId(it) }
                 }
             }
         )

@@ -22,7 +22,7 @@ import kotlin.math.pow
 import kotlin.math.sqrt
 
 
-internal class GestureRecorder(
+class GestureRecorder(
     private val onNewCapturedGesture: (gesture: RecordedGesture?, isFinished: Boolean) -> Unit,
 ) {
 

@@ -47,17 +47,44 @@ class EventTogglesViewModel @Inject constructor(
         buildMap {
             val currentEditedEvent = editionRepository.editionState.getEditedEvent<Event>() ?: return@buildMap
             val allEditedEvents = editionRepository.editionState.getAllEditedEvents()
-            val toggles = editionRepository.editionState.getEditedActionEventToggles() ?: emptyList()
+            val toggles = editionRepository.editionState.getEditedActionEventToggles()
+                ?.filter { it.targetEventId != null }
+                ?: emptyList()
 
             findAndPutToggleState(currentEditedEvent.id, toggles)
             allEditedEvents.forEach { event -> findAndPutToggleState(event.id, toggles) }
         }
     )
 
+    private val prefixModifications: MutableStateFlow<List<PrefixToggleEdit>> = MutableStateFlow(
+        editionRepository.editionState.getEditedActionEventToggles()
+            ?.mapNotNull { toggle ->
+                val prefix = toggle.eventNamePrefix ?: return@mapNotNull null
+                PrefixToggleEdit(
+                    id = toggle.id,
+                    prefix = prefix,
+                    toggleType = toggle.toggleType,
+                )
+            }
+            ?: emptyList()
+    )
+
     /** Final items list, with all events and the user modifications applied. */
     val currentItems: Flow<List<EventTogglesListItem>> =
-        combine(editionRepository.editionState.allEditedEvents, userModifications) { editedEvents, modifications ->
+        combine(editionRepository.editionState.allEditedEvents, userModifications, prefixModifications) { editedEvents, modifications, prefixes ->
             buildList {
+                add(EventTogglesListItem.Header(context.getString(R.string.list_header_prefix_rules)))
+                prefixes.forEach { prefixEdit ->
+                    add(
+                        EventTogglesListItem.PrefixItem(
+                            prefixToggleId = prefixEdit.id,
+                            prefix = prefixEdit.prefix,
+                            toggleState = prefixEdit.toggleType,
+                        )
+                    )
+                }
+                add(EventTogglesListItem.AddPrefixButton)
+
                 val imageEvents = mutableListOf<EventTogglesListItem>().apply {
                     add(EventTogglesListItem.Header(context.getString(R.string.list_header_image_events)))
                 }
@@ -107,8 +134,32 @@ class EventTogglesViewModel @Inject constructor(
         }
     }
 
-    fun getEditedEventToggleList(): List<EventToggle> =
-        userModifications.value.mapNotNull { (eventId, eventToggleIdToNewType) ->
+    fun changePrefixToggleState(prefixToggleId: Identifier, newState: ToggleEvent.ToggleType?) {
+        prefixModifications.value = prefixModifications.value.map { prefixEdit ->
+            if (prefixEdit.id == prefixToggleId) prefixEdit.copy(toggleType = newState) else prefixEdit
+        }
+    }
+
+    fun changePrefixToggleText(prefixToggleId: Identifier, prefix: String) {
+        prefixModifications.value = prefixModifications.value.map { prefixEdit ->
+            if (prefixEdit.id == prefixToggleId) prefixEdit.copy(prefix = prefix) else prefixEdit
+        }
+    }
+
+    fun addPrefixToggle() {
+        prefixModifications.value = prefixModifications.value + PrefixToggleEdit(
+            id = editionRepository.editedItemsBuilder.createNewEventToggle().id,
+            prefix = "",
+            toggleType = null,
+        )
+    }
+
+    fun removePrefixToggle(prefixToggleId: Identifier) {
+        prefixModifications.value = prefixModifications.value.filterNot { it.id == prefixToggleId }
+    }
+
+    fun getEditedEventToggleList(): List<EventToggle> {
+        val eventToggles = userModifications.value.mapNotNull { (eventId, eventToggleIdToNewType) ->
             val (editedToggleId, newType) = eventToggleIdToNewType
             if (newType == null) return@mapNotNull null
 
@@ -125,6 +176,20 @@ class EventTogglesViewModel @Inject constructor(
                 )
             }
         }
+
+        val prefixToggles = prefixModifications.value.mapNotNull { prefixEdit ->
+            val type = prefixEdit.toggleType ?: return@mapNotNull null
+            if (prefixEdit.prefix.isBlank()) return@mapNotNull null
+
+            editionRepository.editedItemsBuilder.createNewEventToggle(
+                id = prefixEdit.id,
+                eventNamePrefix = prefixEdit.prefix,
+                toggleType = type,
+            )
+        }
+
+        return eventToggles + prefixToggles
+    }
 
     private fun Event.toEventTogglesListItems(toggleState: ToggleEvent.ToggleType?) =
         EventTogglesListItem.Item(
@@ -144,11 +209,25 @@ class EventTogglesViewModel @Inject constructor(
     }
 }
 
+private data class PrefixToggleEdit(
+    val id: Identifier,
+    val prefix: String,
+    val toggleType: ToggleEvent.ToggleType?,
+)
+
 sealed class EventTogglesListItem {
 
     data class Header(
         val title: String,
     ) : EventTogglesListItem()
+
+    data class PrefixItem(
+        val prefixToggleId: Identifier,
+        val prefix: String,
+        val toggleState: ToggleEvent.ToggleType?,
+    ) : EventTogglesListItem()
+
+    data object AddPrefixButton : EventTogglesListItem()
 
     data class Item(
         val eventId: Identifier,

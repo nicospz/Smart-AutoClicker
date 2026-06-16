@@ -23,15 +23,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.buzbuz.smartautoclicker.core.bitmaps.BitmapRepository
 
-import com.buzbuz.smartautoclicker.core.domain.model.AND
 import com.buzbuz.smartautoclicker.core.domain.model.ConditionOperator
 import com.buzbuz.smartautoclicker.core.domain.model.action.Action
 import com.buzbuz.smartautoclicker.core.domain.model.condition.ImageCondition
 import com.buzbuz.smartautoclicker.core.domain.model.condition.TriggerCondition
 import com.buzbuz.smartautoclicker.core.domain.model.event.Event
 import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEventDetectionMode
-import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEventDetectionMode.ANCHORED_REPEAT
+import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEventDetectionMode.OFFSET_REPEAT
+import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEventDetectionMode.SPLIT_SCREEN
 import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEvent
+import com.buzbuz.smartautoclicker.core.domain.model.event.OffsetRepeatMatchMode
 import com.buzbuz.smartautoclicker.core.domain.model.scenario.Scenario
 import com.buzbuz.smartautoclicker.core.settings.SettingsRepository
 import com.buzbuz.smartautoclicker.core.ui.monitoring.MonitoredViewsManager
@@ -105,7 +106,6 @@ class EventDialogViewModel @Inject constructor(
                         context = context,
                         shortThreshold = true,
                         inError = !imageConditionsState.itemValidity[index],
-                        isAnchor = event.detectionMode == ANCHORED_REPEAT && imageCondition.id == event.anchorConditionId,
                     )
                 }
             }.filterNotNull()
@@ -143,8 +143,32 @@ class EventDialogViewModel @Inject constructor(
         .filterIsInstance<ImageEvent>()
         .map { event -> event.detectionMode }
 
-    val isAnchoredDetectionMode: Flow<Boolean> = detectionMode
-        .map { it == ANCHORED_REPEAT }
+    val isOffsetRepeatDetectionMode: Flow<Boolean> = detectionMode
+        .map { it == OFFSET_REPEAT }
+
+    val isSplitScreenDetectionMode: Flow<Boolean> = detectionMode
+        .map { it == SPLIT_SCREEN }
+
+    val splitScreenDeviceYOffset: Flow<Int> = settingsRepository.splitScreenYOffsetPxFlow
+
+    val offsetRepeatCount: Flow<String> = configuredEvent
+        .filterIsInstance<ImageEvent>()
+        .map { event -> event.offsetRepeatCount.toString() }
+        .take(1)
+
+    val offsetRepeatX: Flow<String> = configuredEvent
+        .filterIsInstance<ImageEvent>()
+        .map { event -> event.offsetRepeatX.toString() }
+        .take(1)
+
+    val offsetRepeatY: Flow<String> = configuredEvent
+        .filterIsInstance<ImageEvent>()
+        .map { event -> event.offsetRepeatY.toString() }
+        .take(1)
+
+    val offsetRepeatMatchMode: Flow<OffsetRepeatMatchMode> = configuredEvent
+        .filterIsInstance<ImageEvent>()
+        .map { event -> event.offsetRepeatMatchMode }
 
     val canTryEvent: Flow<Boolean> = configuredEvent
         .filterIsInstance<ImageEvent>()
@@ -185,31 +209,43 @@ class EventDialogViewModel @Inject constructor(
             if (oldValue is ImageEvent) {
                 oldValue.copy(
                     detectionMode = mode,
-                    conditionOperator = if (mode == ANCHORED_REPEAT) AND else oldValue.conditionOperator,
-                    anchorConditionId = if (mode == ANCHORED_REPEAT) {
-                        oldValue.conditions.find { it.id == oldValue.anchorConditionId && it.shouldBeDetected }?.id
-                            ?: oldValue.conditions.firstOrNull { it.shouldBeDetected }?.id
-                    } else null,
+                    offsetRepeatCount = if (mode == OFFSET_REPEAT) oldValue.offsetRepeatCount.coerceAtLeast(1) else 0,
+                    offsetRepeatX = if (mode == OFFSET_REPEAT) oldValue.offsetRepeatX else 0,
+                    offsetRepeatY = if (mode == OFFSET_REPEAT) oldValue.offsetRepeatY else 0,
+                    offsetRepeatMatchMode = if (mode == OFFSET_REPEAT) {
+                        oldValue.offsetRepeatMatchMode
+                    } else OffsetRepeatMatchMode.FIRST_MATCH,
                 )
             } else oldValue
         }
     }
 
-    fun setAnchorCondition(index: Int): Boolean {
-        val event = editionRepository.editionState.getEditedEvent<ImageEvent>() ?: return false
-        if (event.detectionMode != ANCHORED_REPEAT) return false
-        if (index !in event.conditions.indices) return false
-
-        val condition = event.conditions[index]
-        if (!condition.shouldBeDetected) return false
-
+    fun setOffsetRepeatCount(count: Int) {
         updateEditedEvent { oldValue ->
-            if (oldValue is ImageEvent) oldValue.copy(
-                conditionOperator = AND,
-                anchorConditionId = condition.id,
-            ) else oldValue
+            if (oldValue is ImageEvent) oldValue.copy(offsetRepeatCount = count.coerceAtLeast(0))
+            else oldValue
         }
-        return true
+    }
+
+    fun setOffsetRepeatX(offsetX: Int) {
+        updateEditedEvent { oldValue ->
+            if (oldValue is ImageEvent) oldValue.copy(offsetRepeatX = offsetX)
+            else oldValue
+        }
+    }
+
+    fun setOffsetRepeatY(offsetY: Int) {
+        updateEditedEvent { oldValue ->
+            if (oldValue is ImageEvent) oldValue.copy(offsetRepeatY = offsetY)
+            else oldValue
+        }
+    }
+
+    fun setOffsetRepeatMatchMode(mode: OffsetRepeatMatchMode) {
+        updateEditedEvent { oldValue ->
+            if (oldValue is ImageEvent) oldValue.copy(offsetRepeatMatchMode = mode)
+            else oldValue
+        }
     }
 
     fun toggleEventState() {

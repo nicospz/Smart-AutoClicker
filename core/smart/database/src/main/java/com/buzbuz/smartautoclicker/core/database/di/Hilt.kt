@@ -18,25 +18,25 @@ package com.buzbuz.smartautoclicker.core.database.di
 
 import android.content.Context
 import androidx.room.Room
-import androidx.room.RoomDatabase
-import androidx.sqlite.db.SupportSQLiteDatabase
 
 import com.buzbuz.smartautoclicker.core.database.ClickDatabase
 import com.buzbuz.smartautoclicker.core.database.migrations.Migration10to11
 import com.buzbuz.smartautoclicker.core.database.migrations.Migration12to13
+import com.buzbuz.smartautoclicker.core.database.migrations.Migration18to19
+import com.buzbuz.smartautoclicker.core.database.migrations.Migration19to20
+import com.buzbuz.smartautoclicker.core.database.migrations.Migration1to2
+import com.buzbuz.smartautoclicker.core.database.migrations.Migration20to21
 import com.buzbuz.smartautoclicker.core.database.migrations.Migration21to22
 import com.buzbuz.smartautoclicker.core.database.migrations.Migration22to23
-import com.buzbuz.smartautoclicker.core.database.migrations.Migration20to21
-import com.buzbuz.smartautoclicker.core.database.migrations.Migration19to20
-import com.buzbuz.smartautoclicker.core.database.migrations.Migration18to19
-import com.buzbuz.smartautoclicker.core.database.migrations.Migration1to2
+import com.buzbuz.smartautoclicker.core.database.migrations.Migration23to24
+import com.buzbuz.smartautoclicker.core.database.migrations.Migration24to25
+import com.buzbuz.smartautoclicker.core.database.migrations.Migration25to26
 import com.buzbuz.smartautoclicker.core.database.migrations.Migration2to3
 import com.buzbuz.smartautoclicker.core.database.migrations.Migration3to4
 import com.buzbuz.smartautoclicker.core.database.migrations.Migration4to5
 import com.buzbuz.smartautoclicker.core.database.migrations.Migration5to6
 import com.buzbuz.smartautoclicker.core.database.migrations.Migration6to7
 import com.buzbuz.smartautoclicker.core.database.migrations.Migration9to10
-import com.buzbuz.smartautoclicker.core.database.migrations.sanitizeAnchoredRepeatEventAnchors
 
 import dagger.Module
 import dagger.Provides
@@ -72,13 +72,8 @@ internal object SmartDatabaseModule {
             Migration20to21,
             Migration21to22,
             Migration22to23,
-        ).addCallback(AnchoredRepeatSanitizerCallback)
-            .build()
-
-    private object AnchoredRepeatSanitizerCallback : RoomDatabase.Callback() {
-        override fun onOpen(db: SupportSQLiteDatabase) {
-            super.onOpen(db)
-            db.sanitizeAnchoredRepeatEventAnchors()
-        }
-    }
+            Migration23to24,
+            Migration24to25,
+            Migration25to26,
+        ).build()
 }

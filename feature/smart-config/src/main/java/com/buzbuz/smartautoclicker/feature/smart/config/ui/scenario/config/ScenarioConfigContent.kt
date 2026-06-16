@@ -35,6 +35,7 @@ import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setOnClickListener
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setTitle
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setupDescriptions
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setError
+import com.buzbuz.smartautoclicker.core.ui.bindings.fields.enableEasyOverwriteOnFocus
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setLabel
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setOnTextChangedListener
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setText
@@ -66,6 +67,7 @@ class ScenarioConfigContent(appContext: Context) : NavBarDialogContent(appContex
                 )
             }
             dialogController.hideSoftInputOnFocusLoss(fieldScenarioName.textField)
+            fieldScenarioName.enableEasyOverwriteOnFocus()
 
             fieldAntiDetection.apply {
                 setTitle(context.resources.getString(R.string.input_field_label_anti_detection))

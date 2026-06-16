@@ -45,6 +45,7 @@ import com.buzbuz.smartautoclicker.core.database.entity.EventToggleEntity
 import com.buzbuz.smartautoclicker.core.database.entity.EventToggleType
 import com.buzbuz.smartautoclicker.core.database.entity.EventType
 import com.buzbuz.smartautoclicker.core.database.entity.ImageEventDetectionMode
+import com.buzbuz.smartautoclicker.core.database.entity.OffsetRepeatMatchMode
 import com.buzbuz.smartautoclicker.core.database.entity.IntentExtraEntity
 import com.buzbuz.smartautoclicker.core.database.entity.IntentExtraType
 import com.buzbuz.smartautoclicker.core.database.entity.NotificationMessageType
@@ -221,9 +222,12 @@ internal open class CompatDeserializer : Deserializer {
             ?: OPERATOR_DEFAULT_VALUE
 
         val keepDetecting = jsonEvent.getBoolean("keepDetecting") ?: false
-        val imageDetectionMode = jsonEvent.getEnum<ImageEventDetectionMode>("imageDetectionMode")
-            ?: ImageEventDetectionMode.STANDARD
-        val anchorConditionId = jsonEvent.getLong("anchorConditionId")
+        val imageDetectionMode = jsonEvent.deserializeImageDetectionMode()
+        val offsetRepeatCount = jsonEvent.getInt("offsetRepeatCount") ?: 0
+        val offsetRepeatX = jsonEvent.getInt("offsetRepeatX") ?: 0
+        val offsetRepeatY = jsonEvent.getInt("offsetRepeatY") ?: 0
+        val offsetRepeatMatchMode = jsonEvent.getEnum<OffsetRepeatMatchMode>("offsetRepeatMatchMode")
+            ?: OffsetRepeatMatchMode.FIRST_MATCH
         val cooldownMs = jsonEvent.getLong("cooldownMs")
             ?: jsonEvent.getLong("cooldown_ms", true)
             ?: 0L
@@ -239,7 +243,10 @@ internal open class CompatDeserializer : Deserializer {
             type = type,
             keepDetecting = keepDetecting,
             imageDetectionMode = imageDetectionMode,
-            anchorConditionId = anchorConditionId,
+            offsetRepeatCount = offsetRepeatCount,
+            offsetRepeatX = offsetRepeatX,
+            offsetRepeatY = offsetRepeatY,
+            offsetRepeatMatchMode = offsetRepeatMatchMode,
         )
     }
 
@@ -695,9 +702,20 @@ internal open class CompatDeserializer : Deserializer {
         val id = jsonExtra.getLong("id", true) ?: return null
         val actionId = jsonExtra.getLong("actionId", true) ?: return null
         val type = jsonExtra.getEnum<EventToggleType>("type", true) ?: return null
-        val toggleEventId = jsonExtra.getLong("toggleEventId", true) ?: return null
+        val toggleEventId = jsonExtra.getLong("toggleEventId")
+        val eventNamePrefix = jsonExtra.getString("eventNamePrefix")
 
-        if (!scenarioEvents.containsId(toggleEventId)) {
+        if (!eventNamePrefix.isNullOrBlank()) {
+            return EventToggleEntity(
+                id = id,
+                actionId = actionId,
+                type = type,
+                toggleEventId = null,
+                eventNamePrefix = eventNamePrefix,
+            )
+        }
+
+        if (toggleEventId == null || !scenarioEvents.containsId(toggleEventId)) {
             Log.w(TAG, "Can't deserialize event toggle, toggleEventId is not valid.")
             return null
         }
@@ -705,3 +723,11 @@ internal open class CompatDeserializer : Deserializer {
         return EventToggleEntity(id, actionId, type, toggleEventId)
     }
 }
+
+private fun JsonObject.deserializeImageDetectionMode(): ImageEventDetectionMode =
+    when (getString("imageDetectionMode")) {
+        "OFFSET_REPEAT" -> ImageEventDetectionMode.OFFSET_REPEAT
+        "SPLIT_SCREEN" -> ImageEventDetectionMode.SPLIT_SCREEN
+        "ANCHORED_REPEAT", null -> ImageEventDetectionMode.STANDARD
+        else -> getEnum<ImageEventDetectionMode>("imageDetectionMode") ?: ImageEventDetectionMode.STANDARD
+    }

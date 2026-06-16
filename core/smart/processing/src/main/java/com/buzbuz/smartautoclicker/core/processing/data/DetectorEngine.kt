@@ -229,6 +229,7 @@ class DetectorEngine @Inject constructor(
                 precisionGestureExecutor = precisionGestureExecutor,
                 precisionTextExecutor = precisionTextExecutor,
                 unblockWorkaroundEnabled = settingsRepository.isInputBlockWorkaroundEnabled(),
+                splitScreenYOffsetPx = settingsRepository.getSplitScreenYOffsetPx(),
                 onStopRequested = { stopDetection() },
                 progressListener  = if (liveDebugging || generateReport) debuggingListener else null,
             )

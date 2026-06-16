@@ -16,13 +16,13 @@
  */
 package com.buzbuz.smartautoclicker.feature.smart.config.ui.event
 
+import android.content.Intent
 import android.text.InputFilter
 import android.text.InputType
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -34,12 +34,16 @@ import com.buzbuz.smartautoclicker.core.domain.model.AND
 import com.buzbuz.smartautoclicker.core.domain.model.ConditionOperator
 import com.buzbuz.smartautoclicker.core.domain.model.OR
 import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEventDetectionMode
-import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEventDetectionMode.ANCHORED_REPEAT
+import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEventDetectionMode.OFFSET_REPEAT
+import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEventDetectionMode.SPLIT_SCREEN
 import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEventDetectionMode.STANDARD
+import com.buzbuz.smartautoclicker.core.domain.model.event.OffsetRepeatMatchMode
 import com.buzbuz.smartautoclicker.core.ui.bindings.buttons.DualStateButtonTextConfig
+import com.buzbuz.smartautoclicker.core.ui.bindings.buttons.MultiStateButtonConfig
 import com.buzbuz.smartautoclicker.core.ui.bindings.dialogs.DialogNavigationButton
 import com.buzbuz.smartautoclicker.core.ui.bindings.dialogs.setButtonEnabledState
 import com.buzbuz.smartautoclicker.core.ui.bindings.dialogs.setButtonVisibility
+import com.buzbuz.smartautoclicker.core.ui.bindings.fields.enableEasyOverwriteOnFocus
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setButtonConfig
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setChecked
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setDescription
@@ -125,6 +129,7 @@ class EventDialog(
             )
         }
         hideSoftInputOnFocusLoss(fieldEventName.textField)
+        fieldEventName.enableEasyOverwriteOnFocus()
 
         fieldIsEnabled.apply {
             setTitle(context.resources.getString(R.string.field_event_state_title))
@@ -182,7 +187,6 @@ class EventDialog(
                 setAdapter(
                     EventImageConditionsAdapter(
                         itemClickedListener = ::showImageConditionsBriefMenu,
-                        itemLongClickedListener = ::setAnchorCondition,
                         bitmapProvider = viewModel::getConditionBitmap,
                     ),
                 )
@@ -209,19 +213,81 @@ class EventDialog(
             setupDescriptions(
                 listOf(
                     context.getString(R.string.field_image_detection_mode_desc_normal),
-                    context.getString(R.string.field_image_detection_mode_desc_anchored),
+                    context.getString(R.string.field_image_detection_mode_desc_offset_repeat),
+                    context.getString(R.string.field_image_detection_mode_desc_split_screen),
+                )
+            )
+            setButtonConfig(
+                MultiStateButtonConfig(
+                    icons = listOf(
+                        R.drawable.ic_detect_exact,
+                        R.drawable.ic_hint_move,
+                        R.drawable.ic_detect_split_screen,
+                    ),
+                    selectionRequired = true,
+                )
+            )
+            setOnCheckedListener { checkedId ->
+                viewModel.setDetectionMode(
+                    when (checkedId) {
+                        1 -> OFFSET_REPEAT
+                        2 -> SPLIT_SCREEN
+                        else -> STANDARD
+                    }
+                )
+            }
+        }
+
+        fieldSplitScreenSettings.apply {
+            setTitle(context.getString(R.string.field_split_screen_detection_settings))
+            setOnClickListener { openSettings() }
+        }
+
+        fieldOffsetRepeatCount.apply {
+            textField.filters = arrayOf(MinMaxInputFilter(0))
+            setLabel(R.string.input_field_label_offset_repeat_count)
+            setOnTextChangedListener {
+                viewModel.setOffsetRepeatCount(if (it.isNotEmpty()) it.toString().toInt() else 0)
+            }
+        }
+        hideSoftInputOnFocusLoss(fieldOffsetRepeatCount.textField)
+
+        fieldOffsetRepeatX.apply {
+            setLabel(R.string.input_field_label_offset_repeat_x)
+            setOnTextChangedListener {
+                viewModel.setOffsetRepeatX(if (it.isNotEmpty()) it.toString().toInt() else 0)
+            }
+        }
+        hideSoftInputOnFocusLoss(fieldOffsetRepeatX.textField)
+
+        fieldOffsetRepeatY.apply {
+            setLabel(R.string.input_field_label_offset_repeat_y)
+            setOnTextChangedListener {
+                viewModel.setOffsetRepeatY(if (it.isNotEmpty()) it.toString().toInt() else 0)
+            }
+        }
+        hideSoftInputOnFocusLoss(fieldOffsetRepeatY.textField)
+
+        fieldOffsetRepeatMatchMode.apply {
+            setTitle(context.getString(R.string.field_offset_repeat_match_mode_title))
+            setupDescriptions(
+                listOf(
+                    context.getString(R.string.field_offset_repeat_match_mode_desc_first),
+                    context.getString(R.string.field_offset_repeat_match_mode_desc_all),
                 )
             )
             setButtonConfig(
                 DualStateButtonTextConfig(
-                    textLeft = context.getString(R.string.field_image_detection_mode_normal),
-                    textRight = context.getString(R.string.field_image_detection_mode_anchored),
+                    textLeft = context.getString(R.string.field_offset_repeat_match_mode_first),
+                    textRight = context.getString(R.string.field_offset_repeat_match_mode_all),
                     selectionRequired = true,
                     singleSelection = true,
                 )
             )
             setOnCheckedListener { checkedId ->
-                viewModel.setDetectionMode(if (checkedId == 0) STANDARD else ANCHORED_REPEAT)
+                viewModel.setOffsetRepeatMatchMode(
+                    if (checkedId == 1) OffsetRepeatMatchMode.ALL_MATCHES else OffsetRepeatMatchMode.FIRST_MATCH
+                )
             }
         }
 
@@ -279,7 +345,13 @@ class EventDialog(
                 launch { viewModel.eventNameError.collect(viewBinding.fieldEventName::setError) }
                 launch { viewModel.conditionOperator.collect(::updateConditionOperator) }
                 launch { viewModel.detectionMode.collect(::updateImageDetectionMode) }
-                launch { viewModel.isAnchoredDetectionMode.collect(::updateAnchoredModeUi) }
+                launch { viewModel.isOffsetRepeatDetectionMode.collect(::updateOffsetRepeatModeUi) }
+                launch { viewModel.isSplitScreenDetectionMode.collect(::updateSplitScreenModeUi) }
+                launch { viewModel.splitScreenDeviceYOffset.collect(::updateSplitScreenDeviceOffset) }
+                launch { viewModel.offsetRepeatCount.collect(::updateOffsetRepeatCount) }
+                launch { viewModel.offsetRepeatX.collect(::updateOffsetRepeatX) }
+                launch { viewModel.offsetRepeatY.collect(::updateOffsetRepeatY) }
+                launch { viewModel.offsetRepeatMatchMode.collect(::updateOffsetRepeatMatchMode) }
                 launch { viewModel.eventEnabledOnStart.collect(::updateEnabledOnStart) }
                 launch { viewModel.eventCooldown.collect(::updateCooldown) }
                 launch { viewModel.eventCooldownError.collect(viewBinding.fieldEventCooldown::setError) }
@@ -350,15 +422,58 @@ class EventDialog(
 
     private fun updateImageDetectionMode(mode: ImageEventDetectionMode) {
         viewBinding.fieldImageDetectionMode.apply {
-            val index = if (mode == ANCHORED_REPEAT) 1 else 0
+            val index = when (mode) {
+                OFFSET_REPEAT -> 1
+                SPLIT_SCREEN -> 2
+                else -> 0
+            }
             setChecked(index)
             setDescription(index)
         }
     }
 
-    private fun updateAnchoredModeUi(isAnchored: Boolean) {
-        viewBinding.fieldConditionsOperator.root.visibility = if (isAnchored) View.GONE else View.VISIBLE
-        viewBinding.dividerConditionsOperator.visibility = if (isAnchored) View.GONE else View.VISIBLE
+    private fun updateOffsetRepeatModeUi(isOffsetRepeat: Boolean) {
+        viewBinding.layoutOffsetRepeatConfig.visibility = if (isOffsetRepeat) View.VISIBLE else View.GONE
+    }
+
+    private fun updateSplitScreenModeUi(isSplitScreen: Boolean) {
+        viewBinding.layoutSplitScreenConfig.visibility = if (isSplitScreen) View.VISIBLE else View.GONE
+    }
+
+    private fun updateSplitScreenDeviceOffset(offsetPx: Int) {
+        viewBinding.textSplitScreenDeviceOffset.text =
+            context.getString(R.string.field_split_screen_detection_device_offset, offsetPx)
+        viewBinding.textSplitScreenOffsetWarning.visibility =
+            if (offsetPx <= 0) View.VISIBLE else View.GONE
+    }
+
+    private fun openSettings() {
+        context.startActivity(
+            Intent().setClassName(
+                context.packageName,
+                "com.buzbuz.smartautoclicker.settings.SettingsActivity",
+            )
+        )
+    }
+
+    private fun updateOffsetRepeatCount(count: String) {
+        viewBinding.fieldOffsetRepeatCount.setText(count, InputType.TYPE_CLASS_NUMBER)
+    }
+
+    private fun updateOffsetRepeatX(offsetX: String) {
+        viewBinding.fieldOffsetRepeatX.setText(offsetX, InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_SIGNED)
+    }
+
+    private fun updateOffsetRepeatY(offsetY: String) {
+        viewBinding.fieldOffsetRepeatY.setText(offsetY, InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_SIGNED)
+    }
+
+    private fun updateOffsetRepeatMatchMode(mode: OffsetRepeatMatchMode) {
+        viewBinding.fieldOffsetRepeatMatchMode.apply {
+            val index = if (mode == OffsetRepeatMatchMode.ALL_MATCHES) 1 else 0
+            setChecked(index)
+            setDescription(index)
+        }
     }
 
     private fun updateEnabledOnStart(enabledOnStart: Boolean) {
@@ -411,17 +526,6 @@ class EventDialog(
             newOverlay = ImageConditionsBriefMenu(initialFocusedIndex),
             hideCurrent = true,
         )
-    }
-
-    private fun setAnchorCondition(index: Int): Boolean {
-        if (!viewModel.setAnchorCondition(index)) return false
-
-        Toast.makeText(
-            context,
-            R.string.message_anchor_condition_selected,
-            Toast.LENGTH_SHORT,
-        ).show()
-        return true
     }
 
     private fun showTriggerConditionsDialog() {

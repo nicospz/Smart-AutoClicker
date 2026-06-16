@@ -19,6 +19,7 @@ package com.buzbuz.smartautoclicker.core.settings.data
 import android.content.Context
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 
 import com.buzbuz.smartautoclicker.core.base.PreferencesDataStore
 import com.buzbuz.smartautoclicker.core.base.di.Dispatcher
@@ -53,6 +54,8 @@ internal class SettingsDataSource @Inject constructor(
             booleanPreferencesKey("forceEntireScreen")
         val KEY_INPUT_BLOCK_WORKAROUND: Preferences.Key<Boolean> =
             booleanPreferencesKey("inputBlockWorkaround")
+        val KEY_SPLIT_SCREEN_Y_OFFSET_PX: Preferences.Key<Int> =
+            intPreferencesKey("splitScreenYOffsetPx")
     }
 
     private val dataStore: PreferencesDataStore =
@@ -102,6 +105,15 @@ internal class SettingsDataSource @Inject constructor(
         if (!isImpactedByInputBlock()) return
         dataStore.edit { preferences ->
             preferences[KEY_INPUT_BLOCK_WORKAROUND] = !(preferences[KEY_INPUT_BLOCK_WORKAROUND] ?: false)
+        }
+    }
+
+    internal fun splitScreenYOffsetPx(): Flow<Int> =
+        dataStore.data.map { preferences -> preferences[KEY_SPLIT_SCREEN_Y_OFFSET_PX] ?: 0 }
+
+    internal suspend fun setSplitScreenYOffsetPx(offsetPx: Int) {
+        dataStore.edit { preferences ->
+            preferences[KEY_SPLIT_SCREEN_Y_OFFSET_PX] = offsetPx.coerceAtLeast(0)
         }
     }
 }

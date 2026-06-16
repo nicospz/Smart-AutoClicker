@@ -31,6 +31,7 @@ import com.buzbuz.smartautoclicker.core.dumb.domain.model.REPEAT_COUNT_MAX_VALUE
 import com.buzbuz.smartautoclicker.core.dumb.domain.model.REPEAT_COUNT_MIN_VALUE
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setChecked
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setError
+import com.buzbuz.smartautoclicker.core.ui.bindings.fields.enableEasyOverwriteOnFocus
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setLabel
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setNumericValue
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setOnCheckboxClickedListener
@@ -69,6 +70,7 @@ class DumbScenarioConfigContent(appContext: Context) : NavBarDialogContent(appCo
                 )
             }
             dialogController.hideSoftInputOnFocusLoss(fieldName.textField)
+            fieldName.enableEasyOverwriteOnFocus()
 
             fieldRepeatCount.apply {
                 textField.filters = arrayOf(MinMaxInputFilter(

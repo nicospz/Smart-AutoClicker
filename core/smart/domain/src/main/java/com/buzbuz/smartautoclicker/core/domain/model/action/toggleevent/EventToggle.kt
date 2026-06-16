@@ -25,8 +25,10 @@ data class EventToggle(
     override val id: Identifier,
     val actionId: Identifier,
     val targetEventId: Identifier?,
+    val eventNamePrefix: String? = null,
     val toggleType: ToggleEvent.ToggleType,
 ): Identifiable, Completable {
 
-    override fun isComplete(): Boolean = true
+    override fun isComplete(): Boolean =
+        targetEventId != null || !eventNamePrefix.isNullOrBlank()
 }

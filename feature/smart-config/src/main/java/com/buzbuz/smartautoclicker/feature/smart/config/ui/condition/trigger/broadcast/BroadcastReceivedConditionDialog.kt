@@ -28,6 +28,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.buzbuz.smartautoclicker.core.ui.bindings.dialogs.DialogNavigationButton
 import com.buzbuz.smartautoclicker.core.ui.bindings.dialogs.setButtonEnabledState
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setError
+import com.buzbuz.smartautoclicker.core.ui.bindings.fields.enableEasyOverwriteOnFocus
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setLabel
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setOnCheckboxClickedListener
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setOnTextChangedListener
@@ -89,6 +90,7 @@ class BroadcastReceivedConditionDialog(
                 )
             }
             hideSoftInputOnFocusLoss(fieldName.textField)
+            fieldName.enableEasyOverwriteOnFocus()
 
             editBroadcastAction.apply {
                 setup(R.string.field_intent_broadcast_action_label, R.drawable.ic_search, false)

@@ -19,8 +19,6 @@ package com.buzbuz.smartautoclicker.core.domain.data
 import com.buzbuz.smartautoclicker.core.base.identifier.Identifier
 import com.buzbuz.smartautoclicker.core.domain.model.action.Action
 import com.buzbuz.smartautoclicker.core.domain.model.action.Click
-import com.buzbuz.smartautoclicker.core.domain.model.event.Event
-import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEvent
 
 internal class ScenarioUpdateState {
 
@@ -53,10 +51,6 @@ internal class ScenarioUpdateState {
 
     fun getClickOnConditionDatabaseId(action: Action): Long? =
         if (action is Click) action.clickOnConditionId?.let { getConditionDbId(it) }
-        else null
-
-    fun getAnchorConditionDatabaseId(event: Event): Long? =
-        if (event is ImageEvent) event.anchorConditionId?.let { getConditionDbId(it) }
         else null
 
     private fun getConditionDbId(identifier: Identifier?): Long = when {

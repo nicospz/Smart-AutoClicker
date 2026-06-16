@@ -35,10 +35,13 @@ interface IEventsState {
 
     fun enableAll()
     fun enableEvent(eventId: Long)
+    fun enableEventsWithNamePrefix(prefix: String)
     fun disableAll()
     fun disableEvent(eventId: Long)
+    fun disableEventsWithNamePrefix(prefix: String)
     fun toggleAll()
     fun toggleEvent(eventId: Long)
+    fun toggleEventsWithNamePrefix(prefix: String)
     fun setEventStateListener(listener: EventStateListener)
 }
 
@@ -101,14 +104,29 @@ internal class EventsState(
         triggerEventList.enableEvent(eventId)
     }
 
+    override fun enableEventsWithNamePrefix(prefix: String) {
+        imageEventList.enableEventsWithNamePrefix(prefix)
+        triggerEventList.enableEventsWithNamePrefix(prefix)
+    }
+
     override fun disableEvent(eventId: Long) {
         imageEventList.disableEvent(eventId)
         triggerEventList.disableEvent(eventId)
     }
 
+    override fun disableEventsWithNamePrefix(prefix: String) {
+        imageEventList.disableEventsWithNamePrefix(prefix)
+        triggerEventList.disableEventsWithNamePrefix(prefix)
+    }
+
     override fun toggleEvent(eventId: Long) {
         imageEventList.toggleEvent(eventId)
         triggerEventList.toggleEvent(eventId)
+    }
+
+    override fun toggleEventsWithNamePrefix(prefix: String) {
+        imageEventList.toggleEventsWithNamePrefix(prefix)
+        triggerEventList.toggleEventsWithNamePrefix(prefix)
     }
 
     override fun enableAll() {
@@ -199,5 +217,23 @@ private class EventList<T : Event>(events: List<T>) {
 
     fun toggleAll() {
         eventsMap.keys.forEach(::toggleEvent)
+    }
+
+    fun enableEventsWithNamePrefix(prefix: String) {
+        eventsMap.values
+            .filter { it.name.startsWith(prefix) }
+            .forEach { enableEvent(it.getValidId()) }
+    }
+
+    fun disableEventsWithNamePrefix(prefix: String) {
+        eventsMap.values
+            .filter { it.name.startsWith(prefix) }
+            .forEach { disableEvent(it.getValidId()) }
+    }
+
+    fun toggleEventsWithNamePrefix(prefix: String) {
+        eventsMap.values
+            .filter { it.name.startsWith(prefix) }
+            .forEach { toggleEvent(it.getValidId()) }
     }
 }

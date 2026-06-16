@@ -65,6 +65,50 @@ data class PrecisionGesturePayload(
 
             DecodedPrecisionGesturePayload(version, eventCount, durationMs)
         }
+
+        fun translatePayload(payloadHex: String, dx: Int, dy: Int): String {
+            if (dx == 0 && dy == 0) return payloadHex
+
+            val bytes = payloadHex.hexToBytes()
+            val buffer = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
+            buffer.position(4)
+            val version = buffer.int
+            val eventCount = buffer.int
+            val durationMs = buffer.long
+            require(version == GESTURE_VERSION) { "unsupported gesture payload version" }
+
+            val output = ByteBuffer.allocate(HEADER_SIZE + eventCount * EVENT_RECORD_SIZE).order(ByteOrder.LITTLE_ENDIAN)
+            output.put(GESTURE_MAGIC.encodeToByteArray())
+            output.putInt(version)
+            output.putInt(eventCount)
+            output.putLong(durationMs)
+
+            buffer.position(HEADER_SIZE)
+            repeat(eventCount) {
+                val deltaUs = buffer.long
+                val timeSec = buffer.long
+                val timeUsec = buffer.long
+                val type = buffer.short.toInt() and 0xFFFF
+                val code = buffer.short.toInt() and 0xFFFF
+                var value = buffer.int
+
+                if (type == EV_ABS) {
+                    when (code) {
+                        ABS_X, ABS_MT_POSITION_X -> value += dx
+                        ABS_Y, ABS_MT_POSITION_Y -> value += dy
+                    }
+                }
+
+                output.putLong(deltaUs)
+                output.putLong(timeSec)
+                output.putLong(timeUsec)
+                output.putShort(type.toShort())
+                output.putShort(code.toShort())
+                output.putInt(value)
+            }
+
+            return output.array().toHexString()
+        }
     }
 }
 
@@ -86,3 +130,11 @@ private const val GESTURE_VERSION = 1
 private const val HEADER_SIZE = 20
 private const val EVENT_RECORD_SIZE = 32
 private const val MAX_GESTURE_EVENTS = 50_000
+private const val EV_ABS = 0x03
+private const val ABS_X = 0x00
+private const val ABS_Y = 0x01
+private const val ABS_MT_POSITION_X = 0x35
+private const val ABS_MT_POSITION_Y = 0x36
+
+private fun ByteArray.toHexString(): String =
+    joinToString(separator = "") { byte -> "%02x".format(byte) }

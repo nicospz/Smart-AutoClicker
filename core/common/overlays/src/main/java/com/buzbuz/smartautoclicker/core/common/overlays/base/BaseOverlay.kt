@@ -130,6 +130,7 @@ abstract class BaseOverlay internal constructor(
     }
 
     override fun finish() {
+        Log.w(TAG, "finish() ${javaClass.simpleName}#${hashCode()} lifecycle=${lifecycle.currentState}")
         destroy()
     }
 
@@ -142,9 +143,15 @@ abstract class BaseOverlay internal constructor(
      */
     override fun create(appContext: Context, dismissListener: ((Context, Overlay) -> Unit)?) {
         if (lifecycleRegistry.currentState == State.DESTROYED) lifecycleRegistry.currentState = State.INITIALIZED
-        if (lifecycleRegistry.currentState != State.INITIALIZED) return
+        if (lifecycleRegistry.currentState != State.INITIALIZED) {
+            Log.w(
+                TAG,
+                "create skipped for ${javaClass.simpleName}#${hashCode()}: lifecycle=${lifecycleRegistry.currentState}",
+            )
+            return
+        }
 
-        Log.d(TAG, "create overlay ${hashCode()}")
+        Log.i(TAG, "create ${javaClass.simpleName}#${hashCode()}")
         if (!this::context.isInitialized) context = appContext
         context = newOverlayContext(appContext)
 
@@ -158,7 +165,13 @@ abstract class BaseOverlay internal constructor(
      * If the lifecycle doesn't allows it, does nothing.
      */
     override fun start() {
-        if (lifecycleRegistry.currentState != State.CREATED) return
+        if (lifecycleRegistry.currentState != State.CREATED) {
+            Log.w(
+                TAG,
+                "start skipped for ${javaClass.simpleName}#${hashCode()}: lifecycle=${lifecycleRegistry.currentState}",
+            )
+            return
+        }
 
         // During the orientation change, this overlay was hidden (in CREATED state). As it was not displayed, the
         // recreation of the overlay was delayed to its next start request.

@@ -72,7 +72,8 @@ class EventCopyAdapter(
 private object DiffUtilCallback: DiffUtil.ItemCallback<EventCopyItem>() {
     override fun areItemsTheSame(oldItem: EventCopyItem, newItem: EventCopyItem): Boolean =
         when {
-            oldItem is EventCopyItem.Header && newItem is EventCopyItem.Header -> true
+            oldItem is EventCopyItem.Header && newItem is EventCopyItem.Header ->
+                oldItem.scenarioId == newItem.scenarioId
             oldItem is EventCopyItem.EventItem && newItem is EventCopyItem.EventItem ->
                 oldItem.uiEvent.event.id == newItem.uiEvent.event.id
             else -> false
@@ -90,7 +91,7 @@ class HeaderViewHolder(
 ) : RecyclerView.ViewHolder(viewBinding.root) {
 
     fun onBind(header: EventCopyItem.Header) {
-        viewBinding.textHeader.setText(header.title)
+        viewBinding.textHeader.text = header.title
     }
 }
 

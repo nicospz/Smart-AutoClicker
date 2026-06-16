@@ -18,11 +18,11 @@ package com.buzbuz.smartautoclicker.core.processing.data.processor
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.util.Log
 import androidx.annotation.VisibleForTesting
 
 import com.buzbuz.smartautoclicker.core.common.actions.AndroidActionExecutor
-import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEventDetectionMode.ANCHORED_REPEAT
+import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEventDetectionMode.OFFSET_REPEAT
+import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEventDetectionMode.SPLIT_SCREEN
 import com.buzbuz.smartautoclicker.core.common.actions.precision.PrecisionGestureExecutor
 import com.buzbuz.smartautoclicker.core.common.actions.precision.PrecisionTextExecutor
 import com.buzbuz.smartautoclicker.core.detection.ImageDetector
@@ -58,6 +58,7 @@ internal class ScenarioProcessor(
     precisionGestureExecutor: PrecisionGestureExecutor? = null,
     precisionTextExecutor: PrecisionTextExecutor? = null,
     unblockWorkaroundEnabled: Boolean = false,
+    private val splitScreenYOffsetPx: Int = 0,
     private val onStopRequested: () -> Unit,
     private val progressListener: SmartProcessingListener?,
 ) {
@@ -170,39 +171,27 @@ internal class ScenarioProcessor(
                 if (imageEvent.conditions.isEmpty()) continue
 
                 progressListener?.onEventProcessingStarted(imageEvent)
-                val results = if (imageEvent.detectionMode == ANCHORED_REPEAT) {
-                    conditionsVerifier.verifyAnchoredImageEvent(imageEvent)
-                } else {
-                    conditionsVerifier.verifyConditions(
+                val results = when (imageEvent.detectionMode) {
+                    OFFSET_REPEAT -> conditionsVerifier.verifyOffsetRepeatImageEvent(imageEvent)
+                    SPLIT_SCREEN -> verifySplitScreenImageEvent(imageEvent)
+                    else -> conditionsVerifier.verifyConditions(
                         operator = imageEvent.conditionOperator,
                         conditions = imageEvent.conditions,
                     )
                 }
 
-                if (imageEvent.detectionMode == ANCHORED_REPEAT) {
-                    Log.i(
-                        TAG_ANCHORED,
-                        "Anchored event ${imageEvent.id.databaseId} '${imageEvent.name}' completed: " +
-                                "fulfilled=${results.fulfilled}, keepDetecting=${imageEvent.keepDetecting}, " +
-                                "actions=${imageEvent.actions.size}",
-                    )
-                    results.getAllImageConditionsResults().forEach { result ->
-                        Log.i(
-                            TAG_ANCHORED,
-                            "Anchored event ${imageEvent.id.databaseId} result condition=${result.condition.id.databaseId} " +
-                                    "shouldBeDetected=${result.condition.shouldBeDetected}, detected=${result.haveBeenDetected}, " +
-                                    "fulfilled=${result.isFulfilled}, confidence=${result.confidenceRate}, " +
-                                    "position=${result.position}, bestPosition=${result.bestPosition}",
-                        )
-                    }
-                }
-
                 progressListener?.onEventProcessingCompleted(imageEvent, results.fulfilled == true, results.getAllImageConditionsResults())
                 if (results.fulfilled == true) {
-                    if (imageEvent.detectionMode == ANCHORED_REPEAT) {
-                        Log.i(TAG_ANCHORED, "Anchored event ${imageEvent.id.databaseId}: executing actions")
+                    if (imageEvent.detectionMode == OFFSET_REPEAT || imageEvent.detectionMode == SPLIT_SCREEN) {
+                        results.offsetRepeatMatches.forEach { match ->
+                            actionExecutor.executeActions(
+                                imageEvent,
+                                results.forOffsetRepeatMatch(match),
+                            )
+                        }
+                    } else {
+                        actionExecutor.executeActions(imageEvent, results)
                     }
-                    actionExecutor.executeActions(imageEvent, results)
                     processingState.startEventCooldown(imageEvent)
                     progressListener?.onEventActionsExecuted(imageEvent, results.getAllImageConditionsResults())
 
@@ -217,6 +206,17 @@ internal class ScenarioProcessor(
             imageDetector.releaseScreenBitmap(screenFrame)
         }
     }
+
+    private suspend fun verifySplitScreenImageEvent(event: ImageEvent): ConditionsResults {
+        if (splitScreenYOffsetPx <= 0) {
+            return conditionsVerifier.verifyConditions(
+                operator = event.conditionOperator,
+                conditions = event.conditions,
+            )
+        }
+        return conditionsVerifier.verifyOffsetRepeatImageEvent(
+            event.toSplitScreenOffsetRepeat(splitScreenYOffsetPx),
+        )
+    }
 }
 
-private const val TAG_ANCHORED = "AnchoredImageEvent"

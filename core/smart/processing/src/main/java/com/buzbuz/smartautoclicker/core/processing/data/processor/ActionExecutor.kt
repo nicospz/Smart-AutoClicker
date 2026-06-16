@@ -27,6 +27,7 @@ import com.buzbuz.smartautoclicker.core.base.workarounds.UnblockGestureScheduler
 import com.buzbuz.smartautoclicker.core.base.workarounds.buildUnblockGesture
 import com.buzbuz.smartautoclicker.core.common.actions.AndroidActionExecutor
 import com.buzbuz.smartautoclicker.core.common.actions.precision.PrecisionGestureExecutor
+import com.buzbuz.smartautoclicker.core.common.actions.precision.PrecisionGesturePayload
 import com.buzbuz.smartautoclicker.core.common.actions.precision.PrecisionTextExecutor
 import com.buzbuz.smartautoclicker.core.common.actions.gesture.buildSingleStroke
 import com.buzbuz.smartautoclicker.core.common.actions.gesture.line
@@ -44,6 +45,7 @@ import com.buzbuz.smartautoclicker.core.domain.model.action.PrecisionGesture
 import com.buzbuz.smartautoclicker.core.domain.model.action.PrecisionText
 import com.buzbuz.smartautoclicker.core.domain.model.action.Swipe
 import com.buzbuz.smartautoclicker.core.domain.model.action.ToggleEvent
+import com.buzbuz.smartautoclicker.core.domain.model.action.toggleevent.EventToggle
 import com.buzbuz.smartautoclicker.core.domain.model.action.ChangeCounter
 import com.buzbuz.smartautoclicker.core.domain.model.action.Notification
 import com.buzbuz.smartautoclicker.core.domain.model.action.SetText
@@ -99,17 +101,13 @@ internal class ActionExecutor(
 
     suspend fun executeActions(event: Event, results: ConditionsResults? = null) {
         event.actions.forEach { action ->
-            if (event is ImageEvent && event.detectionMode.name == "ANCHORED_REPEAT") {
-                Log.i(TAG_ANCHORED, "Executing anchored action '${action.name}' type=${action::class.simpleName}")
-            }
-
             val shouldStop = when (action) {
                 is Click -> {
                     executeClick(event, action, results)
                     false
                 }
                 is Swipe -> {
-                    executeSwipe(action)
+                    executeSwipe(action, results)
                     false
                 }
                 is Pause -> {
@@ -142,7 +140,7 @@ internal class ActionExecutor(
                 }
                 is StopScenario -> executeStopScenario()
                 is PrecisionGesture -> {
-                    executePrecisionGesture(action)
+                    executePrecisionGesture(action, results)
                     false
                 }
                 is PrecisionText -> {
@@ -156,13 +154,18 @@ internal class ActionExecutor(
     }
 
     private suspend fun executeClick(event: Event, click: Click, results: ConditionsResults?) {
+        val offsetDx = results?.offsetRepeatDx ?: 0
+        val offsetDy = results?.offsetRepeatDy ?: 0
+
         val clickPath = when (click.positionType) {
             Click.PositionType.USER_SELECTED -> {
-                if (event is ImageEvent && event.detectionMode.name == "ANCHORED_REPEAT") {
-                    Log.i(TAG_ANCHORED, "Anchored click using user selected position=${click.position}")
-                }
                 click.position?.let { position ->
-                    Path().apply { moveTo(position, random) }
+                    Path().apply {
+                        moveTo(
+                            Point(position.x + offsetDx, position.y + offsetDy),
+                            random,
+                        )
+                    }
                 }
             }
 
@@ -197,24 +200,7 @@ internal class ActionExecutor(
         val detectedPosition = result?.position
         if (detectedPosition == null) {
             Log.w(TAG, "Click is invalid, target condition has no detected position")
-            if (event.detectionMode.name == "ANCHORED_REPEAT") {
-                Log.w(
-                    TAG_ANCHORED,
-                    "Anchored click skipped: clickOnConditionId=${click.clickOnConditionId?.databaseId}, " +
-                            "resultFound=${result != null}, detected=${result?.haveBeenDetected}, " +
-                            "fulfilled=${result?.isFulfilled}, position=${result?.position}, " +
-                            "bestPosition=${result?.bestPosition}",
-                )
-            }
             return null
-        }
-
-        if (event.detectionMode.name == "ANCHORED_REPEAT") {
-            Log.i(
-                TAG_ANCHORED,
-                "Anchored click target: clickOnConditionId=${click.clickOnConditionId?.databaseId}, " +
-                        "detectedPosition=$detectedPosition, offset=${click.clickOffset}",
-            )
         }
 
         return Path().apply {
@@ -232,11 +218,20 @@ internal class ActionExecutor(
      * Execute the provided swipe.
      * @param swipe the swipe to be executed.
      */
-    private suspend fun executeSwipe(swipe: Swipe) {
+    private suspend fun executeSwipe(swipe: Swipe, results: ConditionsResults?) {
+        val offsetDx = results?.offsetRepeatDx ?: 0
+        val offsetDy = results?.offsetRepeatDy ?: 0
+        val from = swipe.from ?: return
+        val to = swipe.to ?: return
+
         val swipeGesture = GestureDescription.Builder().buildSingleStroke(
-            path =
-                if (swipe.from == null || swipe.to == null) return
-                else Path().apply { line(swipe.from, swipe.to, random) },
+            path = Path().apply {
+                line(
+                    Point(from.x + offsetDx, from.y + offsetDy),
+                    Point(to.x + offsetDx, to.y + offsetDy),
+                    random,
+                )
+            },
             durationMs = swipe.swipeDuration!!,
             random = random,
         )
@@ -301,11 +296,26 @@ internal class ActionExecutor(
 
         toggleEvent.eventToggles.forEach { eventToggle ->
             when (eventToggle.toggleType) {
-                ToggleEvent.ToggleType.ENABLE -> processingState.enableEvent(eventToggle.targetEventId!!.databaseId)
-                ToggleEvent.ToggleType.DISABLE -> processingState.disableEvent(eventToggle.targetEventId!!.databaseId)
-                ToggleEvent.ToggleType.TOGGLE -> processingState.toggleEvent(eventToggle.targetEventId!!.databaseId)
+                ToggleEvent.ToggleType.ENABLE -> applyEventToggleEnable(eventToggle)
+                ToggleEvent.ToggleType.DISABLE -> applyEventToggleDisable(eventToggle)
+                ToggleEvent.ToggleType.TOGGLE -> applyEventToggleInvert(eventToggle)
             }
         }
+    }
+
+    private fun applyEventToggleEnable(eventToggle: EventToggle) {
+        eventToggle.eventNamePrefix?.let { processingState.enableEventsWithNamePrefix(it) }
+            ?: processingState.enableEvent(eventToggle.targetEventId!!.databaseId)
+    }
+
+    private fun applyEventToggleDisable(eventToggle: EventToggle) {
+        eventToggle.eventNamePrefix?.let { processingState.disableEventsWithNamePrefix(it) }
+            ?: processingState.disableEvent(eventToggle.targetEventId!!.databaseId)
+    }
+
+    private fun applyEventToggleInvert(eventToggle: EventToggle) {
+        eventToggle.eventNamePrefix?.let { processingState.toggleEventsWithNamePrefix(it) }
+            ?: processingState.toggleEvent(eventToggle.targetEventId!!.databaseId)
     }
 
     /**
@@ -385,11 +395,18 @@ internal class ActionExecutor(
         return true
     }
 
-    private suspend fun executePrecisionGesture(action: PrecisionGesture) {
+    private suspend fun executePrecisionGesture(action: PrecisionGesture, results: ConditionsResults?) {
         val payload = action.payloadHex ?: return
         val executor = precisionGestureExecutor ?: return
+        val offsetDx = results?.offsetRepeatDx ?: 0
+        val offsetDy = results?.offsetRepeatDy ?: 0
+        val translatedPayload = if (offsetDx == 0 && offsetDy == 0) {
+            payload
+        } else {
+            PrecisionGesturePayload.translatePayload(payload, offsetDx, offsetDy)
+        }
 
-        runCatching { executor.play(payload) }
+        runCatching { executor.play(translatedPayload) }
             .onFailure { Log.w(TAG, "Precision gesture playback failed", it) }
     }
 
@@ -410,7 +427,6 @@ internal class ActionExecutor(
 
 /** Tag for logs. */
 private const val TAG = "ActionExecutor"
-private const val TAG_ANCHORED = "AnchoredImageEvent"
 /** Waiting delay after a start activity to avoid overflowing the system. */
 private const val INTENT_START_ACTIVITY_DELAY = 1000L
 /** Waiting delay after a broadcast to avoid overflowing the system. */

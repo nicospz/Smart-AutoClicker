@@ -32,6 +32,7 @@ import com.buzbuz.smartautoclicker.core.ui.bindings.dialogs.setButtonEnabledStat
 import com.buzbuz.smartautoclicker.core.ui.bindings.dropdown.setItems
 import com.buzbuz.smartautoclicker.core.ui.bindings.dropdown.setSelectedItem
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setError
+import com.buzbuz.smartautoclicker.core.ui.bindings.fields.enableEasyOverwriteOnFocus
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setLabel
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setOnTextChangedListener
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setText
@@ -81,6 +82,7 @@ class SystemActionDialog(
                 setOnTextChangedListener { viewModel.setName(it.toString()) }
             }
             hideSoftInputOnFocusLoss(fieldName.textField)
+            fieldName.enableEasyOverwriteOnFocus()
 
             fieldType.setItems(
                 label = context.getString(R.string.field_dropdown_system_action_type_title),

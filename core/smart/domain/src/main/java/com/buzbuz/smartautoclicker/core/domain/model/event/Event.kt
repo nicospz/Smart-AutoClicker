@@ -22,8 +22,10 @@ import com.buzbuz.smartautoclicker.core.base.interfaces.Completable
 import com.buzbuz.smartautoclicker.core.base.interfaces.Identifiable
 import com.buzbuz.smartautoclicker.core.base.interfaces.Prioritizable
 import com.buzbuz.smartautoclicker.core.base.interfaces.areComplete
-import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEventDetectionMode.ANCHORED_REPEAT
+import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEventDetectionMode.OFFSET_REPEAT
+import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEventDetectionMode.SPLIT_SCREEN
 import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEventDetectionMode.STANDARD
+import com.buzbuz.smartautoclicker.core.domain.model.event.OffsetRepeatMatchMode
 import com.buzbuz.smartautoclicker.core.domain.model.AND
 import com.buzbuz.smartautoclicker.core.domain.model.WHOLE_SCREEN
 import com.buzbuz.smartautoclicker.core.domain.model.action.Action
@@ -90,7 +92,10 @@ data class ImageEvent(
     override var priority: Int,
     val keepDetecting: Boolean,
     val detectionMode: ImageEventDetectionMode = STANDARD,
-    val anchorConditionId: Identifier? = null,
+    val offsetRepeatCount: Int = 0,
+    val offsetRepeatX: Int = 0,
+    val offsetRepeatY: Int = 0,
+    val offsetRepeatMatchMode: OffsetRepeatMatchMode = OffsetRepeatMatchMode.FIRST_MATCH,
     override val cooldownMs: Long = 0,
 ): Event(), Prioritizable {
 
@@ -104,19 +109,29 @@ data class ImageEvent(
 
         return when (detectionMode) {
             STANDARD -> true
-            ANCHORED_REPEAT -> isAnchoredRepeatComplete()
+            OFFSET_REPEAT -> isOffsetRepeatComplete()
+            SPLIT_SCREEN -> isSplitScreenComplete()
         }
     }
 
-    private fun isAnchoredRepeatComplete(): Boolean {
-        if (conditionOperator != AND) return false
-        val anchor = conditions.find { it.id == anchorConditionId } ?: return false
-        if (!anchor.shouldBeDetected) return false
+    private fun isSplitScreenComplete(): Boolean =
+        conditions.none { it.detectionType == WHOLE_SCREEN }
 
-        val childConditions = conditions.filterNot { it.id == anchorConditionId }
-        if (childConditions.isEmpty()) return false
+    /** Maps this event to offset-repeat parameters for split-screen processing. */
+    fun toSplitScreenOffsetRepeat(deviceYOffsetPx: Int): ImageEvent =
+        copy(
+            detectionMode = OFFSET_REPEAT,
+            offsetRepeatCount = 1,
+            offsetRepeatX = 0,
+            offsetRepeatY = deviceYOffsetPx,
+            offsetRepeatMatchMode = OffsetRepeatMatchMode.ALL_MATCHES,
+        )
 
-        return childConditions.none { it.detectionType == WHOLE_SCREEN }
+    private fun isOffsetRepeatComplete(): Boolean {
+        if (offsetRepeatCount < 1) return false
+        if (offsetRepeatX == 0 && offsetRepeatY == 0) return false
+        if (conditions.any { it.detectionType == WHOLE_SCREEN }) return false
+        return true
     }
 
 }

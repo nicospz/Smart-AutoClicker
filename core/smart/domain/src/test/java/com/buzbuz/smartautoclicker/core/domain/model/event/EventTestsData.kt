@@ -19,6 +19,7 @@ package com.buzbuz.smartautoclicker.core.domain.model.event
 import com.buzbuz.smartautoclicker.core.database.entity.EventEntity
 import com.buzbuz.smartautoclicker.core.database.entity.EventType
 import com.buzbuz.smartautoclicker.core.database.entity.ImageEventDetectionMode as EntityImageEventDetectionMode
+import com.buzbuz.smartautoclicker.core.database.entity.OffsetRepeatMatchMode as EntityOffsetRepeatMatchMode
 import com.buzbuz.smartautoclicker.core.database.entity.ScenarioWithEvents
 import com.buzbuz.smartautoclicker.core.domain.model.AND
 import com.buzbuz.smartautoclicker.core.domain.model.ConditionOperator
@@ -44,7 +45,10 @@ internal object EventTestsData {
         scenarioId: Long,
         priority: Int = 0,
         imageDetectionMode: EntityImageEventDetectionMode = EntityImageEventDetectionMode.STANDARD,
-        anchorConditionId: Long? = null,
+        offsetRepeatCount: Int = 0,
+        offsetRepeatX: Int = 0,
+        offsetRepeatY: Int = 0,
+        offsetRepeatMatchMode: EntityOffsetRepeatMatchMode = EntityOffsetRepeatMatchMode.FIRST_MATCH,
     ) = EventEntity(
         id = id,
         scenarioId = scenarioId,
@@ -55,7 +59,10 @@ internal object EventTestsData {
         type = EventType.IMAGE_EVENT,
         keepDetecting = false,
         imageDetectionMode = imageDetectionMode,
-        anchorConditionId = anchorConditionId,
+        offsetRepeatCount = offsetRepeatCount,
+        offsetRepeatX = offsetRepeatX,
+        offsetRepeatY = offsetRepeatY,
+        offsetRepeatMatchMode = offsetRepeatMatchMode,
     )
 
     fun getNewTriggerEventEntity(
@@ -76,7 +83,10 @@ internal object EventTestsData {
         scenarioId: Long,
         priority: Int = 0,
         detectionMode: ImageEventDetectionMode = ImageEventDetectionMode.STANDARD,
-        anchorConditionId: Long? = null,
+        offsetRepeatCount: Int = 0,
+        offsetRepeatX: Int = 0,
+        offsetRepeatY: Int = 0,
+        offsetRepeatMatchMode: OffsetRepeatMatchMode = OffsetRepeatMatchMode.FIRST_MATCH,
     ) = ImageEvent(
         id.asIdentifier(),
         scenarioId.asIdentifier(),
@@ -88,7 +98,10 @@ internal object EventTestsData {
         priority,
         false,
         detectionMode,
-        anchorConditionId?.asIdentifier(),
+        offsetRepeatCount,
+        offsetRepeatX,
+        offsetRepeatY,
+        offsetRepeatMatchMode,
     )
 
     fun getNewTriggerEvent(

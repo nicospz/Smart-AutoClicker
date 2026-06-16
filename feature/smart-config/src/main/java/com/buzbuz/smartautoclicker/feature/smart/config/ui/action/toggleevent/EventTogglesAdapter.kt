@@ -16,6 +16,8 @@
  */
 package com.buzbuz.smartautoclicker.feature.smart.config.ui.action.toggleevent
 
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.ViewGroup
 
@@ -30,17 +32,25 @@ import com.buzbuz.smartautoclicker.core.ui.bindings.buttons.setChecked
 import com.buzbuz.smartautoclicker.core.ui.bindings.buttons.setOnCheckedListener
 import com.buzbuz.smartautoclicker.core.ui.bindings.buttons.setup
 import com.buzbuz.smartautoclicker.feature.smart.config.R
+import com.buzbuz.smartautoclicker.feature.smart.config.databinding.ItemAddPrefixToggleBinding
+import com.buzbuz.smartautoclicker.feature.smart.config.databinding.ItemEventPrefixToggleBinding
 import com.buzbuz.smartautoclicker.feature.smart.config.databinding.ItemEventToggleBinding
 import com.buzbuz.smartautoclicker.core.ui.databinding.ItemListHeaderBinding
 
 
 class EventToggleAdapter(
     private val onEventToggleStateChanged: (Identifier, ToggleEvent.ToggleType?) -> Unit,
+    private val onPrefixToggleStateChanged: (Identifier, ToggleEvent.ToggleType?) -> Unit,
+    private val onPrefixToggleTextChanged: (Identifier, String) -> Unit,
+    private val onAddPrefixToggleClicked: () -> Unit,
+    private val onRemovePrefixToggleClicked: (Identifier) -> Unit,
 ) : ListAdapter<EventTogglesListItem, RecyclerView.ViewHolder>(ItemEventToggleDiffUtilCallback) {
 
     override fun getItemViewType(position: Int): Int =
         when (getItem(position)) {
             is EventTogglesListItem.Header -> R.layout.item_list_header
+            is EventTogglesListItem.PrefixItem -> R.layout.item_event_prefix_toggle
+            is EventTogglesListItem.AddPrefixButton -> R.layout.item_add_prefix_toggle
             is EventTogglesListItem.Item -> R.layout.item_event_toggle
         }
 
@@ -49,6 +59,20 @@ class EventToggleAdapter(
             R.layout.item_list_header ->
                 HeaderViewHolder(
                     viewBinding = ItemListHeaderBinding.inflate(LayoutInflater.from(parent.context), parent, false),
+                )
+
+            R.layout.item_event_prefix_toggle ->
+                PrefixItemViewHolder(
+                    viewBinding = ItemEventPrefixToggleBinding.inflate(LayoutInflater.from(parent.context), parent, false),
+                    onPrefixToggleStateChanged = onPrefixToggleStateChanged,
+                    onPrefixToggleTextChanged = onPrefixToggleTextChanged,
+                    onRemovePrefixToggleClicked = onRemovePrefixToggleClicked,
+                )
+
+            R.layout.item_add_prefix_toggle ->
+                AddPrefixButtonViewHolder(
+                    viewBinding = ItemAddPrefixToggleBinding.inflate(LayoutInflater.from(parent.context), parent, false),
+                    onAddPrefixToggleClicked = onAddPrefixToggleClicked,
                 )
 
             R.layout.item_event_toggle ->
@@ -63,13 +87,18 @@ class EventToggleAdapter(
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         when (holder) {
             is HeaderViewHolder -> holder.onBind(getItem(position) as EventTogglesListItem.Header)
+            is PrefixItemViewHolder -> holder.onBind(getItem(position) as EventTogglesListItem.PrefixItem)
+            is AddPrefixButtonViewHolder -> holder.onBind()
             is ItemViewHolder -> holder.onBind(getItem(position) as EventTogglesListItem.Item)
         }
     }
 
     override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
         super.onViewRecycled(holder)
-        if (holder is ItemViewHolder) holder.onUnbind()
+        when (holder) {
+            is ItemViewHolder -> holder.onUnbind()
+            is PrefixItemViewHolder -> holder.onUnbind()
+        }
     }
 }
 
@@ -79,13 +108,17 @@ object ItemEventToggleDiffUtilCallback: DiffUtil.ItemCallback<EventTogglesListIt
           when {
               oldItem is EventTogglesListItem.Header && newItem is EventTogglesListItem.Header ->
                   oldItem.title == newItem.title
+              oldItem is EventTogglesListItem.PrefixItem && newItem is EventTogglesListItem.PrefixItem ->
+                  oldItem.prefixToggleId == newItem.prefixToggleId
+              oldItem is EventTogglesListItem.AddPrefixButton && newItem is EventTogglesListItem.AddPrefixButton ->
+                  true
               oldItem is EventTogglesListItem.Item && newItem is EventTogglesListItem.Item ->
                   oldItem.eventId == newItem.eventId
               else -> false
           }
 
     override fun areContentsTheSame(oldItem: EventTogglesListItem, newItem: EventTogglesListItem): Boolean =
-        true
+        oldItem == newItem
 }
 
 
@@ -102,6 +135,66 @@ class HeaderViewHolder(
     }
 }
 
+class PrefixItemViewHolder(
+    private val viewBinding: ItemEventPrefixToggleBinding,
+    private val onPrefixToggleStateChanged: (Identifier, ToggleEvent.ToggleType?) -> Unit,
+    private val onPrefixToggleTextChanged: (Identifier, String) -> Unit,
+    private val onRemovePrefixToggleClicked: (Identifier) -> Unit,
+) : RecyclerView.ViewHolder(viewBinding.root) {
+
+    private var boundPrefixToggleId: Identifier? = null
+    private var textWatcher: TextWatcher? = null
+
+    init {
+        viewBinding.toggleTypeButton.setup(TOGGLE_BUTTONS_CONFIG)
+    }
+
+    fun onBind(item: EventTogglesListItem.PrefixItem) {
+        boundPrefixToggleId = item.prefixToggleId
+
+        viewBinding.inputPrefix.removeTextChangedListener(textWatcher)
+        if (viewBinding.inputPrefix.text?.toString() != item.prefix) {
+            viewBinding.inputPrefix.setText(item.prefix)
+        }
+
+        textWatcher = object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
+            override fun afterTextChanged(s: Editable?) {
+                onPrefixToggleTextChanged(item.prefixToggleId, s?.toString() ?: "")
+            }
+        }
+        viewBinding.inputPrefix.addTextChangedListener(textWatcher)
+
+        viewBinding.toggleTypeButton.setChecked(item.toggleState.toButtonIndex())
+        viewBinding.toggleTypeButton.setOnCheckedListener { newChecked ->
+            onPrefixToggleStateChanged(item.prefixToggleId, newChecked.toToggleType())
+        }
+
+        viewBinding.buttonRemove.setOnClickListener {
+            onRemovePrefixToggleClicked(item.prefixToggleId)
+        }
+    }
+
+    fun onUnbind() {
+        viewBinding.inputPrefix.removeTextChangedListener(textWatcher)
+        textWatcher = null
+        viewBinding.toggleTypeButton.setOnCheckedListener(null)
+        viewBinding.buttonRemove.setOnClickListener(null)
+        boundPrefixToggleId = null
+    }
+}
+
+class AddPrefixButtonViewHolder(
+    private val viewBinding: ItemAddPrefixToggleBinding,
+    private val onAddPrefixToggleClicked: () -> Unit,
+) : RecyclerView.ViewHolder(viewBinding.root) {
+
+    fun onBind() {
+        viewBinding.buttonAddPrefix.setOnClickListener { onAddPrefixToggleClicked() }
+    }
+}
+
 /**
  * View holder displaying an action in the [EventToggleAdapter].
  * @param viewBinding the view binding for this item.
@@ -111,20 +204,8 @@ class ItemViewHolder(
     private val onEventToggleStateChanged: (Identifier, ToggleEvent.ToggleType?) -> Unit,
 ) : RecyclerView.ViewHolder(viewBinding.root) {
 
-    private companion object {
-        private const val BUTTON_ENABLE_EVENT = 0
-        private const val BUTTON_TOGGLE_EVENT = 1
-        private const val BUTTON_DISABLE_EVENT = 2
-
-        private val BUTTONS_CONFIG = MultiStateButtonConfig(
-            icons = listOf(R.drawable.ic_confirm, R.drawable.ic_invert, R.drawable.ic_cancel),
-            selectionRequired = false,
-            singleSelection = true,
-        )
-    }
-
     init {
-        viewBinding.toggleTypeButton.setup(BUTTONS_CONFIG)
+        viewBinding.toggleTypeButton.setup(TOGGLE_BUTTONS_CONFIG)
     }
 
     fun onBind(item: EventTogglesListItem.Item) {
@@ -133,24 +214,10 @@ class ItemViewHolder(
             textActionsCount.text = item.actionsCount.toString()
             textConditionCount.text = item.conditionsCount.toString()
 
-            toggleTypeButton.setChecked(
-                when (item.toggleState) {
-                    ToggleEvent.ToggleType.ENABLE -> BUTTON_ENABLE_EVENT
-                    ToggleEvent.ToggleType.TOGGLE -> BUTTON_TOGGLE_EVENT
-                    ToggleEvent.ToggleType.DISABLE -> BUTTON_DISABLE_EVENT
-                    else -> null
-                }
-            )
+            toggleTypeButton.setChecked(item.toggleState.toButtonIndex())
 
             toggleTypeButton.setOnCheckedListener { newChecked ->
-                val newState = when (newChecked) {
-                    BUTTON_ENABLE_EVENT -> ToggleEvent.ToggleType.ENABLE
-                    BUTTON_TOGGLE_EVENT -> ToggleEvent.ToggleType.TOGGLE
-                    BUTTON_DISABLE_EVENT -> ToggleEvent.ToggleType.DISABLE
-                    else -> null
-                }
-
-                onEventToggleStateChanged(item.eventId, newState)
+                onEventToggleStateChanged(item.eventId, newChecked.toToggleType())
             }
         }
     }
@@ -160,4 +227,22 @@ class ItemViewHolder(
     }
 }
 
+private val TOGGLE_BUTTONS_CONFIG = MultiStateButtonConfig(
+    icons = listOf(R.drawable.ic_confirm, R.drawable.ic_invert, R.drawable.ic_cancel),
+    selectionRequired = false,
+    singleSelection = true,
+)
 
+private fun ToggleEvent.ToggleType?.toButtonIndex(): Int? = when (this) {
+    ToggleEvent.ToggleType.ENABLE -> BUTTON_ENABLE_EVENT
+    ToggleEvent.ToggleType.TOGGLE -> BUTTON_TOGGLE_EVENT
+    ToggleEvent.ToggleType.DISABLE -> BUTTON_DISABLE_EVENT
+    null -> null
+}
+
+private fun Int?.toToggleType(): ToggleEvent.ToggleType? = when (this) {
+    BUTTON_ENABLE_EVENT -> ToggleEvent.ToggleType.ENABLE
+    BUTTON_TOGGLE_EVENT -> ToggleEvent.ToggleType.TOGGLE
+    BUTTON_DISABLE_EVENT -> ToggleEvent.ToggleType.DISABLE
+    else -> null
+}

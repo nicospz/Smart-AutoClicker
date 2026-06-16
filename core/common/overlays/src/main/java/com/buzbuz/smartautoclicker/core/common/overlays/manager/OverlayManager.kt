@@ -100,14 +100,28 @@ class OverlayManager @Inject internal constructor(
     fun getBackStackTop(): Overlay? =
         overlayBackStack.top
 
+    /** @return the root overlay on the back stack (e.g. the running scenario menu). */
+    fun getBackStackBottom(): Overlay? =
+        overlayBackStack.bottom
+
     /** Display the provided overlay and pause the current one, if any. */
     fun navigateTo(context: Context, newOverlay: Overlay, hideCurrent: Boolean = false) {
-        Log.d(
-            TAG, "Pushing NavigateTo request: HideCurrent=$hideCurrent, Overlay=${newOverlay.hashCode()}" +
-                    ", currently navigating: ${isNavigating.value}")
+        Log.i(
+            TAG,
+            "navigateTo ${newOverlay.javaClass.simpleName}#${newOverlay.hashCode()} " +
+                "hideCurrent=$hideCurrent isNavigating=${isNavigating.value} backStackSize=${overlayBackStack.size}",
+        )
 
         overlayNavigationRequestStack.push(OverlayNavigationRequest.NavigateTo(newOverlay, hideCurrent))
-        if (isNavigating.value == null) executeNextNavigationRequest(context)
+        if (isNavigating.value == null) {
+            executeNextNavigationRequest(context)
+        } else {
+            Log.e(
+                TAG,
+                "navigateTo queued but navigation already in progress: ${isNavigating.value}. " +
+                    "Request for ${newOverlay.javaClass.simpleName} will not run until the current navigation completes.",
+            )
+        }
     }
 
     /** Destroys the currently shown overlay. */
@@ -148,10 +162,11 @@ class OverlayManager @Inject internal constructor(
     fun closeAll(context: Context) {
         if (topOverlay == null && overlayBackStack.isEmpty()) return
 
-        Log.d(TAG, "Close all overlays (${overlayBackStack.size}, currently navigating: ${isNavigating.value}")
+        Log.i(TAG, "closeAll overlays=${overlayBackStack.size} isNavigating=${isNavigating.value}")
 
         overlayNavigationRequestStack.clear()
         lifecyclesRegistry.clearStates()
+        isNavigating.value = null
         topOverlay?.destroy()
         repeat(overlayBackStack.size) {
             overlayNavigationRequestStack.push(OverlayNavigationRequest.NavigateUp)
@@ -262,12 +277,17 @@ class OverlayManager @Inject internal constructor(
     private fun executeNextNavigationRequest(context: Context) {
         val request = if (overlayNavigationRequestStack.isNotEmpty()) overlayNavigationRequestStack.pop() else null
         isNavigating.value = request
-        Log.d(TAG, "Executing next navigation request $request")
+        Log.i(TAG, "executeNextNavigationRequest $request")
 
-        when (request) {
-            is OverlayNavigationRequest.NavigateTo -> executeNavigateTo(context, request)
-            OverlayNavigationRequest.NavigateUp -> executeNavigateUp()
-            null -> onNavigationCompleted()
+        try {
+            when (request) {
+                is OverlayNavigationRequest.NavigateTo -> executeNavigateTo(context, request)
+                OverlayNavigationRequest.NavigateUp -> executeNavigateUp(context)
+                null -> onNavigationCompleted()
+            }
+        } catch (error: Exception) {
+            Log.e(TAG, "Navigation request failed: $request", error)
+            isNavigating.value = null
         }
     }
 
@@ -282,11 +302,26 @@ class OverlayManager @Inject internal constructor(
                 overlayBackStack.peek()
             }
 
-        // Create the new one and add it to the stack
+        Log.i(TAG, "executeNavigateTo creating ${request.overlay.javaClass.simpleName}#${request.overlay.hashCode()}")
         request.overlay.create(
             appContext = context,
             dismissListener = ::onOverlayDismissed,
         )
+        Log.i(
+            TAG,
+            "executeNavigateTo created ${request.overlay.javaClass.simpleName}#${request.overlay.hashCode()} " +
+                "lifecycle=${request.overlay.lifecycle.currentState}",
+        )
+
+        if (!request.overlay.lifecycle.currentState.isAtLeast(Lifecycle.State.CREATED)) {
+            Log.e(
+                TAG,
+                "executeNavigateTo aborted: ${request.overlay.javaClass.simpleName} was not created " +
+                    "(lifecycle=${request.overlay.lifecycle.currentState})",
+            )
+            executeNextNavigationRequest(context)
+            return
+        }
 
         // Update current lifecycle
         currentOverlay?.apply {
@@ -296,12 +331,22 @@ class OverlayManager @Inject internal constructor(
 
         request.overlay.start()
         overlayBackStack.push(request.overlay)
+        Log.i(
+            TAG,
+            "executeNavigateTo started ${request.overlay.javaClass.simpleName}#${request.overlay.hashCode()} " +
+                "stackSize=${overlayBackStack.size} hideCurrent=${request.hideCurrent} " +
+                "lifecycle=${request.overlay.lifecycle.currentState}",
+        )
 
         executeNextNavigationRequest(context)
     }
 
-    private fun executeNavigateUp() {
-        if (overlayBackStack.isEmpty()) return
+    private fun executeNavigateUp(context: Context) {
+        if (overlayBackStack.isEmpty()) {
+            Log.w(TAG, "executeNavigateUp: back stack already empty, advancing navigation queue")
+            executeNextNavigationRequest(context)
+            return
+        }
 
         overlayBackStack.peek().apply {
             pause()
@@ -327,12 +372,17 @@ class OverlayManager @Inject internal constructor(
     private fun onNavigationCompleted() {
         // If there is no more navigation requests, resume the top overlay
         if (overlayBackStack.isNotEmpty()) {
+            val top = overlayBackStack.peek()
             // If the overlay stack was requested hidden, do nothing
             if (!isStackHidden()) {
-                Log.d(TAG, "No more pending request, resume stack top overlay")
-                overlayBackStack.peek().resume()
+                Log.i(TAG, "navigation done; resume top=${top.javaClass.simpleName}#${top.hashCode()}")
+                top.resume()
             } else {
-                Log.d(TAG, "No more pending request, but stack is hidden, delaying resume...")
+                Log.w(
+                    TAG,
+                    "navigation done but stack hidden; top=${top.javaClass.simpleName}#${top.hashCode()} " +
+                        "NOT resumed (crop picker may stay invisible)",
+                )
             }
 
             navigateUpToRootCompletionListener?.invoke()

@@ -18,19 +18,18 @@ package com.buzbuz.smartautoclicker.core.processing.data.processor
 
 import android.graphics.Bitmap
 import android.graphics.Rect
-import android.util.Log
 
 import com.buzbuz.smartautoclicker.core.detection.DetectionResult
 import com.buzbuz.smartautoclicker.core.detection.ImageDetector
 import com.buzbuz.smartautoclicker.core.domain.model.AND
 import com.buzbuz.smartautoclicker.core.domain.model.ConditionOperator
 import com.buzbuz.smartautoclicker.core.domain.model.CounterOperationValue
-import com.buzbuz.smartautoclicker.core.domain.model.IN_AREA
 import com.buzbuz.smartautoclicker.core.domain.model.OR
 import com.buzbuz.smartautoclicker.core.domain.model.condition.Condition
 import com.buzbuz.smartautoclicker.core.domain.model.condition.ImageCondition
 import com.buzbuz.smartautoclicker.core.domain.model.condition.TriggerCondition
 import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEvent
+import com.buzbuz.smartautoclicker.core.domain.model.event.OffsetRepeatMatchMode
 import com.buzbuz.smartautoclicker.core.processing.data.processor.state.ProcessingState
 import com.buzbuz.smartautoclicker.core.processing.data.scaling.ImageConditionScalingInfo
 import com.buzbuz.smartautoclicker.core.processing.data.scaling.ScalingManager
@@ -81,138 +80,97 @@ internal class ConditionsVerifier(
         return verificationResults
     }
 
-    suspend fun verifyAnchoredImageEvent(event: ImageEvent): ConditionsResults {
+    suspend fun verifyOffsetRepeatImageEvent(event: ImageEvent): ConditionsResults {
         verificationResults.reset()
         currentVerificationTsMs = System.currentTimeMillis()
 
-        val anchorCondition = event.conditions.find { it.id == event.anchorConditionId }
-            ?: return event.conditions.toUnfulfilledImageResults(
-                reason = "anchor condition ${event.anchorConditionId} not found in event ${event.id.databaseId}",
-            )
-        val anchorScaling = scalingManager.getImageConditionScalingInfo(anchorCondition)
-            ?: return event.conditions.toUnfulfilledImageResults(
-                reason = "no scaling info for anchor ${anchorCondition.id.databaseId}",
-            )
-        val anchorBitmap = bitmapSupplier(
-            anchorCondition.path,
-            anchorScaling.imageArea.width(),
-            anchorScaling.imageArea.height(),
-        ) ?: return event.conditions.toUnfulfilledImageResults(
-            reason = "unable to load anchor bitmap ${anchorCondition.path}",
-        )
+        val screenBounds = scalingManager.getScaledScreenBounds()
+        val matches = mutableListOf<OffsetRepeatMatch>()
 
-        if (!anchorScaling.detectionArea.canContain(anchorScaling.imageArea)) {
-            return event.conditions.toUnfulfilledImageResults(
-                reason = "anchor detection area too small: anchorArea=${anchorScaling.imageArea}, " +
-                        "detectionArea=${anchorScaling.detectionArea}",
-            )
-        }
+        for (instanceIndex in 0..event.offsetRepeatCount) {
+            val dxScreen = event.offsetRepeatX * instanceIndex
+            val dyScreen = event.offsetRepeatY * instanceIndex
+            val dxScaled = scalingManager.scaleDownOffset(dxScreen)
+            val dyScaled = scalingManager.scaleDownOffset(dyScreen)
 
-        Log.i(
-            TAG,
-            "Anchored event ${event.id.databaseId} '${event.name}': anchor=${anchorCondition.id.databaseId} " +
-                    "anchorOriginal=${anchorScaling.imageArea}, anchorSearch=${anchorScaling.detectionArea}, " +
-                    "threshold=${anchorCondition.threshold}, children=${event.conditions.size - 1}",
-        )
+            val instanceResults = mutableListOf<Pair<Long, ProcessedConditionResult>>()
+            var instanceFulfilled = when (event.conditionOperator) {
+                AND -> true
+                OR -> false
+                else -> false
+            }
 
-        val anchorOccurrences = imageDetector.detectConditionOccurrences(
-            conditionBitmap = anchorBitmap,
-            conditionWidth = anchorScaling.imageArea.width(),
-            conditionHeight = anchorScaling.imageArea.height(),
-            detectionArea = anchorScaling.detectionArea,
-            threshold = anchorCondition.threshold,
-        ).filter { it.isDetected }
-            .deduplicateOverlappingOccurrences(anchorScaling.imageArea)
-            .sortedWith(compareBy<DetectionResult> { it.position.y }.thenBy { it.position.x })
-
-        Log.i(
-            TAG,
-            "Anchored event ${event.id.databaseId}: found ${anchorOccurrences.size} anchor occurrence(s): " +
-                    anchorOccurrences.joinToString { occurrence ->
-                        "center=${occurrence.position}, confidence=${occurrence.confidenceRate}"
-                    },
-        )
-
-        if (anchorOccurrences.isEmpty()) {
-            return event.conditions.toUnfulfilledImageResults(reason = "no detected anchor occurrence")
-        }
-
-        val childConditions = event.conditions.filterNot { it.id == anchorCondition.id }
-        var lastCandidateResults: List<Pair<Long, ProcessedConditionResult>> = emptyList()
-
-        for ((candidateIndex, anchorOccurrence) in anchorOccurrences.withIndex()) {
-            val candidateResults = mutableListOf<Pair<Long, ProcessedConditionResult>>()
-            val anchorResult = anchorCondition.toImageResult(anchorOccurrence)
-            candidateResults += anchorCondition.getValidId() to anchorResult
-
-            val anchorRuntimeArea = anchorOccurrence.toArea(anchorScaling.imageArea)
-            var candidateFulfilled = true
-
-            Log.i(
-                TAG,
-                "Anchored event ${event.id.databaseId}: evaluating candidate #$candidateIndex " +
-                        "anchorCenter=${anchorOccurrence.position}, anchorRuntime=$anchorRuntimeArea, " +
-                        "anchorConfidence=${anchorOccurrence.confidenceRate}",
-            )
-
-            for (childCondition in childConditions) {
-                val childScaling = scalingManager.getImageConditionScalingInfo(childCondition)
-                if (childScaling == null) {
-                    candidateFulfilled = false
-                    val invalidResult = childCondition.toInvalidConditionResult()
-                    candidateResults += childCondition.getValidId() to invalidResult
-                    Log.w(
-                        TAG,
-                        "Anchored event ${event.id.databaseId}: child ${childCondition.id.databaseId} invalid, " +
-                                "no scaling info",
-                    )
+            for (condition in event.conditions) {
+                val baseScaling = scalingManager.getImageConditionScalingInfo(condition)
+                if (baseScaling == null) {
+                    val invalidResult = condition.toInvalidConditionResult()
+                    instanceResults += condition.getValidId() to invalidResult
+                    if (event.conditionOperator == AND) {
+                        instanceFulfilled = false
+                        break
+                    }
                     continue
                 }
 
-                val childDetectionArea = childCondition.getRelativeDetectionArea(
-                    anchorOriginalArea = anchorScaling.imageArea,
-                    anchorRuntimeArea = anchorRuntimeArea,
-                    childScalingInfo = childScaling,
-                )
-                val childResult = if (childDetectionArea.canContain(childScaling.imageArea)) {
+                val imageArea = baseScaling.imageArea.translated(dxScaled, dyScaled)
+                val detectionArea = baseScaling.detectionArea.translated(dxScaled, dyScaled)
+                if (!imageArea.fitsIn(screenBounds) || !detectionArea.fitsIn(screenBounds)) {
+                    val invalidResult = condition.toNotDetectedResult()
+                    instanceResults += condition.getValidId() to invalidResult
+                    if (event.conditionOperator == AND) {
+                        instanceFulfilled = false
+                        break
+                    }
+                    continue
+                }
+
+                val result = if (detectionArea.canContain(imageArea)) {
                     verifyImageConditionInArea(
-                        condition = childCondition,
-                        scaledConditionArea = childScaling,
-                        detectionArea = childDetectionArea,
+                        condition = condition,
+                        scaledConditionArea = baseScaling.copy(imageArea = imageArea, detectionArea = detectionArea),
+                        detectionArea = detectionArea,
                         notifyProgress = false,
                     )
                 } else {
-                    childCondition.toNotDetectedResult()
+                    condition.toNotDetectedResult()
                 }
 
-                Log.i(
-                    TAG,
-                    "Anchored event ${event.id.databaseId}: candidate #$candidateIndex child=${childCondition.id.databaseId} " +
-                            "shouldBeDetected=${childCondition.shouldBeDetected}, childOriginal=${childScaling.imageArea}, " +
-                            "childDetectionType=${childCondition.detectionType}, relativeSearch=$childDetectionArea, " +
-                            "canSearch=${childDetectionArea.canContain(childScaling.imageArea)}, " +
-                            "detected=${childResult.haveBeenDetected}, fulfilled=${childResult.isFulfilled}, " +
-                            "confidence=${childResult.confidenceRate}, position=${childResult.position}, " +
-                            "bestPosition=${childResult.bestPosition}",
+                instanceResults += condition.getValidId() to result
+
+                if (event.conditionOperator == OR && result.isFulfilled) {
+                    instanceFulfilled = true
+                    break
+                }
+                if (event.conditionOperator == AND && !result.isFulfilled) {
+                    instanceFulfilled = false
+                    break
+                }
+            }
+
+            if (instanceFulfilled) {
+                val match = OffsetRepeatMatch(
+                    instanceIndex = instanceIndex,
+                    dx = dxScreen,
+                    dy = dyScreen,
+                    results = instanceResults.toMap(),
                 )
+                matches += match
 
-                candidateResults += childCondition.getValidId() to childResult
-                if (!childResult.isFulfilled) candidateFulfilled = false
+                if (event.offsetRepeatMatchMode == OffsetRepeatMatchMode.FIRST_MATCH) {
+                    verificationResults.setOffsetRepeatMatches(matches)
+                    return verificationResults
+                }
             }
 
-            lastCandidateResults = candidateResults
-            if (candidateFulfilled) {
-                Log.i(TAG, "Anchored event ${event.id.databaseId}: candidate #$candidateIndex PASSED")
-                verificationResults.setResults(candidateResults, fulfilledState = true)
-                return verificationResults
-            }
-
-            Log.i(TAG, "Anchored event ${event.id.databaseId}: candidate #$candidateIndex failed")
             yield()
         }
 
-        Log.i(TAG, "Anchored event ${event.id.databaseId}: no candidate passed")
-        verificationResults.setResults(lastCandidateResults, fulfilledState = false)
+        if (matches.isNotEmpty()) {
+            verificationResults.setOffsetRepeatMatches(matches)
+        } else {
+            verificationResults.setFulfilledState(false)
+        }
+
         return verificationResults
     }
 
@@ -333,66 +291,14 @@ internal class ConditionsVerifier(
         if (confidenceRate == 0.0 && position.x == 0 && position.y == 0) null
         else scalingManager.scaleUpDetectionResult(position)
 
-    private fun List<ImageCondition>.toUnfulfilledImageResults(reason: String): ConditionsResults {
-        Log.i(TAG, "Anchored event unfulfilled: $reason")
-        verificationResults.setResults(
-            results = map { condition -> condition.getValidId() to condition.toInvalidConditionResult() },
-            fulfilledState = false,
-        )
-        return verificationResults
-    }
-
-    private fun DetectionResult.toArea(conditionArea: Rect): Rect {
-        val halfWidth = conditionArea.width() / 2
-        val halfHeight = conditionArea.height() / 2
-        return Rect(
-            position.x - halfWidth,
-            position.y - halfHeight,
-            position.x - halfWidth + conditionArea.width(),
-            position.y - halfHeight + conditionArea.height(),
-        )
-    }
-
-    private fun List<DetectionResult>.deduplicateOverlappingOccurrences(conditionArea: Rect): List<DetectionResult> {
-        val bestFirstOccurrences = sortedByDescending { occurrence -> occurrence.confidenceRate }
-        val uniqueOccurrences = mutableListOf<DetectionResult>()
-
-        bestFirstOccurrences.forEach { occurrence ->
-            val occurrenceArea = occurrence.toArea(conditionArea)
-            val overlapsExistingOccurrence = uniqueOccurrences.any { uniqueOccurrence ->
-                Rect.intersects(occurrenceArea, uniqueOccurrence.toArea(conditionArea))
-            }
-
-            if (!overlapsExistingOccurrence) uniqueOccurrences += occurrence
-            else Log.d(
-                TAG,
-                "Discarding overlapping anchor occurrence center=${occurrence.position}, " +
-                        "confidence=${occurrence.confidenceRate}, area=$occurrenceArea",
-            )
-        }
-
-        return uniqueOccurrences
-    }
-
-    private fun ImageCondition.getRelativeDetectionArea(
-        anchorOriginalArea: Rect,
-        anchorRuntimeArea: Rect,
-        childScalingInfo: ImageConditionScalingInfo,
-    ): Rect {
-        val sourceArea = if (detectionType == IN_AREA) childScalingInfo.detectionArea else childScalingInfo.imageArea
-        val relativeLeft = sourceArea.left - anchorOriginalArea.left
-        val relativeTop = sourceArea.top - anchorOriginalArea.top
-
-        return Rect(
-            anchorRuntimeArea.left + relativeLeft,
-            anchorRuntimeArea.top + relativeTop,
-            anchorRuntimeArea.left + relativeLeft + sourceArea.width(),
-            anchorRuntimeArea.top + relativeTop + sourceArea.height(),
-        )
-    }
-
     private fun Rect.canContain(conditionArea: Rect): Boolean =
         left >= 0 && top >= 0 && width() >= conditionArea.width() && height() >= conditionArea.height()
+
+    private fun Rect.fitsIn(bounds: Rect): Boolean =
+        left >= bounds.left && top >= bounds.top && right <= bounds.right && bottom <= bounds.bottom
+
+    private fun Rect.translated(dx: Int, dy: Int): Rect =
+        Rect(left + dx, top + dy, right + dx, bottom + dy)
 
     private fun ImageCondition.toNotDetectedResult(): ProcessedConditionResult.Image =
         ProcessedConditionResult.Image(
@@ -420,5 +326,3 @@ internal class ConditionsVerifier(
             condition = this,
         )
 }
-
-private const val TAG = "AnchoredImageEvent"

@@ -71,7 +71,13 @@ class EventTogglesDialog(
                 }
             }
 
-            eventToggleAdapter = EventToggleAdapter(onEventToggleStateChanged = viewModel::changeEventToggleState)
+            eventToggleAdapter = EventToggleAdapter(
+                onEventToggleStateChanged = viewModel::changeEventToggleState,
+                onPrefixToggleStateChanged = viewModel::changePrefixToggleState,
+                onPrefixToggleTextChanged = viewModel::changePrefixToggleText,
+                onAddPrefixToggleClicked = viewModel::addPrefixToggle,
+                onRemovePrefixToggleClicked = viewModel::removePrefixToggle,
+            )
 
             layoutLoadableList.apply {
                 setEmptyText(R.string.message_empty_screen_event_title)

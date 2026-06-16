@@ -16,6 +16,12 @@
  */
 package com.buzbuz.smartautoclicker.core.ui.bindings.fields
 
+import android.view.View
+import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
+import androidx.core.content.ContextCompat
+import com.buzbuz.smartautoclicker.core.ui.bindings.ALPHA_DISABLED
+import com.buzbuz.smartautoclicker.core.ui.bindings.ALPHA_ENABLED
 import com.buzbuz.smartautoclicker.core.ui.bindings.buttons.MultiStateButtonConfig
 import com.buzbuz.smartautoclicker.core.ui.bindings.buttons.setChecked
 import com.buzbuz.smartautoclicker.core.ui.bindings.buttons.setup
@@ -53,4 +59,22 @@ fun IncludeFieldMultiStateBinding.setChecked(checkedId: Int?) {
 fun IncludeFieldMultiStateBinding.setOnCheckedListener(listener: ((Int?) -> Unit)?) {
     if (listener == null) multiStateButton.setOnCheckedListener(null)
     else multiStateButton.setOnCheckedListener(listener)
+}
+
+fun IncludeFieldMultiStateBinding.setActionButton(
+    @DrawableRes icon: Int,
+    @StringRes contentDescription: Int,
+    onClick: () -> Unit,
+) {
+    buttonAction.apply {
+        visibility = View.VISIBLE
+        this.icon = ContextCompat.getDrawable(root.context, icon)
+        this.contentDescription = root.context.getString(contentDescription)
+        setOnClickListener { onClick() }
+    }
+}
+
+fun IncludeFieldMultiStateBinding.setActionButtonEnabled(isEnabled: Boolean) {
+    buttonAction.isEnabled = isEnabled
+    buttonAction.alpha = if (isEnabled) ALPHA_ENABLED else ALPHA_DISABLED
 }

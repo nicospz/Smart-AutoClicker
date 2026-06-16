@@ -67,7 +67,7 @@ class Migration21to22Tests {
             dbV21.insertV21Event()
         }
 
-        helper.runMigrationsAndValidate(dbPath, NEW_DB_VERSION, true).use { dbV22 ->
+        helper.runMigrationsAndValidate(dbPath, NEW_DB_VERSION, true, Migration21to22).use { dbV22 ->
             dbV22.query("SELECT * FROM event_table").use { eventCursor ->
                 eventCursor.assertCountEquals(1)
                 eventCursor.moveToFirst()

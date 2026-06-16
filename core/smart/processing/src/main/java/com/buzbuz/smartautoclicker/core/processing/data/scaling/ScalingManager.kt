@@ -26,6 +26,7 @@ import com.buzbuz.smartautoclicker.core.domain.model.WHOLE_SCREEN
 import com.buzbuz.smartautoclicker.core.domain.model.condition.ImageCondition
 import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEvent
 import javax.inject.Inject
+import kotlin.math.roundToInt
 import kotlin.math.max
 
 class ScalingManager @Inject constructor(
@@ -66,6 +67,12 @@ class ScalingManager @Inject constructor(
 
     internal fun scaleUpDetectionResult(result: Point): Point =
         result.scaleUp()
+
+    internal fun scaleDownOffset(offsetPx: Int): Int =
+        (offsetPx * scalingRatio).roundToInt()
+
+    internal fun getScaledScreenBounds(): Rect =
+        displayConfigManager.displayConfig.sizePx.toArea().scaleDown()
 
 
     private fun refreshScalingMetrics(): Point {

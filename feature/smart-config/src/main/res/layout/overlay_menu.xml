@@ -76,6 +76,13 @@
                     android:contentDescription="@string/content_desc_open_event_list" />
 
                 <ImageButton
+                    android:id="@+id/btn_touch_probe"
+                    style="@style/AppTheme.Overlay.FloatingMenu.Buttons"
+                    android:src="@drawable/ic_click"
+                    android:visibility="gone"
+                    android:contentDescription="@string/content_desc_touch_probe" />
+
+                <ImageButton
                     android:id="@+id/btn_move"
                     style="@style/AppTheme.Overlay.FloatingMenu.Buttons"
                     android:src="@drawable/ic_move"
