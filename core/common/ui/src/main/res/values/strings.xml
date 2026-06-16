@@ -120,5 +120,6 @@
     <string name="content_desc_stop_clicker">Stop Klick\'r</string>
     <string name="content_desc_confirm">Confirm</string>
     <string name="content_desc_go_back">Back to dialog</string>
+    <string name="content_desc_reset_selection">Reset selection</string>
 
 </resources>

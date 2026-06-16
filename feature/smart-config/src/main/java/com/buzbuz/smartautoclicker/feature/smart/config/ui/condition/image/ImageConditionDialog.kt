@@ -37,11 +37,13 @@ import com.buzbuz.smartautoclicker.core.domain.model.WHOLE_SCREEN
 import com.buzbuz.smartautoclicker.core.ui.bindings.buttons.MultiStateButtonConfig
 import com.buzbuz.smartautoclicker.core.ui.bindings.dialogs.DialogNavigationButton
 import com.buzbuz.smartautoclicker.core.ui.bindings.dialogs.setButtonEnabledState
+import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setActionButton
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setButtonConfig
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setChecked
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setDescription
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setEnabled
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setError
+import com.buzbuz.smartautoclicker.core.ui.bindings.fields.enableEasyOverwriteOnFocus
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setLabel
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setOnCheckedListener
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setOnClickListener
@@ -105,6 +107,7 @@ class ImageConditionDialog(
                 )
             }
             hideSoftInputOnFocusLoss(fieldEditName.textField)
+            fieldEditName.enableEasyOverwriteOnFocus()
 
             fieldShouldAppear.apply {
                 setTitle(context.getString(R.string.field_condition_visibility_title))
@@ -137,6 +140,10 @@ class ImageConditionDialog(
                     )
                 )
                 setOnCheckedListener { index -> viewModel.setDetectionType(index.fromIndexToDetectionType())}
+                setActionButton(
+                    icon = R.drawable.ic_detect_coordinates,
+                    contentDescription = R.string.content_desc_detection_area_coordinates,
+                ) { debounceUserInteraction { showDetectionAreaCoordinatesDialog() } }
             }
 
             fieldSelectArea.apply {
@@ -258,12 +265,29 @@ class ImageConditionDialog(
     }
 
     private fun showDetectionAreaSelector() {
+        val selectorState = viewModel.getAreaSelectorState() ?: run {
+            Log.e(TAG, "Cannot open detection area selector: condition is not configured for IN_AREA")
+            return
+        }
+
+        overlayManager.hideAll()
         overlayManager.navigateTo(
             context = context,
             newOverlay = ImageConditionAreaSelectorMenu(
+                selectorState = selectorState,
                 onAreaSelected = viewModel::setDetectionArea,
             ),
             hideCurrent = true,
+        )
+    }
+
+    private fun showDetectionAreaCoordinatesDialog() {
+        context.showDetectionAreaCoordinatesDialog(
+            initialArea = viewModel.getDetectionArea(),
+            onAreaSelected = { area ->
+                viewModel.setDetectionType(IN_AREA)
+                viewModel.setDetectionArea(area)
+            },
         )
     }
 

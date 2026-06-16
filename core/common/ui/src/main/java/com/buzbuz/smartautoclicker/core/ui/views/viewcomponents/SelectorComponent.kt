@@ -154,6 +154,25 @@ internal class SelectorComponent(
         return result
     }
 
+    /** Update the selection area and reset the selector to it. */
+    fun updateSelectionArea(area: Rect, minimumArea: Rect, notify: Boolean = true) {
+        defaultSelectionArea = area.toRectF()
+        defaultMinimumArea = minimumArea.toRectF()
+        resetSelectorPosition(notify = notify)
+        invalidate()
+    }
+
+    /** Update the minimum selectable size without moving the selector. */
+    fun updateMinimumArea(minimumArea: Rect) {
+        defaultMinimumArea = minimumArea.toRectF()
+        selectorMinimumSize.apply {
+            x = minimumArea.width().toFloat()
+            y = minimumArea.height().toFloat()
+        }
+        verifyBounds()
+        invalidate()
+    }
+
     /**
      * Get the part of the capture that is currently selected within the selector.
      *

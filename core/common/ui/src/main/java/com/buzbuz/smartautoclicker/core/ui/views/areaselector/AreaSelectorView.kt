@@ -93,6 +93,12 @@ class AreaSelectorView(
     fun getSelection(): Rect =
         selector.selectedArea.toRect()
 
+    fun resetSelection(area: Rect, minimalArea: Rect) {
+        selector.updateSelectionArea(area, minimalArea)
+        hintsIcons.showAll()
+        animations.startHideHintsAnimation()
+    }
+
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent?): Boolean {
         if (event == null) return false

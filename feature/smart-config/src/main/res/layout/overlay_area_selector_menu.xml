@@ -47,13 +47,13 @@
                 android:id="@+id/btn_reset"
                 style="@style/AppTheme.Overlay.FloatingMenu.Buttons"
                 android:src="@drawable/ic_invert"
-                android:visibility="gone"
                 android:contentDescription="@string/content_desc_reset_selection" />
 
             <ImageButton
                 android:id="@+id/btn_move"
                 style="@style/AppTheme.Overlay.FloatingMenu.Buttons"
                 android:src="@drawable/ic_move"
+                android:visibility="gone"
                 android:contentDescription="@string/content_desc_move_menu" />
 
         </LinearLayout>

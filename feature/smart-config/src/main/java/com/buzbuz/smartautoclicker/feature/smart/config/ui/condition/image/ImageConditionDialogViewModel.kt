@@ -138,6 +138,22 @@ class ImageConditionViewModel @Inject constructor(
         }
     }
 
+    /** The current detection area for the edited condition. */
+    fun getDetectionArea(): Rect =
+        editionRepository.editionState.getEditedCondition<ImageCondition>()?.let { condition ->
+            condition.detectionArea ?: condition.area
+        } ?: Rect()
+
+    /** Build the selector state for the detection area overlay. */
+    fun getAreaSelectorState(): SelectorUiState? =
+        editionRepository.editionState.getEditedCondition<ImageCondition>()?.let { condition ->
+            if (condition.detectionType != IN_AREA) return null
+            SelectorUiState(
+                initialArea = condition.detectionArea ?: condition.area,
+                minimalArea = condition.area,
+            )
+        }
+
     /**
      * Set the threshold of the configured condition.
      * @param value the new threshold value.

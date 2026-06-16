@@ -238,6 +238,15 @@
 
     <string name="field_select_detection_area_title">Detection Area</string>
     <string name="field_select_detection_area_desc">In [%1$d, %2$d, %3$d, %4$d]</string>
+    <string name="error_detection_area_screenshot">Screen capture is unavailable. Start the scenario with screen recording enabled to use zoom while selecting the detection area.</string>
+
+    <string name="dialog_title_detection_area_coordinates">Detection area coordinates</string>
+    <string name="content_desc_detection_area_coordinates">Edit detection area coordinates</string>
+    <string name="field_detection_area_coord_left">Left</string>
+    <string name="field_detection_area_coord_top">Top</string>
+    <string name="field_detection_area_coord_right">Right</string>
+    <string name="field_detection_area_coord_bottom">Bottom</string>
+
 
     <string name="field_title_condition_threshold">Tolerated difference</string>
 

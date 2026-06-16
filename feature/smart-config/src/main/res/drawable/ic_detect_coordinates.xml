@@ -1,0 +1,10 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960"
+    android:tint="?attr/colorControlNormal">
+  <path
+      android:fillColor="@color/overlayMenuButtons"
+      android:pathData="M200,840L200,120Q200,96 218,78Q236,60 260,60L700,60Q724,60 742,78Q760,96 760,120L760,840Q760,864 742,882Q724,900 700,900L260,900Q236,900 218,882Q200,864 200,840ZM260,780L700,780L700,180L260,180L260,780ZM360,480L420,480L420,420L480,420L480,360L420,360L420,300L360,300L360,360L300,360L300,420L360,420L360,480ZM540,660L600,660L600,600L660,600L660,540L600,540L600,480L540,480L540,540L480,540L480,600L540,600L540,660Z"/>
+</vector>

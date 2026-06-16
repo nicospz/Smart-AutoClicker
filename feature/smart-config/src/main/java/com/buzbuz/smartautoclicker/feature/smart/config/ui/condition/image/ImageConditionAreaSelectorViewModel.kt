@@ -16,39 +16,53 @@
  */
 package com.buzbuz.smartautoclicker.feature.smart.config.ui.condition.image
 
-import android.graphics.Rect
+import android.graphics.Bitmap
+import android.util.Log
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 
-import com.buzbuz.smartautoclicker.core.domain.model.IN_AREA
-import com.buzbuz.smartautoclicker.feature.smart.config.domain.EditionRepository
+import com.buzbuz.smartautoclicker.core.display.recorder.DisplayRecorder
 
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 import javax.inject.Inject
 
 class ImageConditionAreaSelectorViewModel @Inject constructor(
-    editionRepository: EditionRepository,
+    private val displayRecorder: DisplayRecorder,
 ) : ViewModel()  {
 
+    fun takeScreenshot(onSuccess: (Bitmap) -> Unit, onFailure: () -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            delay(SCREENSHOT_CAPTURE_DELAY_MS)
+            val screenshot = withTimeoutOrNull(SCREENSHOT_TIMEOUT_MS) {
+                repeat(SCREENSHOT_MAX_ATTEMPTS) { attempt ->
+                    displayRecorder.acquireLatestBitmap()?.let { bitmap ->
+                        Log.i(TAG, "Screenshot acquired on attempt ${attempt + 1}")
+                        return@withTimeoutOrNull bitmap
+                    }
+                    delay(SCREENSHOT_RETRY_DELAY_MS)
+                }
+                null
+            }
 
-    /** The condition being configured by the user. */
-    private val configuredCondition = editionRepository.editionState.editedImageConditionState
-        .mapNotNull { it.value }
-
-    /** The position at which the selector should be initialized. */
-    val initialArea: Flow<SelectorUiState> = configuredCondition
-        .mapNotNull { condition ->
-            if (condition.detectionType != IN_AREA) null
-            else SelectorUiState(
-                initialArea = condition.detectionArea ?: condition.area,
-                minimalArea = condition.area,
-            )
+            withContext(Dispatchers.Main) {
+                if (screenshot != null) onSuccess(screenshot)
+                else {
+                    Log.e(TAG, "Failed to acquire screenshot for area selector")
+                    onFailure()
+                }
+            }
         }
+    }
 }
 
-data class SelectorUiState(
-    val initialArea: Rect,
-    val minimalArea: Rect,
-)
+private const val TAG = "ImageConditionAreaSelector"
+private const val SCREENSHOT_CAPTURE_DELAY_MS = 300L
+private const val SCREENSHOT_TIMEOUT_MS = 5_000L
+private const val SCREENSHOT_RETRY_DELAY_MS = 50L
+private const val SCREENSHOT_MAX_ATTEMPTS = 100

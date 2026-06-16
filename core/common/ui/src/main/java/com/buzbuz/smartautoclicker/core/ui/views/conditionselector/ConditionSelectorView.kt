@@ -27,6 +27,8 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 
 import androidx.core.content.res.use
+import androidx.core.graphics.toRect
+import kotlin.math.roundToInt
 
 import com.buzbuz.smartautoclicker.core.display.config.DisplayConfigManager
 import com.buzbuz.smartautoclicker.core.ui.R
@@ -67,6 +69,17 @@ class ConditionSelectorView(
     private var isSelectorValid = false
     /** Used during selector validation. kept here to avoid instantiation at each touch event. */
     private val selectorValidityTempValue = RectF()
+    /** When set, the selector must be at least this area size in capture coordinates. */
+    private var customMinimalArea: Rect? = null
+    /**
+     * When true, the selected area is stored in bitmap/screen coordinates and is only updated when the
+     * user moves or resizes the selector. Panning and zooming the capture only changes the viewport.
+     */
+    var lockSelectionOnViewportChanges: Boolean = false
+    /** Selected area in bitmap coordinates while [lockSelectionOnViewportChanges] is enabled. */
+    private var lockedSelectionInBitmapCoords: Rect? = null
+    /** Prevents viewport sync from overwriting the locked selection. */
+    private var isSyncingSelectorFromCapture = false
 
     /** Get the attributes from the style file and initialize all components. */
     init {
@@ -82,10 +95,19 @@ class ConditionSelectorView(
     init {
         selector.onSelectorPositionChanged = { position ->
             hintsIcons.setSelectorArea(position)
+            if (lockSelectionOnViewportChanges && !isSyncingSelectorFromCapture) {
+                lockedSelectionInBitmapCoords =
+                    selector.getSelectionArea(capture.captureArea, capture.zoomLevel)
+            }
             verifySelectorValidity()
         }
         capture.onCapturePositionChanged = { _ ->
-            verifySelectorValidity()
+            if (lockSelectionOnViewportChanges) {
+                syncSelectorDisplayToLockedSelection()
+            } else {
+                updateMinimumSizeForZoom()
+                verifySelectorValidity()
+            }
         }
     }
 
@@ -116,6 +138,8 @@ class ConditionSelectorView(
             field = value
 
             if (value) {
+                customMinimalArea = null
+                lockedSelectionInBitmapCoords = null
                 capture.onReset()
                 selector.onReset()
                 hintsIcons.onReset()
@@ -133,8 +157,17 @@ class ConditionSelectorView(
         selectorValidityTempValue.set(RectF(selector.selectedArea))
 
         val isSelectorOverCapture = selectorValidityTempValue.intersect(capture.captureArea)
-        val isBiggerThanMinimumSize = selectorValidityTempValue.width() >= CAPTURE_MINIMUM_SIZE
-                && selectorValidityTempValue.height() >= CAPTURE_MINIMUM_SIZE
+        val minimumWidth: Float
+        val minimumHeight: Float
+        if (customMinimalArea != null) {
+            minimumWidth = customMinimalArea!!.width() * capture.zoomLevel
+            minimumHeight = customMinimalArea!!.height() * capture.zoomLevel
+        } else {
+            minimumWidth = CAPTURE_MINIMUM_SIZE
+            minimumHeight = CAPTURE_MINIMUM_SIZE
+        }
+        val isBiggerThanMinimumSize = selectorValidityTempValue.width() >= minimumWidth
+                && selectorValidityTempValue.height() >= minimumHeight
 
         if ((isSelectorOverCapture && isBiggerThanMinimumSize) != isSelectorValid) {
             isSelectorValid = !isSelectorValid
@@ -147,15 +180,57 @@ class ConditionSelectorView(
      *
      * @param bitmap the capture the be shown.
      */
-    fun showCapture(bitmap: Bitmap) {
+    fun showCapture(
+        bitmap: Bitmap,
+        defaultSelection: Rect? = null,
+        minimalSelection: Rect? = null,
+    ) {
         capture.screenCapture = BitmapDrawable(resources, bitmap)
         hintsIcons.showAll()
         animations.startShowSelectorAnimation(
             onAnimationCompleted = {
+                when {
+                    defaultSelection != null && minimalSelection != null ->
+                        setSelection(defaultSelection, minimalSelection)
+                    defaultSelection != null ->
+                        setSelection(defaultSelection)
+                }
                 animations.startHideHintsAnimation()
             }
         )
     }
+
+    /**
+     * Set the selected area in capture bitmap coordinates.
+     */
+    fun setSelection(area: Rect) {
+        customMinimalArea = null
+        applySelection(area, toMinimumDisplaySize(CAPTURE_MINIMUM_SIZE.roundToInt()))
+    }
+
+    /**
+     * Set the selected area in capture bitmap coordinates with a minimum selectable size.
+     */
+    fun setSelection(area: Rect, minimalArea: Rect) {
+        customMinimalArea = minimalArea
+        applySelection(area, toMinimumDisplaySize(minimalArea))
+    }
+
+    fun resetSelection(area: Rect, minimalArea: Rect) {
+        customMinimalArea = minimalArea
+        applySelection(area, toMinimumDisplaySize(minimalArea), forceUpdate = true)
+        hintsIcons.showAll()
+        animations.startHideHintsAnimation()
+    }
+
+    /** @return the selected area in capture bitmap coordinates. */
+    fun getSelectedArea(): Rect =
+        if (lockSelectionOnViewportChanges) {
+            lockedSelectionInBitmapCoords
+                ?: selector.getSelectionArea(capture.captureArea, capture.zoomLevel)
+        } else {
+            selector.getSelectionArea(capture.captureArea, capture.zoomLevel)
+        }
 
     /**
      * Get the part of the capture that is currently selected within the selector.
@@ -207,6 +282,62 @@ class ConditionSelectorView(
     override fun onDraw(canvas: Canvas) {
         if (hide) return
         super.onDraw(canvas)
+    }
+
+    private fun applySelection(
+        area: Rect,
+        minimumSize: Rect,
+        forceUpdate: Boolean = false,
+    ) {
+        val displayArea = toDisplayArea(area)
+        if (forceUpdate || !selector.setDefaultSelectionArea(displayArea, minimumSize)) {
+            selector.updateSelectionArea(displayArea, minimumSize)
+        }
+        if (lockSelectionOnViewportChanges) {
+            lockedSelectionInBitmapCoords = Rect(area)
+        }
+        verifySelectorValidity()
+    }
+
+    private fun toDisplayArea(area: Rect): Rect = Rect(
+        (capture.captureArea.left + area.left * capture.zoomLevel).roundToInt(),
+        (capture.captureArea.top + area.top * capture.zoomLevel).roundToInt(),
+        (capture.captureArea.left + area.right * capture.zoomLevel).roundToInt(),
+        (capture.captureArea.top + area.bottom * capture.zoomLevel).roundToInt(),
+    )
+
+    private fun toMinimumDisplaySize(minimalSize: Int): Rect {
+        val size = (minimalSize * capture.zoomLevel).roundToInt().coerceAtLeast(1)
+        return Rect(0, 0, size, size)
+    }
+
+    private fun toMinimumDisplaySize(minimalArea: Rect): Rect = Rect(
+        0,
+        0,
+        (minimalArea.width() * capture.zoomLevel).roundToInt().coerceAtLeast(1),
+        (minimalArea.height() * capture.zoomLevel).roundToInt().coerceAtLeast(1),
+    )
+
+    private fun updateMinimumSizeForZoom() {
+        val minimumSize = customMinimalArea?.let(::toMinimumDisplaySize)
+            ?: toMinimumDisplaySize(CAPTURE_MINIMUM_SIZE.roundToInt())
+        selector.updateMinimumArea(minimumSize)
+    }
+
+    private fun syncSelectorDisplayToLockedSelection() {
+        val locked = lockedSelectionInBitmapCoords ?: return
+
+        isSyncingSelectorFromCapture = true
+        try {
+            val displayArea = toDisplayArea(locked)
+            val minimumSize = customMinimalArea?.let(::toMinimumDisplaySize)
+                ?: toMinimumDisplaySize(CAPTURE_MINIMUM_SIZE.roundToInt())
+            selector.updateSelectionArea(displayArea, minimumSize, notify = false)
+            hintsIcons.setSelectorArea(selector.selectedArea.toRect())
+        } finally {
+            isSyncingSelectorFromCapture = false
+        }
+        verifySelectorValidity()
     }
 
     private fun BitmapDrawable.getSelection(area: Rect): Pair<Rect, Bitmap>? {
