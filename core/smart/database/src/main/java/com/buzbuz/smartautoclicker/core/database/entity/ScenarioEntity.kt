@@ -49,6 +49,9 @@ data class ScenarioEntity(
     @ColumnInfo(name = "detection_quality") val detectionQuality: Int,
     @ColumnInfo(name = "randomize", defaultValue="0") val randomize: Boolean = false,
     @ColumnInfo(name = "keep_screen_on", defaultValue="0") val keepScreenOn: Boolean = false,
+    @ColumnInfo(name = "is_favorite", defaultValue="0") val isFavorite: Boolean = false,
+    @ColumnInfo(name = "auto_start", defaultValue="0") val autoStart: Boolean = false,
+    @ColumnInfo(name = "auto_start_delay_ms", defaultValue="0") val autoStartDelayMs: Long = 0L,
 ) : EntityWithId
 
 /**

@@ -29,6 +29,14 @@ enum class EventType {
     TRIGGER_EVENT,
 }
 
+/** Detection strategy for [EventType.IMAGE_EVENT]. */
+enum class ImageEventDetectionMode {
+    /** Existing behavior: each image condition is searched independently. */
+    STANDARD,
+    /** Find an anchor condition repeatedly, then verify other conditions around each anchor occurrence. */
+    ANCHORED_REPEAT,
+}
+
 /**
  * Type of [ActionEntity].
  * For each type there is a set of values that will be available in the database, all others will always be null. Refers
@@ -53,6 +61,12 @@ enum class ActionType {
     SYSTEM,
     /** Set the text of a focused view on the screen. */
     TEXT,
+    /** Stop the scenario execution. */
+    STOP_SCENARIO,
+    /** Raw precision gesture recorded and replayed through the Shizuku helper. */
+    PRECISION_GESTURE,
+    /** Text injected through Shizuku shell key events or input text. */
+    PRECISION_TEXT,
 }
 
 

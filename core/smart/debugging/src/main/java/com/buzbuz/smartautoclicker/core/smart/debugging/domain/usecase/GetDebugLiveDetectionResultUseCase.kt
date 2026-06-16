@@ -22,7 +22,10 @@ import com.buzbuz.smartautoclicker.core.domain.model.action.Click
 import com.buzbuz.smartautoclicker.core.domain.model.action.Intent
 import com.buzbuz.smartautoclicker.core.domain.model.action.Notification
 import com.buzbuz.smartautoclicker.core.domain.model.action.Pause
+import com.buzbuz.smartautoclicker.core.domain.model.action.PrecisionGesture
+import com.buzbuz.smartautoclicker.core.domain.model.action.PrecisionText
 import com.buzbuz.smartautoclicker.core.domain.model.action.SetText
+import com.buzbuz.smartautoclicker.core.domain.model.action.StopScenario
 import com.buzbuz.smartautoclicker.core.domain.model.action.Swipe
 import com.buzbuz.smartautoclicker.core.domain.model.action.SystemAction
 import com.buzbuz.smartautoclicker.core.domain.model.action.ToggleEvent
@@ -80,10 +83,13 @@ class GetDebugLiveDetectionResultUseCase @Inject constructor(
                 is Click -> action.pressDuration ?: 0
                 is Swipe -> action.swipeDuration ?: 0
                 is Pause -> action.pauseDuration ?: 0
+                is PrecisionGesture -> action.durationMs ?: 0
                 is ChangeCounter,
                 is Intent,
                 is Notification,
+                is PrecisionText,
                 is SetText,
+                is StopScenario,
                 is SystemAction,
                 is ToggleEvent -> 0
             }

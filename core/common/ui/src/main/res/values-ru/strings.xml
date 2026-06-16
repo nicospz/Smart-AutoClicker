@@ -25,7 +25,6 @@
       -->
     <string name="dialog_overlay_title_warning">Предупреждение</string>
     <string name="dialog_overlay_title_copy_from">Копирование</string>
-    <string name="dialog_title_tutorial">Руководство</string>
 
     <!--
       - Text for items in a list or vertical layout.
@@ -48,10 +47,6 @@
       - Messages.
       - Views handles any length here, so no limitations.
       -->
-    <string name="message_tutorial_volume_down_stop">Если действия в вашем сценарии выполняются 
-        слишком быстро, то они могут попрепятствовать остановке Klick\'r через плавающее 
-        меню.\n\nВ данном случае остановить выполнение можно нажав на физическую кнопку 
-        уменьшения громкости.</string>
     <string name="message_dont_show_again">Больше не показывать это сообщение</string>
 
 

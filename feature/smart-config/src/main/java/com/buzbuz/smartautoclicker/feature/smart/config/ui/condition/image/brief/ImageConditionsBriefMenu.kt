@@ -67,7 +67,6 @@ class ImageConditionsBriefMenu(
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch { viewModel.conditionBriefList.collect(::updateItemList) }
                 launch { viewModel.conditionVisualization.collect(::updateActionVisualisation) }
-                launch { viewModel.isTutorialModeEnabled.collect(::updateTutorialModeState) }
             }
         }
     }
@@ -142,10 +141,6 @@ class ImageConditionsBriefMenu(
         briefViewBinding.viewBrief.setDescription(visualization, true)
     }
 
-    private fun updateTutorialModeState(isTutorialEnabled: Boolean) {
-        setBriefPanelAutoHide(!isTutorialEnabled)
-    }
-
     private fun showTryConditionOverlay() {
         val focusedItem = getFocusedItemBrief() ?: return
 
@@ -182,19 +177,24 @@ class ImageConditionsBriefMenu(
         overlayManager.navigateTo(
             context = context,
             newOverlay = CaptureMenu { capturedCondition ->
-                showImageConditionConfigDialog(capturedCondition)
+                showImageConditionConfigDialog(capturedCondition, fromNewCapture = true)
             },
             hideCurrent = true,
         )
     }
 
-    private fun showImageConditionConfigDialog(condition: ImageCondition) {
+    private fun showImageConditionConfigDialog(condition: ImageCondition, fromNewCapture: Boolean = false) {
         viewModel.startConditionEdition(condition)
 
         val conditionConfigDialogListener: OnConditionConfigCompleteListener by lazy {
             object : OnConditionConfigCompleteListener {
                 override fun onConfirmClicked() {
                     viewModel.upsertEditedCondition()
+
+                    if (fromNewCapture) {
+                        viewModel.createClickOnConditionIfNoActions(context, condition)
+                        this@ImageConditionsBriefMenu.back()
+                    }
                 }
                 override fun onDeleteClicked() { viewModel.removeEditedCondition() }
                 override fun onDismissClicked() { viewModel.dismissEditedCondition() }

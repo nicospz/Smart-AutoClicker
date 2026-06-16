@@ -41,7 +41,7 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="0dp"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/button_delete"
+            app:layout_constraintEnd_toStartOf="@id/button_favorite"
             app:layout_constraintTop_toTopOf="@id/button_delete"
             app:layout_constraintBottom_toBottomOf="@id/button_delete"
             android:drawablePadding="@dimen/margin_horizontal_small"
@@ -49,10 +49,21 @@
             tools:text="My cool scenario " />
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/button_delete"
+            android:id="@+id/button_favorite"
             style="@style/AppTheme.Widget.IconButton"
             android:layout_marginEnd="@dimen/margin_horizontal_default"
             app:layout_constraintStart_toEndOf="@id/scenario_name"
+            app:layout_constraintEnd_toStartOf="@id/button_delete"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:icon="@drawable/ic_sort_favourites"
+            tools:visibility="visible"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/button_delete"
+            style="@style/AppTheme.Widget.IconButton"
+            android:layout_marginEnd="@dimen/margin_horizontal_default"
+            app:layout_constraintStart_toEndOf="@id/button_favorite"
             app:layout_constraintEnd_toStartOf="@id/button_start"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"

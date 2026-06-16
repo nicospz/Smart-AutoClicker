@@ -19,6 +19,7 @@
 #define KLICK_R_TEMPLATE_MATCHER_HPP
 
 #include <opencv2/core/types.hpp>
+#include <vector>
 
 #include "../images/condition_image.hpp"
 #include "../images/screen_image.hpp"
@@ -48,6 +49,13 @@ namespace smartautoclicker {
                 const ConditionImage& condition,
                 const cv::Rect& detectionArea,
                 int threshold);
+
+        std::vector<TemplateMatchingResult> matchTemplateOccurrences(
+                const ScreenImage& screenImage,
+                const ConditionImage& condition,
+                const cv::Rect& detectionArea,
+                int threshold,
+                int maxResults);
 
         TemplateMatchingResult* getMatchingResults();
 

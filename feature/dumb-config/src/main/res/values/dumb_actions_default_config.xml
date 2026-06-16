@@ -22,6 +22,9 @@
     <string name="default_dumb_swipe_name" translatable="false">Swipe</string>
     <integer name="default_dumb_swipe_duration">500</integer>
 
+    <string name="default_dumb_precision_gesture_name" translatable="false">Precision gesture</string>
+    <string name="default_dumb_precision_text_name" translatable="false">Precision text</string>
+
     <string name="default_dumb_pause_name" translatable="false">Wait</string>
     <integer name="default_dumb_pause_duration">50</integer>
 </resources>

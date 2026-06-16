@@ -81,6 +81,10 @@ interface DumbScenarioDao {
     @Update
     suspend fun updateDumbScenario(dumbScenario: DumbScenarioEntity)
 
+    /** Update favorite state for a dumb scenario. */
+    @Query("UPDATE dumb_scenario_table SET is_favorite = :isFavorite WHERE id = :dumbScenarioId")
+    suspend fun updateDumbScenarioFavorite(dumbScenarioId: Long, isFavorite: Boolean)
+
     /**
      * Delete the provided click scenario from the database.
      *

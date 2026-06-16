@@ -56,6 +56,19 @@ interface ImageDetector : AutoCloseable {
         threshold: Int,
     ): DetectionResult
 
+    /**
+     * Detect all matching occurrences of a bitmap in the current screen bitmap.
+     * Results are returned in native confidence order; callers can sort them spatially if needed.
+     */
+    fun detectConditionOccurrences(
+        conditionBitmap: Bitmap,
+        conditionWidth: Int,
+        conditionHeight: Int,
+        detectionArea: Rect,
+        threshold: Int,
+        maxResults: Int = 30,
+    ): List<DetectionResult>
+
     /** Release the resources of the screen image set with [setScreenBitmap]. */
     fun releaseScreenBitmap(screenBitmap: Bitmap)
 }

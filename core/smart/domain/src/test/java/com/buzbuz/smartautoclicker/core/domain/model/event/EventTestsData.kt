@@ -18,6 +18,7 @@ package com.buzbuz.smartautoclicker.core.domain.model.event
 
 import com.buzbuz.smartautoclicker.core.database.entity.EventEntity
 import com.buzbuz.smartautoclicker.core.database.entity.EventType
+import com.buzbuz.smartautoclicker.core.database.entity.ImageEventDetectionMode as EntityImageEventDetectionMode
 import com.buzbuz.smartautoclicker.core.database.entity.ScenarioWithEvents
 import com.buzbuz.smartautoclicker.core.domain.model.AND
 import com.buzbuz.smartautoclicker.core.domain.model.ConditionOperator
@@ -42,7 +43,20 @@ internal object EventTestsData {
         enabledOnStart: Boolean = EVENT_ENABLED_ON_START,
         scenarioId: Long,
         priority: Int = 0,
-    ) = EventEntity(id, scenarioId, name, conditionOperator, priority, enabledOnStart, EventType.IMAGE_EVENT, keepDetecting = false)
+        imageDetectionMode: EntityImageEventDetectionMode = EntityImageEventDetectionMode.STANDARD,
+        anchorConditionId: Long? = null,
+    ) = EventEntity(
+        id = id,
+        scenarioId = scenarioId,
+        name = name,
+        conditionOperator = conditionOperator,
+        priority = priority,
+        enabledOnStart = enabledOnStart,
+        type = EventType.IMAGE_EVENT,
+        keepDetecting = false,
+        imageDetectionMode = imageDetectionMode,
+        anchorConditionId = anchorConditionId,
+    )
 
     fun getNewTriggerEventEntity(
         id: Long = EVENT_ID,
@@ -61,7 +75,21 @@ internal object EventTestsData {
         conditions: List<ImageCondition> = emptyList(),
         scenarioId: Long,
         priority: Int = 0,
-    ) = ImageEvent(id.asIdentifier(), scenarioId.asIdentifier(), name, conditionOperator, actions, conditions, enabledOnStart, priority, false)
+        detectionMode: ImageEventDetectionMode = ImageEventDetectionMode.STANDARD,
+        anchorConditionId: Long? = null,
+    ) = ImageEvent(
+        id.asIdentifier(),
+        scenarioId.asIdentifier(),
+        name,
+        conditionOperator,
+        actions,
+        conditions,
+        enabledOnStart,
+        priority,
+        false,
+        detectionMode,
+        anchorConditionId?.asIdentifier(),
+    )
 
     fun getNewTriggerEvent(
         id: Long = EVENT_ID,

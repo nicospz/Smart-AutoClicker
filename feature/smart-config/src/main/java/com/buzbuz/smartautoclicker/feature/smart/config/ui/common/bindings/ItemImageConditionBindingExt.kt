@@ -18,6 +18,7 @@ package com.buzbuz.smartautoclicker.feature.smart.config.ui.common.bindings
 
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.view.View
 
 import androidx.core.content.ContextCompat
 
@@ -42,6 +43,7 @@ fun IncludeImageConditionCardBinding.bind(
     conditionShouldBeDetected.setImageResource(uiCondition.shouldBeVisibleIconRes)
     conditionDetectionType.setImageResource(uiCondition.detectionTypeIconRes)
     conditionThreshold.text = uiCondition.thresholdText
+    conditionAnchorBadge.visibility = if (uiCondition.isAnchor) View.VISIBLE else View.GONE
 
     return bitmapProvider.invoke(uiCondition.condition) { bitmap ->
         if (bitmap != null) {

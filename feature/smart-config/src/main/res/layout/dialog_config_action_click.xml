@@ -52,6 +52,12 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="@dimen/margin_vertical_small"/>
 
+            <include layout="@layout/include_field_text_input"
+                android:id="@+id/field_wait_after_click"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/margin_vertical_small"/>
+
             <com.google.android.material.card.MaterialCardView
                 style="@style/AppTheme.Widget.Card"
                 android:layout_width="match_parent"

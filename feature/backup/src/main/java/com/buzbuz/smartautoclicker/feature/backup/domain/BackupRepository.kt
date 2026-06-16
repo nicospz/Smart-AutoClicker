@@ -19,6 +19,7 @@ package com.buzbuz.smartautoclicker.feature.backup.domain
 import android.content.Context
 import android.graphics.Point
 import android.net.Uri
+import android.util.Log
 
 import com.buzbuz.smartautoclicker.core.database.ClickDatabase
 import com.buzbuz.smartautoclicker.core.domain.IRepository
@@ -108,9 +109,12 @@ class BackupRepository @Inject constructor(
                     onCompleted = { dumbs, smarts, failureCount, compatWarning ->
                         var totalFailures = failureCount
 
+                        Log.i(TAG, "Import verification completed: dumbs=${dumbs.size}, smarts=${smarts.size}, failures=$failureCount")
                         val dumbsSuccess = dumbs.toMutableList()
                         dumbs.forEach { completeScenario ->
+                            Log.d(TAG, "Insert dumb scenario backup: scenarioId=${completeScenario.scenario.id}")
                             if (dumbRepository.addDumbScenarioCopy(completeScenario) == null) {
+                                Log.w(TAG, "Failed to insert dumb scenario backup: scenarioId=${completeScenario.scenario.id}")
                                 dumbsSuccess.remove(completeScenario)
                                 totalFailures++
                             }
@@ -118,12 +122,18 @@ class BackupRepository @Inject constructor(
 
                         val smartsSuccess = smarts.toMutableList()
                         smarts.forEach { completeScenario ->
+                            Log.d(TAG, "Insert smart scenario backup: scenarioId=${completeScenario.scenario.id}")
                             if (smartRepository.addScenarioCopy(completeScenario) == null) {
+                                Log.w(TAG, "Failed to insert smart scenario backup: scenarioId=${completeScenario.scenario.id}")
                                 smartsSuccess.remove(completeScenario)
                                 totalFailures++
                             }
                         }
 
+                        Log.i(
+                            TAG,
+                            "Import insertion completed: successes=${dumbsSuccess.size + smartsSuccess.size}, failures=$totalFailures",
+                        )
                         send(Backup.Completed(
                             successCount = dumbsSuccess.size + smartsSuccess.size,
                             failureCount = totalFailures,
@@ -135,3 +145,6 @@ class BackupRepository @Inject constructor(
         }
     }
 }
+
+/** Tag for logs. */
+private const val TAG = "BackupRepository"

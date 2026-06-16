@@ -147,6 +147,12 @@ class DumbScenarioBriefViewModel @Inject constructor(
     fun createNewDumbPause(context: Context, ): DumbAction.DumbPause =
         dumbEditionRepository.dumbActionBuilder.createNewDumbPause(context)
 
+    fun createNewDumbPrecisionGesture(context: Context): DumbAction.DumbPrecisionGesture =
+        dumbEditionRepository.dumbActionBuilder.createNewDumbPrecisionGesture(context)
+
+    fun createNewDumbPrecisionText(context: Context): DumbAction.DumbPrecisionText =
+        dumbEditionRepository.dumbActionBuilder.createNewDumbPrecisionText(context)
+
     fun createDumbActionCopy(actionToCopy: DumbAction): DumbAction =
         dumbEditionRepository.dumbActionBuilder.createNewDumbActionFrom(actionToCopy)
 
@@ -221,6 +227,14 @@ class DumbScenarioBriefViewModel @Inject constructor(
 
             is DumbAction.DumbPause -> PauseDescription(
                 pauseDurationMs = pauseDurationMs,
+            )
+
+            is DumbAction.DumbPrecisionGesture -> PauseDescription(
+                pauseDurationMs = durationMs ?: 0L,
+            )
+
+            is DumbAction.DumbPrecisionText -> PauseDescription(
+                pauseDurationMs = 0L,
             )
         }
 }

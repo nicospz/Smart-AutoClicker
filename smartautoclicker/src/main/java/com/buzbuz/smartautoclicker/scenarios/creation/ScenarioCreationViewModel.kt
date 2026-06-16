@@ -117,6 +117,9 @@ class ScenarioCreationViewModel @Inject constructor(
                 maxDurationMin = 1,
                 isDurationInfinite = true,
                 randomize = false,
+                isFavorite = false,
+                autoStart = false,
+                autoStartDelayMs = 0L,
             )
         )
     }
@@ -128,6 +131,9 @@ class ScenarioCreationViewModel @Inject constructor(
                 name = _name.value!!,
                 detectionQuality = getDefaultDetectionQuality(),
                 randomize = false,
+                isFavorite = false,
+                autoStart = false,
+                autoStartDelayMs = 0L,
             )
         )
     }

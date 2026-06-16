@@ -4,13 +4,11 @@
     <string name="no">否</string>
     <string name="dialog_overlay_title_copy_from">複製來源</string>
     <string name="dialog_overlay_title_warning">警告</string>
-    <string name="dialog_title_tutorial">教學</string>
     <string name="field_click_position_title">點擊位置</string>
     <string name="field_swipe_positions_title">滑動位置</string>
     <string name="item_title_try_element">測試您的 %1$s</string>
     <string name="item_error_action_invalid_generic">此動作無效</string>
     <string name="message_empty_copy">沒有可複製的內容</string>
-    <string name="message_tutorial_volume_down_stop">若情境點擊過快，可能無法透過懸浮選單停止。\n\n此時可按下裝置的實體「音量降低」鍵以停止目前情境。</string>
     <string name="message_dont_show_again">不再顯示此訊息</string>
     <string name="button_understood">瞭解</string>
     <string name="input_field_label_anti_detection">反偵測</string>

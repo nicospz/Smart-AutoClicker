@@ -32,7 +32,8 @@ sealed interface DebugLiveEventConditionResult {
     /**
      * @param isDetected tells if the image of this condition have been detected or not.
      * @param confidenceRate the confidence rate of the detection algorithm on this result. Between [0 - 100].
-     * @param detectionArea the area of the image that have been detected. Null if not detected.
+     * @param detectionArea the area of the image that has been detected. Null if not detected.
+     * @param bestMatchArea the best candidate area found by the detector, even when below threshold.
      */
     data class Image(
         override val condition: ImageCondition,
@@ -40,6 +41,7 @@ sealed interface DebugLiveEventConditionResult {
         val isDetected: Boolean,
         val confidenceRate: Double,
         val detectionArea: Rect?,
+        val bestMatchArea: Rect? = detectionArea,
     ) : DebugLiveEventConditionResult
 
     data class Trigger(

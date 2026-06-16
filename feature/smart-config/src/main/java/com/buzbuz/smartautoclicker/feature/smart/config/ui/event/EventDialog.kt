@@ -17,10 +17,12 @@
 package com.buzbuz.smartautoclicker.feature.smart.config.ui.event
 
 import android.text.InputFilter
+import android.text.InputType
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -31,6 +33,9 @@ import com.buzbuz.smartautoclicker.core.common.overlays.dialog.OverlayDialog
 import com.buzbuz.smartautoclicker.core.domain.model.AND
 import com.buzbuz.smartautoclicker.core.domain.model.ConditionOperator
 import com.buzbuz.smartautoclicker.core.domain.model.OR
+import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEventDetectionMode
+import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEventDetectionMode.ANCHORED_REPEAT
+import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEventDetectionMode.STANDARD
 import com.buzbuz.smartautoclicker.core.ui.bindings.buttons.DualStateButtonTextConfig
 import com.buzbuz.smartautoclicker.core.ui.bindings.dialogs.DialogNavigationButton
 import com.buzbuz.smartautoclicker.core.ui.bindings.dialogs.setButtonEnabledState
@@ -47,6 +52,7 @@ import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setOnTextChangedListe
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setText
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setTitle
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setupDescriptions
+import com.buzbuz.smartautoclicker.core.ui.utils.MinMaxInputFilter
 import com.buzbuz.smartautoclicker.feature.smart.config.R
 import com.buzbuz.smartautoclicker.feature.smart.config.databinding.DialogEventConfigBinding
 import com.buzbuz.smartautoclicker.feature.smart.config.di.ScenarioConfigViewModelsEntryPoint
@@ -131,6 +137,15 @@ class EventDialog(
             setOnClickListener(viewModel::toggleEventState)
         }
 
+        fieldEventCooldown.apply {
+            textField.filters = arrayOf(MinMaxInputFilter(0))
+            setLabel(R.string.input_field_label_event_cooldown)
+            setOnTextChangedListener {
+                viewModel.setEventCooldown(if (it.isNotEmpty()) it.toString().toLong() else 0L)
+            }
+        }
+        hideSoftInputOnFocusLoss(fieldEventCooldown.textField)
+
         fieldKeepDetecting.apply {
             setTitle(context.resources.getString(R.string.field_event_keep_detecting_title))
             setupDescriptions(
@@ -167,6 +182,7 @@ class EventDialog(
                 setAdapter(
                     EventImageConditionsAdapter(
                         itemClickedListener = ::showImageConditionsBriefMenu,
+                        itemLongClickedListener = ::setAnchorCondition,
                         bitmapProvider = viewModel::getConditionBitmap,
                     ),
                 )
@@ -185,6 +201,27 @@ class EventDialog(
 
                 setAdapter(EventChildrenCardsAdapter { showTriggerConditionsDialog() })
                 setOnClickListener { debounceUserInteraction { showTriggerConditionsDialog() } }
+            }
+        }
+
+        fieldImageDetectionMode.apply {
+            setTitle(context.getString(R.string.field_image_detection_mode_title))
+            setupDescriptions(
+                listOf(
+                    context.getString(R.string.field_image_detection_mode_desc_normal),
+                    context.getString(R.string.field_image_detection_mode_desc_anchored),
+                )
+            )
+            setButtonConfig(
+                DualStateButtonTextConfig(
+                    textLeft = context.getString(R.string.field_image_detection_mode_normal),
+                    textRight = context.getString(R.string.field_image_detection_mode_anchored),
+                    selectionRequired = true,
+                    singleSelection = true,
+                )
+            )
+            setOnCheckedListener { checkedId ->
+                viewModel.setDetectionMode(if (checkedId == 0) STANDARD else ANCHORED_REPEAT)
             }
         }
 
@@ -241,7 +278,11 @@ class EventDialog(
                 launch { viewModel.eventName.collect(viewBinding.fieldEventName::setText) }
                 launch { viewModel.eventNameError.collect(viewBinding.fieldEventName::setError) }
                 launch { viewModel.conditionOperator.collect(::updateConditionOperator) }
+                launch { viewModel.detectionMode.collect(::updateImageDetectionMode) }
+                launch { viewModel.isAnchoredDetectionMode.collect(::updateAnchoredModeUi) }
                 launch { viewModel.eventEnabledOnStart.collect(::updateEnabledOnStart) }
+                launch { viewModel.eventCooldown.collect(::updateCooldown) }
+                launch { viewModel.eventCooldownError.collect(viewBinding.fieldEventCooldown::setError) }
                 launch { viewModel.keepDetecting.collect(::updateKeepDetecting) }
                 launch { viewModel.isImageEvent.collect(::updateImageEventSpecificViewsVisibility) }
                 launch { viewModel.canTryEvent.collect(::updateTryFieldEnabledState) }
@@ -307,11 +348,28 @@ class EventDialog(
         }
     }
 
+    private fun updateImageDetectionMode(mode: ImageEventDetectionMode) {
+        viewBinding.fieldImageDetectionMode.apply {
+            val index = if (mode == ANCHORED_REPEAT) 1 else 0
+            setChecked(index)
+            setDescription(index)
+        }
+    }
+
+    private fun updateAnchoredModeUi(isAnchored: Boolean) {
+        viewBinding.fieldConditionsOperator.root.visibility = if (isAnchored) View.GONE else View.VISIBLE
+        viewBinding.dividerConditionsOperator.visibility = if (isAnchored) View.GONE else View.VISIBLE
+    }
+
     private fun updateEnabledOnStart(enabledOnStart: Boolean) {
         viewBinding.fieldIsEnabled.apply {
             setChecked(enabledOnStart)
             setDescription(if (enabledOnStart) 1 else 0)
         }
+    }
+
+    private fun updateCooldown(cooldownMs: String) {
+        viewBinding.fieldEventCooldown.setText(cooldownMs, InputType.TYPE_CLASS_NUMBER)
     }
 
     private fun updateKeepDetecting(keepDetecting: Boolean) {
@@ -323,6 +381,7 @@ class EventDialog(
 
     private fun updateImageEventSpecificViewsVisibility(isEnabled: Boolean) {
         viewBinding.apply {
+            fieldImageDetectionMode.root.visibility = if (isEnabled) View.VISIBLE else View.GONE
             fieldKeepDetecting.root.visibility =  if (isEnabled) View.VISIBLE else View.GONE
             dividerKeepDetecting.visibility =  if (isEnabled) View.VISIBLE else View.GONE
             cardEventTest.visibility = if (isEnabled) View.VISIBLE else View.GONE
@@ -352,6 +411,17 @@ class EventDialog(
             newOverlay = ImageConditionsBriefMenu(initialFocusedIndex),
             hideCurrent = true,
         )
+    }
+
+    private fun setAnchorCondition(index: Int): Boolean {
+        if (!viewModel.setAnchorCondition(index)) return false
+
+        Toast.makeText(
+            context,
+            R.string.message_anchor_condition_selected,
+            Toast.LENGTH_SHORT,
+        ).show()
+        return true
     }
 
     private fun showTriggerConditionsDialog() {

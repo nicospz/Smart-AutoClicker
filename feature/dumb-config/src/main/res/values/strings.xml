@@ -48,9 +48,32 @@
     <string name="item_desc_dumb_swipe">Swipe from a position on the screen to another</string>
     <string name="item_desc_dumb_swipe_details">During %1$s from [%2$d, %3$d] to [%4$d, %5$d]</string>
     <string name="item_desc_dumb_swipe_positions">Swipe from %1$d, %2$d to %3$d, %4$d</string>
+    <string name="item_desc_dumb_precision_gesture">Record and replay a raw touch gesture with Shizuku</string>
+    <string name="item_desc_dumb_precision_gesture_details">%1$d events during %2$s</string>
+    <string name="item_desc_dumb_precision_text">Send text with Shizuku key events or shell input</string>
+    <string name="item_desc_dumb_precision_text_details">%1$d chars, %2$s</string>
+    <string name="input_field_label_precision_text">Text</string>
+    <string name="button_dumb_precision_text_mode_keys">Key events</string>
+    <string name="button_dumb_precision_text_mode_shell">Shell input</string>
+    <string name="button_dumb_precision_text_try">Try</string>
+    <string name="status_dumb_precision_text_ready">%1$d chars, %2$s</string>
+    <string name="status_dumb_precision_text_typing">Sending precision text</string>
+    <string name="status_dumb_precision_text_typed">Precision text sent</string>
+    <string name="button_dumb_precision_gesture_record">Record</string>
+    <string name="button_dumb_precision_gesture_play">Play</string>
+    <string name="button_dumb_precision_gesture_clear">Clear</string>
+    <string name="button_dumb_precision_gesture_save">Save</string>
+    <string name="button_dumb_precision_gesture_delete">Delete</string>
+    <string name="status_dumb_precision_gesture_empty">No gesture recorded</string>
+    <string name="status_dumb_precision_gesture_recording">Touch the target screen to record. Recording stops automatically.</string>
+    <string name="status_dumb_precision_gesture_ready">%1$d events recorded during %2$s</string>
+    <string name="status_dumb_precision_gesture_playing">Playing precision gesture</string>
+    <string name="status_dumb_precision_gesture_played">Precision gesture played</string>
     <string name="item_title_dumb_click">Click</string>
     <string name="item_title_dumb_pause">Wait</string>
     <string name="item_title_dumb_swipe">Swipe</string>
+    <string name="item_title_dumb_precision_gesture">Precision gesture</string>
+    <string name="item_title_dumb_precision_text">Precision text</string>
     <string name="item_title_no_dumb_actions">No Actions</string>
     <string name="item_title_dumb_action_copy">Copy</string>
     <string name="item_desc_dumb_action_copy">Copy an existing Action from any Scenarios</string>
@@ -89,6 +112,10 @@
     <string name="input_field_label_maximum_duration">Maximum duration (minutes)</string>
     <string name="input_field_label_repeat_count">Repeat count</string>
     <string name="input_field_label_repeat_delay">Repeat delay (ms)</string>
+    <string name="field_scenario_auto_start_title">Auto start</string>
+    <string name="field_scenario_auto_start_enabled">Start this scenario automatically.</string>
+    <string name="field_scenario_auto_start_disabled">Wait for the play button before starting.</string>
+    <string name="input_field_label_auto_start_delay">Auto start delay (ms)</string>
 
     <!--
       - Content description texts.

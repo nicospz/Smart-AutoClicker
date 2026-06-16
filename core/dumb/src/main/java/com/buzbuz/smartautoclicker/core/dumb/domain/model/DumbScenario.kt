@@ -30,6 +30,9 @@ data class DumbScenario(
     val isDurationInfinite: Boolean,
     val randomize: Boolean,
     val stats: ScenarioStats? = null,
+    val isFavorite: Boolean = false,
+    val autoStart: Boolean = false,
+    val autoStartDelayMs: Long = 0L,
 ) : Identifiable, Repeatable {
 
     fun isValid(): Boolean = name.isNotEmpty() && dumbActions.isNotEmpty()

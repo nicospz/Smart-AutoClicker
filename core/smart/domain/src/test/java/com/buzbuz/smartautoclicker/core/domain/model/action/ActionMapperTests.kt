@@ -49,6 +49,34 @@ class ActionMapperTests {
     }
 
     @Test
+    fun click_toEntity_withWaitAfterClick() {
+        assertEquals(
+            ActionTestsData.getNewClickEntity(
+                eventId = ActionTestsData.ACTION_EVENT_ID,
+                waitAfterClickMs = 250L,
+            ).action,
+            ActionTestsData.getNewClick(
+                eventId = ActionTestsData.ACTION_EVENT_ID,
+                waitAfterClickMs = 250L,
+            ).toEntity(),
+        )
+    }
+
+    @Test
+    fun click_toDomain_withWaitAfterClick() {
+        assertEquals(
+            ActionTestsData.getNewClick(
+                eventId = ActionTestsData.ACTION_EVENT_ID,
+                waitAfterClickMs = 250L,
+            ),
+            ActionTestsData.getNewClickEntity(
+                eventId = ActionTestsData.ACTION_EVENT_ID,
+                waitAfterClickMs = 250L,
+            ).toDomain(),
+        )
+    }
+
+    @Test
     fun swipe_toEntity() {
         assertEquals(
             ActionTestsData.getNewSwipeEntity(eventId = ActionTestsData.ACTION_EVENT_ID).action,
@@ -109,6 +137,22 @@ class ActionMapperTests {
         assertEquals(
             ActionTestsData.getNewToggleEvent(eventId = ActionTestsData.ACTION_EVENT_ID),
             ActionTestsData.getNewToggleEventEntity(eventId = ActionTestsData.ACTION_EVENT_ID).toDomain(),
+        )
+    }
+
+    @Test
+    fun stopScenario_toEntity() {
+        assertEquals(
+            ActionTestsData.getNewStopScenarioEntity(eventId = ActionTestsData.ACTION_EVENT_ID).action,
+            ActionTestsData.getNewStopScenario(eventId = ActionTestsData.ACTION_EVENT_ID).toEntity(),
+        )
+    }
+
+    @Test
+    fun stopScenario_toDomain() {
+        assertEquals(
+            ActionTestsData.getNewStopScenario(eventId = ActionTestsData.ACTION_EVENT_ID),
+            ActionTestsData.getNewStopScenarioEntity(eventId = ActionTestsData.ACTION_EVENT_ID).toDomain(),
         )
     }
 }

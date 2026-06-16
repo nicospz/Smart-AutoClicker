@@ -133,6 +133,10 @@ class DumbScenarioDataSource @Inject constructor(
         updateDumbScenarioActions(scenarioEntity.id, scenario.dumbActions)
     }
 
+    suspend fun updateDumbScenarioFavorite(scenarioDbId: Long, isFavorite: Boolean) {
+        dumbScenarioDao.updateDumbScenarioFavorite(scenarioDbId, isFavorite)
+    }
+
     private suspend fun updateDumbScenarioActions(scenarioDbId: Long, actions: List<DumbAction>) {
         val updater = DatabaseListUpdater<DumbAction, DumbActionEntity>()
         updater.refreshUpdateValues(

@@ -61,6 +61,35 @@ TemplateMatchingResult* Detector::detectCondition(
     return templateMatcher->getMatchingResults();
 }
 
+
+std::vector<TemplateMatchingResult> Detector::detectConditionOccurrences(
+        std::unique_ptr<cv::Mat> conditionMat,
+        int targetConditionWidth,
+        int targetConditionHeight,
+        const cv::Rect& roi,
+        int threshold,
+        int maxResults
+) {
+    templateMatcher->reset();
+
+    conditionImage->processNewData(
+            std::move(conditionMat),
+            targetConditionWidth,
+            targetConditionHeight);
+
+    if (!isRoiValidForDetection(roi)) {
+        return std::vector<TemplateMatchingResult>();
+    }
+
+    return templateMatcher->matchTemplateOccurrences(
+            *screenImage,
+            *conditionImage,
+            roi,
+            threshold,
+            maxResults);
+}
+
+
 bool Detector::isRoiValidForDetection(const cv::Rect& roi) const {
     cv::Rect screenRoi = screenImage->getRoi();
     cv::Rect conditionRoi = conditionImage->getRoi();

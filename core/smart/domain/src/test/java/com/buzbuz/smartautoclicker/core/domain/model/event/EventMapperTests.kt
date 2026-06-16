@@ -21,6 +21,7 @@ import android.os.Build
 import androidx.test.ext.junit.runners.AndroidJUnit4
 
 import com.buzbuz.smartautoclicker.core.database.entity.CompleteEventEntity
+import com.buzbuz.smartautoclicker.core.database.entity.ImageEventDetectionMode as EntityImageEventDetectionMode
 import com.buzbuz.smartautoclicker.core.domain.model.action.ActionTestsData
 import com.buzbuz.smartautoclicker.core.domain.model.condition.ConditionTestsData
 
@@ -52,6 +53,48 @@ class EventMapperTests {
 
         assertEquals(
             EventTestsData.getNewImageEvent(scenarioId = EventTestsData.EVENT_SCENARIO_ID, priority = 0),
+            completeEvent.toDomainImageEvent()
+        )
+    }
+
+    @Test
+    fun imageEvent_toEntity_anchoredRepeat() {
+        assertEquals(
+            EventTestsData.getNewImageEventEntity(
+                scenarioId = EventTestsData.EVENT_SCENARIO_ID,
+                priority = 0,
+                imageDetectionMode = EntityImageEventDetectionMode.ANCHORED_REPEAT,
+                anchorConditionId = 42L,
+            ),
+            EventTestsData.getNewImageEvent(
+                scenarioId = EventTestsData.EVENT_SCENARIO_ID,
+                priority = 0,
+                detectionMode = ImageEventDetectionMode.ANCHORED_REPEAT,
+                anchorConditionId = 42L,
+            ).toEntity()
+        )
+    }
+
+    @Test
+    fun imageEvent_toDomain_anchoredRepeat() {
+        val completeEvent = CompleteEventEntity(
+            event = EventTestsData.getNewImageEventEntity(
+                scenarioId = EventTestsData.EVENT_SCENARIO_ID,
+                priority = 0,
+                imageDetectionMode = EntityImageEventDetectionMode.ANCHORED_REPEAT,
+                anchorConditionId = 42L,
+            ),
+            actions = emptyList(),
+            conditions = emptyList(),
+        )
+
+        assertEquals(
+            EventTestsData.getNewImageEvent(
+                scenarioId = EventTestsData.EVENT_SCENARIO_ID,
+                priority = 0,
+                detectionMode = ImageEventDetectionMode.ANCHORED_REPEAT,
+                anchorConditionId = 42L,
+            ),
             completeEvent.toDomainImageEvent()
         )
     }

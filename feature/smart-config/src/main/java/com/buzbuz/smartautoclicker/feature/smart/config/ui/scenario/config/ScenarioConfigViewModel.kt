@@ -64,6 +64,19 @@ class ScenarioConfigViewModel @Inject constructor(
     val keepScreenOn: Flow<Boolean> = configuredScenario
         .map { it.keepScreenOn }
 
+    /** Tells if the scenario should start automatically. */
+    val autoStart: Flow<Boolean> = configuredScenario
+        .map { it.autoStart }
+
+    /** The auto start delay in milliseconds. */
+    val autoStartDelay: Flow<String> = configuredScenario
+        .map { it.autoStartDelayMs.toString() }
+        .take(1)
+
+    /** Tells if the auto start delay is valid or not. */
+    val autoStartDelayError: Flow<Boolean> = configuredScenario
+        .map { it.autoStartDelayMs < 0 }
+
     /** The detection resolution */
     val detectionQuality: Flow<UiDetectionQuality> = configuredScenario
         .map { scenario ->
@@ -93,6 +106,24 @@ class ScenarioConfigViewModel @Inject constructor(
         editionRepository.editionState.getScenario()?.let { scenario ->
             viewModelScope.launch {
                 editionRepository.updateEditedScenario(scenario.copy(keepScreenOn = !scenario.keepScreenOn))
+            }
+        }
+    }
+
+    /** Toggle the auto start value. */
+    fun toggleAutoStart() {
+        editionRepository.editionState.getScenario()?.let { scenario ->
+            viewModelScope.launch {
+                editionRepository.updateEditedScenario(scenario.copy(autoStart = !scenario.autoStart))
+            }
+        }
+    }
+
+    /** Set the auto start delay. */
+    fun setAutoStartDelay(delayMs: Long) {
+        editionRepository.editionState.getScenario()?.let { scenario ->
+            viewModelScope.launch {
+                editionRepository.updateEditedScenario(scenario.copy(autoStartDelayMs = delayMs.coerceAtLeast(0)))
             }
         }
     }

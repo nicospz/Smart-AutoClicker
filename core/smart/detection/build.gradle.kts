@@ -34,7 +34,7 @@ sourceDownload {
             projectVersion = libs.versions.openCv.get()
 
             unzipPath = File("src/release/opencv")
-            requiredForTask = "configureCMakeRelease"
+            requiredForTask = "configureCMake"
         }
     }
 }
@@ -45,7 +45,53 @@ android {
     defaultConfig {
         externalNativeBuild {
             cmake {
-
+                arguments.addAll(
+                    listOf(
+                        "-DANDROID_SDK_ROOT=${project.androidComponents.sdkComponents.sdkDirectory.get().asFile.absolutePath}",
+                        "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON",
+                        "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-z,max-page-size=16384",
+                        "-DOPENCV_ENABLE_NONFREE=OFF",
+                        "-DBUILD_opencv_ittnotify=OFF",
+                        "-DBUILD_ITT=OFF",
+                        "-DCV_DISABLE_OPTIMIZATION=ON",
+                        "-DWITH_CUDA=OFF",
+                        "-DWITH_OPENCL=OFF",
+                        "-DWITH_OPENCLAMDFFT=OFF",
+                        "-DWITH_OPENCLAMDBLAS=OFF",
+                        "-DWITH_VA_INTEL=OFF",
+                        "-DENABLE_SSE=OFF",
+                        "-DENABLE_SSE2=OFF",
+                        "-DBUILD_TESTING=OFF",
+                        "-DBUILD_PERF_TESTS=OFF",
+                        "-DBUILD_TESTS=OFF",
+                        "-DBUILD_EXAMPLES=OFF",
+                        "-DBUILD_DOCS=OFF",
+                        "-DBUILD_opencv_apps=OFF",
+                        "-DWITH_1394=OFF",
+                        "-DWITH_ARITH_DEC=OFF",
+                        "-DWITH_ARITH_ENC=OFF",
+                        "-DWITH_CUBLAS=OFF",
+                        "-DWITH_CUFFT=OFF",
+                        "-DWITH_FFMPEG=OFF",
+                        "-DWITH_GDAL=OFF",
+                        "-DWITH_GSTREAMER=OFF",
+                        "-DWITH_GTK=OFF",
+                        "-DWITH_HALIDE=OFF",
+                        "-DWITH_JASPER=OFF",
+                        "-DWITH_NVCUVID=OFF",
+                        "-DWITH_OPENEXR=OFF",
+                        "-DWITH_PROTOBUF=OFF",
+                        "-DWITH_PTHREADS_PF=OFF",
+                        "-DWITH_QUIRC=OFF",
+                        "-DWITH_V4L=OFF",
+                        "-DWITH_WEBP=OFF",
+                        "-DBUILD_LIST=core,imgproc",
+                        "-DBUILD_JAVA=OFF",
+                        "-DBUILD_ANDROID_EXAMPLES=OFF",
+                        "-DBUILD_ANDROID_PROJECTS=OFF",
+                        "-DBUILD_SHARED_LIBS=ON",
+                    )
+                )
             }
         }
     }
@@ -65,56 +111,13 @@ android {
             externalNativeBuild {
                 cmake {
                     arguments.addAll(
-                        listOf(
-                            "-DANDROID_SDK_ROOT=${project.androidComponents.sdkComponents.sdkDirectory}",
-                            "-DCMAKE_BUILD_TYPE=Release",
-                            "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON",
-                            "-DOPENCV_ENABLE_NONFREE=OFF",
-                            "-DBUILD_opencv_ittnotify=OFF",
-                            "-DBUILD_ITT=OFF",
-                            "-DCV_DISABLE_OPTIMIZATION=ON",
-                            "-DWITH_CUDA=OFF",
-                            "-DWITH_OPENCL=OFF",
-                            "-DWITH_OPENCLAMDFFT=OFF",
-                            "-DWITH_OPENCLAMDBLAS=OFF",
-                            "-DWITH_VA_INTEL=OFF",
-                            "-DENABLE_SSE=OFF",
-                            "-DENABLE_SSE2=OFF",
-                            "-DBUILD_TESTING=OFF",
-                            "-DBUILD_PERF_TESTS=OFF",
-                            "-DBUILD_TESTS=OFF",
-                            "-DBUILD_EXAMPLES=OFF",
-                            "-DBUILD_DOCS=OFF",
-                            "-DBUILD_opencv_apps=OFF",
-                            "-DWITH_1394=OFF",
-                            "-DWITH_ARITH_DEC=OFF",
-                            "-DWITH_ARITH_ENC=OFF",
-                            "-DWITH_CUBLAS=OFF",
-                            "-DWITH_CUFFT=OFF",
-                            "-DWITH_FFMPEG=OFF",
-                            "-DWITH_GDAL=OFF",
-                            "-DWITH_GSTREAMER=OFF",
-                            "-DWITH_GTK=OFF",
-                            "-DWITH_HALIDE=OFF",
-                            "-DWITH_JASPER=OFF",
-                            "-DWITH_NVCUVID=OFF",
-                            "-DWITH_OPENEXR=OFF",
-                            "-DWITH_PROTOBUF=OFF",
-                            "-DWITH_PTHREADS_PF=OFF",
-                            "-DWITH_QUIRC=OFF",
-                            "-DWITH_V4L=OFF",
-                            "-DWITH_WEBP=OFF",
-                            "-DBUILD_LIST=core,imgproc",
-                            "-DBUILD_JAVA=OFF",
-                            "-DBUILD_ANDROID_EXAMPLES=OFF",
-                            "-DBUILD_ANDROID_PROJECTS=OFF",
-                            "-DBUILD_SHARED_LIBS=ON"
-                        )
+                        listOf("-DCMAKE_BUILD_TYPE=Release")
                     )
                 }
             }
         }
     }
+
 
     externalNativeBuild {
         cmake {

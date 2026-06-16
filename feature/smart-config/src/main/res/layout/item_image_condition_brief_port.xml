@@ -41,6 +41,8 @@
             android:layout_marginHorizontal="@dimen/margin_horizontal_small"
             android:layout_marginVertical="@dimen/margin_vertical_default">
 
+
+
             <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/item_name"
                 android:textAppearance="@style/AppTheme.TextAppearance.CardTitle"

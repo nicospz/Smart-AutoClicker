@@ -56,10 +56,26 @@
     <string name="item_click_desc">Click somewhere on the screen</string>
     <string name="item_click_details_on_condition">During %1$s on %2$s</string>
     <string name="item_click_details_at_position">During %1$s</string>
+    <string name="input_field_label_click_wait_after">Wait after click (ms)</string>
 
     <string name="item_swipe_title">Swipe</string>
     <string name="item_swipe_desc">Swipe from a position on the screen to another</string>
     <string name="item_swipe_details">During %1$s</string>
+
+    <string name="item_precision_gesture_title">Precision gesture</string>
+    <string name="item_precision_gesture_desc">Record and replay a raw touch gesture with Shizuku</string>
+    <string name="item_precision_gesture_details">%1$d events during %2$s</string>
+    <string name="dialog_title_precision_gesture">Precision gesture</string>
+    <string name="button_precision_gesture_record">Record</string>
+    <string name="button_precision_gesture_play">Play</string>
+    <string name="button_precision_gesture_clear">Clear</string>
+    <string name="button_precision_gesture_save">Save</string>
+    <string name="button_precision_gesture_delete">Delete</string>
+    <string name="status_precision_gesture_empty">No gesture recorded</string>
+    <string name="status_precision_gesture_recording">Touch the target screen to record. Recording stops automatically.</string>
+    <string name="status_precision_gesture_ready">%1$d events recorded during %2$s</string>
+    <string name="status_precision_gesture_playing">Playing precision gesture</string>
+    <string name="status_precision_gesture_played">Precision gesture played</string>
 
     <string name="item_pause_title">Wait</string>
     <string name="item_pause_desc">Pause the detection execution</string>
@@ -95,8 +111,23 @@
 
     <string name="item_set_text_title">Write text</string>
     <string name="item_set_text_desc">Write a text in the currently focused view</string>
+    <string name="item_precision_text_title">Precision text</string>
+    <string name="item_precision_text_desc">Send text with Shizuku key events or shell input</string>
     <string name="item_set_text_details_text">%1$s</string>
     <string name="item_set_text_details_text_empty">Clear text</string>
+    <string name="item_precision_text_details_text">%1$d chars, %2$s</string>
+    <string name="dialog_title_precision_text">Precision text</string>
+    <string name="input_field_label_precision_text">Text</string>
+    <string name="button_precision_text_mode_keys">Key events</string>
+    <string name="button_precision_text_mode_shell">Shell input</string>
+    <string name="button_precision_text_try">Try</string>
+    <string name="status_precision_text_ready">%1$d chars, %2$s</string>
+    <string name="status_precision_text_typing">Sending precision text</string>
+    <string name="status_precision_text_typed">Precision text sent</string>
+
+    <string name="item_stop_scenario_title">Stop scenario</string>
+    <string name="item_stop_scenario_desc">Stop the current scenario</string>
+    <string name="item_stop_scenario_details">Stop the scenario</string>
 
     <!-- Dialog Copy =============================================================================================== -->
 
@@ -131,6 +162,11 @@
     <string name="field_scenario_keep_screen_on_enabled">Keep the device screen on while detecting.</string>
     <string name="field_scenario_keep_screen_on_disabled">Use the normal device screen behaviour.</string>
 
+    <string name="field_scenario_auto_start_title">Auto start</string>
+    <string name="field_scenario_auto_start_enabled">Start this scenario automatically.</string>
+    <string name="field_scenario_auto_start_disabled">Wait for the play button before starting.</string>
+    <string name="input_field_label_auto_start_delay">Auto start delay (ms)</string>
+
     <string name="field_scenario_quality_title">Detection resolution</string>
     <string name="field_scenario_quality_description">To achieve faster detection, Klick\'r is downscaling the images before detecting.\n\nIf you increase the resolution, the detection will be slower, but more accurate. If you decrease the resolution, the detection will be faster, but less accurate. Find the good ratio between the detection resolution and the conditions thresholds to get the best of your scenarios!</string>
     <string name="field_scenario_quality_resolution" translatable="false">%1$d x %2$d</string>
@@ -145,8 +181,8 @@
     <string name="field_show_debug_report_desc_available">Debug report is available</string>
     <string name="field_show_debug_report_desc_not_available">No debug report available</string>
 
-    <string name="field_tutorial_title">Tutorial</string>
-    <string name="field_tutorial_desc">Learn how to use Klick\'r</string>
+    <string name="default_stop_scenario_name">Stop scenario</string>
+    <string name="default_precision_gesture_name">Precision gesture</string>
 
 
     <!-- Dialog Event ============================================================================================== -->
@@ -170,6 +206,7 @@
     <string name="field_event_state_title">State</string>
     <string name="field_event_state_desc_enabled">This event will be interpreted normally when playing the scenario</string>
     <string name="field_event_state_desc_disabled">This event needs to be enabled by an action to be interpreted when playing the scenario</string>
+    <string name="input_field_label_event_cooldown">Cooldown after execution (ms)</string>
 
     <string name="field_event_keep_detecting_title">Keep executing</string>
     <string name="field_event_keep_detecting_desc_enabled">When this Event is triggered, continue the execution from the next event on the list</string>
@@ -421,4 +458,12 @@
     <string name="content_desc_open_event_list">Open the event list</string>
     <string name="content_desc_application_icon">The icon of the application to start.</string>
 
+
+    <string name="field_image_detection_mode_title">Detection mode</string>
+    <string name="field_image_detection_mode_normal">Normal</string>
+    <string name="field_image_detection_mode_anchored">Anchor + relative</string>
+    <string name="field_image_detection_mode_desc_normal">Checks each image condition independently.</string>
+    <string name="field_image_detection_mode_desc_anchored">Finds an anchor image, then checks the other conditions around the same item.</string>
+    <string name="item_image_condition_anchor_badge">Anchor</string>
+    <string name="message_anchor_condition_selected">Anchor condition selected</string>
 </resources>

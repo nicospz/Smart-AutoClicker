@@ -33,6 +33,7 @@ sealed class ProcessedConditionResult {
      * @param condition the condition that triggered this result.
      * @param confidenceRate the confidence rate of the detection algorithm on this result. Between [0 - 100].
      * @param position the position at which the condition image have been detected. Null if not detected.
+     * @param bestPosition the best candidate position found by the detector, even when below threshold.
      */
     data class Image(
         override val isFulfilled: Boolean,
@@ -40,6 +41,7 @@ sealed class ProcessedConditionResult {
         val condition: ImageCondition,
         val confidenceRate: Double,
         val position: Point?,
+        val bestPosition: Point? = position,
     ) : ProcessedConditionResult()
 
     /**

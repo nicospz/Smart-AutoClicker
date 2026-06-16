@@ -53,6 +53,8 @@ class ScenarioSortConfigRepository @Inject constructor(
             booleanPreferencesKey("filterShowSmart")
         val KEY_FILTER_SHOW_DUMB: Preferences.Key<Boolean> =
             booleanPreferencesKey("filterShowDumb")
+        val KEY_FILTER_SHOW_FAVORITES: Preferences.Key<Boolean> =
+            booleanPreferencesKey("filterShowFavorites")
     }
 
     private val dataStore: PreferencesDataStore =
@@ -66,10 +68,11 @@ class ScenarioSortConfigRepository @Inject constructor(
     internal fun getSortConfig(): Flow<ScenarioSortConfig> =
         dataStore.data.map { preferences ->
             ScenarioSortConfig(
-                type = preferences.getEnum<ScenarioSortType>(KEY_SORT_TYPE) ?: ScenarioSortType.NAME,
+                type = preferences.getSortType(),
                 inverted = preferences[KEY_SORT_INVERTED] ?: false,
                 showSmartScenario = preferences[KEY_FILTER_SHOW_SMART] ?: true,
                 showDumbScenario = preferences[KEY_FILTER_SHOW_DUMB] ?: true,
+                showFavoritesOnly = preferences[KEY_FILTER_SHOW_FAVORITES] ?: false,
             )
         }
 
@@ -92,4 +95,14 @@ class ScenarioSortConfigRepository @Inject constructor(
         dataStore.edit { preferences ->
             preferences[KEY_FILTER_SHOW_SMART] = show
         }
+
+    internal suspend fun setShowFavorites(show: Boolean) =
+        dataStore.edit { preferences ->
+            preferences[KEY_FILTER_SHOW_FAVORITES] = show
+        }
+
+    private fun Preferences.getSortType(): ScenarioSortType =
+        runCatching { getEnum<ScenarioSortType>(KEY_SORT_TYPE) }.getOrNull()
+            ?.takeIf { it != ScenarioSortType.MOST_USED }
+            ?: ScenarioSortType.NAME
 }

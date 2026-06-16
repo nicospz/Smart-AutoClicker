@@ -30,6 +30,7 @@ class SortViewHolder(
     private val onSortTypeClicked: (ScenarioSortType) -> Unit,
     private val onSmartChipClicked: (Boolean) -> Unit,
     private val onDumbChipClicked: (Boolean) -> Unit,
+    private val onFavoritesChipClicked: (Boolean) -> Unit,
     private val onSortOrderClicked: (Boolean) -> Unit,
 ): RecyclerView.ViewHolder(viewBinding.root) {
 
@@ -53,6 +54,10 @@ class SortViewHolder(
                 isChecked = config.dumbVisible
                 setOnClickListener { onDumbChipClicked(chipDumb.isChecked) }
             }
+            chipFavorites.apply {
+                isChecked = config.favoritesOnly
+                setOnClickListener { onFavoritesChipClicked(chipFavorites.isChecked) }
+            }
             checkboxSortOrder.apply {
                 isChecked = config.changeOrderChecked
                 setOnClickListener { onSortOrderClicked(checkboxSortOrder.isChecked) }
@@ -65,6 +70,7 @@ class SortViewHolder(
             buttonGroupOrdering.removeOnButtonCheckedListener(onOrderingButtonGroupCheckedListener)
             chipSmart.setOnClickListener(null)
             chipDumb.setOnClickListener(null)
+            chipFavorites.setOnClickListener(null)
             checkboxSortOrder.setOnClickListener(null)
         }
     }
@@ -75,13 +81,12 @@ private fun ScenarioSortType.toButtonId(): Int =
     when (this) {
         ScenarioSortType.NAME -> R.id.button_name
         ScenarioSortType.RECENT -> R.id.button_recent
-        ScenarioSortType.MOST_USED -> R.id.button_most_used
+        ScenarioSortType.MOST_USED -> R.id.button_name
     }
 
 private fun Int.toScenarioSortType(): ScenarioSortType =
     when (this) {
         R.id.button_name -> ScenarioSortType.NAME
         R.id.button_recent -> ScenarioSortType.RECENT
-        R.id.button_most_used -> ScenarioSortType.MOST_USED
         else -> throw IllegalArgumentException("Invalid scenario sort button id")
     }

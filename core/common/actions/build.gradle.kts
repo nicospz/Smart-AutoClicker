@@ -27,6 +27,8 @@ android {
 dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.androidx.core.ktx)
+    implementation(libs.shizuku.api)
+    implementation(libs.shizuku.provider)
 
     implementation(project(":core:common:base"))
     implementation(project(":core:common:permissions"))

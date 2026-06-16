@@ -26,6 +26,8 @@ import android.util.Log
 import com.buzbuz.smartautoclicker.core.base.workarounds.UnblockGestureScheduler
 import com.buzbuz.smartautoclicker.core.base.workarounds.buildUnblockGesture
 import com.buzbuz.smartautoclicker.core.common.actions.AndroidActionExecutor
+import com.buzbuz.smartautoclicker.core.common.actions.precision.PrecisionGestureExecutor
+import com.buzbuz.smartautoclicker.core.common.actions.precision.PrecisionTextExecutor
 import com.buzbuz.smartautoclicker.core.common.actions.gesture.buildSingleStroke
 import com.buzbuz.smartautoclicker.core.common.actions.gesture.line
 import com.buzbuz.smartautoclicker.core.common.actions.gesture.moveTo
@@ -38,11 +40,14 @@ import com.buzbuz.smartautoclicker.core.domain.model.OR
 import com.buzbuz.smartautoclicker.core.domain.model.action.Intent
 import com.buzbuz.smartautoclicker.core.domain.model.action.Click
 import com.buzbuz.smartautoclicker.core.domain.model.action.Pause
+import com.buzbuz.smartautoclicker.core.domain.model.action.PrecisionGesture
+import com.buzbuz.smartautoclicker.core.domain.model.action.PrecisionText
 import com.buzbuz.smartautoclicker.core.domain.model.action.Swipe
 import com.buzbuz.smartautoclicker.core.domain.model.action.ToggleEvent
 import com.buzbuz.smartautoclicker.core.domain.model.action.ChangeCounter
 import com.buzbuz.smartautoclicker.core.domain.model.action.Notification
 import com.buzbuz.smartautoclicker.core.domain.model.action.SetText
+import com.buzbuz.smartautoclicker.core.domain.model.action.StopScenario
 import com.buzbuz.smartautoclicker.core.domain.model.action.SystemAction
 import com.buzbuz.smartautoclicker.core.domain.model.action.intent.putDomainExtra
 import com.buzbuz.smartautoclicker.core.domain.model.event.Event
@@ -66,6 +71,9 @@ internal class ActionExecutor(
     private val processingState: ProcessingState,
     randomize: Boolean,
     unblockWorkaroundEnabled: Boolean = false,
+    private val onStopRequested: () -> Unit = {},
+    private val precisionGestureExecutor: PrecisionGestureExecutor? = null,
+    private val precisionTextExecutor: PrecisionTextExecutor? = null,
 ) {
 
     init { androidExecutor.resetState() }
@@ -91,23 +99,68 @@ internal class ActionExecutor(
 
     suspend fun executeActions(event: Event, results: ConditionsResults? = null) {
         event.actions.forEach { action ->
-            when (action) {
-                is Click -> executeClick(event, action, results)
-                is Swipe -> executeSwipe(action)
-                is Pause -> executePause(action)
-                is Intent -> executeIntent(action)
-                is ToggleEvent -> executeToggleEvent(action)
-                is ChangeCounter -> executeChangeCounter(action)
-                is Notification -> executeNotification(event, action)
-                is SystemAction -> executeSystemAction(action)
-                is SetText -> executeSetText(action)
+            if (event is ImageEvent && event.detectionMode.name == "ANCHORED_REPEAT") {
+                Log.i(TAG_ANCHORED, "Executing anchored action '${action.name}' type=${action::class.simpleName}")
             }
+
+            val shouldStop = when (action) {
+                is Click -> {
+                    executeClick(event, action, results)
+                    false
+                }
+                is Swipe -> {
+                    executeSwipe(action)
+                    false
+                }
+                is Pause -> {
+                    executePause(action)
+                    false
+                }
+                is Intent -> {
+                    executeIntent(action)
+                    false
+                }
+                is ToggleEvent -> {
+                    executeToggleEvent(action)
+                    false
+                }
+                is ChangeCounter -> {
+                    executeChangeCounter(action)
+                    false
+                }
+                is Notification -> {
+                    executeNotification(event, action)
+                    false
+                }
+                is SystemAction -> {
+                    executeSystemAction(action)
+                    false
+                }
+                is SetText -> {
+                    executeSetText(action)
+                    false
+                }
+                is StopScenario -> executeStopScenario()
+                is PrecisionGesture -> {
+                    executePrecisionGesture(action)
+                    false
+                }
+                is PrecisionText -> {
+                    executePrecisionText(action)
+                    false
+                }
+            }
+
+            if (shouldStop) return
         }
     }
 
     private suspend fun executeClick(event: Event, click: Click, results: ConditionsResults?) {
         val clickPath = when (click.positionType) {
             Click.PositionType.USER_SELECTED -> {
+                if (event is ImageEvent && event.detectionMode.name == "ANCHORED_REPEAT") {
+                    Log.i(TAG_ANCHORED, "Anchored click using user selected position=${click.position}")
+                }
                 click.position?.let { position ->
                     Path().apply { moveTo(position, random) }
                 }
@@ -126,6 +179,10 @@ internal class ActionExecutor(
         withContext(Dispatchers.Main) {
             androidExecutor.dispatchGesture(clickGesture)
         }
+
+        if (click.waitAfterClickMs > 0) {
+            delay(click.waitAfterClickMs.getPauseDurationMs(random))
+        }
     }
 
     private fun getOnConditionClickPath(event: Event, click: Click, results: ConditionsResults?): Path? {
@@ -137,16 +194,34 @@ internal class ActionExecutor(
             else -> null
         }
 
-        if (result == null) {
-            Log.w(TAG, "Click is invalid, can't execute")
+        val detectedPosition = result?.position
+        if (detectedPosition == null) {
+            Log.w(TAG, "Click is invalid, target condition has no detected position")
+            if (event.detectionMode.name == "ANCHORED_REPEAT") {
+                Log.w(
+                    TAG_ANCHORED,
+                    "Anchored click skipped: clickOnConditionId=${click.clickOnConditionId?.databaseId}, " +
+                            "resultFound=${result != null}, detected=${result?.haveBeenDetected}, " +
+                            "fulfilled=${result?.isFulfilled}, position=${result?.position}, " +
+                            "bestPosition=${result?.bestPosition}",
+                )
+            }
             return null
+        }
+
+        if (event.detectionMode.name == "ANCHORED_REPEAT") {
+            Log.i(
+                TAG_ANCHORED,
+                "Anchored click target: clickOnConditionId=${click.clickOnConditionId?.databaseId}, " +
+                        "detectedPosition=$detectedPosition, offset=${click.clickOffset}",
+            )
         }
 
         return Path().apply {
             moveTo(
                 position = Point(
-                    (result.position?.x ?: 0) + (click.clickOffset?.x ?: 0),
-                    (result.position?.y ?: 0) + (click.clickOffset?.y ?: 0),
+                    detectedPosition.x + (click.clickOffset?.x ?: 0),
+                    detectedPosition.y + (click.clickOffset?.y ?: 0),
                 ),
                 random = random,
             )
@@ -304,10 +379,38 @@ internal class ActionExecutor(
             )
         }
     }
+
+    private fun executeStopScenario(): Boolean {
+        onStopRequested()
+        return true
+    }
+
+    private suspend fun executePrecisionGesture(action: PrecisionGesture) {
+        val payload = action.payloadHex ?: return
+        val executor = precisionGestureExecutor ?: return
+
+        runCatching { executor.play(payload) }
+            .onFailure { Log.w(TAG, "Precision gesture playback failed", it) }
+    }
+
+    private suspend fun executePrecisionText(action: PrecisionText) {
+        val executor = precisionTextExecutor ?: return
+        val counters = buildMap {
+            action.text.findCounterReferences().forEach { counterName ->
+                processingState.getCounterValue(counterName)?.let { counterValue ->
+                    put(counterName, counterValue)
+                }
+            }
+        }
+
+        runCatching { executor.typeText(action.text.replaceCounterReferences(counters), action.mode) }
+            .onFailure { Log.w(TAG, "Precision text input failed", it) }
+    }
 }
 
 /** Tag for logs. */
 private const val TAG = "ActionExecutor"
+private const val TAG_ANCHORED = "AnchoredImageEvent"
 /** Waiting delay after a start activity to avoid overflowing the system. */
 private const val INTENT_START_ACTIVITY_DELAY = 1000L
 /** Waiting delay after a broadcast to avoid overflowing the system. */

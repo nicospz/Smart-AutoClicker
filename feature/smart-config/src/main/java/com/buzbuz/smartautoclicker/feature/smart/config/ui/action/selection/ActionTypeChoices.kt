@@ -23,7 +23,9 @@ import com.buzbuz.smartautoclicker.feature.smart.config.ui.common.model.action.g
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.common.model.action.getIntentIconRes
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.common.model.action.getNotificationIconRes
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.common.model.action.getPauseIconRes
+import com.buzbuz.smartautoclicker.feature.smart.config.ui.common.model.action.getPrecisionGestureIconRes
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.common.model.action.getSetTextIconRes
+import com.buzbuz.smartautoclicker.feature.smart.config.ui.common.model.action.getStopScenarioIconRes
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.common.model.action.getSwipeIconRes
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.common.model.action.getSystemActionIconRes
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.common.model.action.getToggleEventIconRes
@@ -57,6 +59,12 @@ sealed class ActionTypeChoice(
         R.string.item_swipe_title,
         R.string.item_swipe_desc,
         getSwipeIconRes(),
+    )
+    /** Precision gesture Action choice. */
+    data object PrecisionGesture : ActionTypeChoice(
+        R.string.item_precision_gesture_title,
+        R.string.item_precision_gesture_desc,
+        getPrecisionGestureIconRes(),
     )
     /** Pause Action choice. */
     data object Pause : ActionTypeChoice(
@@ -103,5 +111,19 @@ sealed class ActionTypeChoice(
         R.string.item_set_text_title,
         R.string.item_set_text_desc,
         getSetTextIconRes(),
+    )
+
+    /** Precision text action choice. */
+    data object PrecisionText : ActionTypeChoice(
+        R.string.item_precision_text_title,
+        R.string.item_precision_text_desc,
+        getSetTextIconRes(),
+    )
+
+    /** Stop scenario action choice. */
+    data object StopScenario : ActionTypeChoice(
+        R.string.item_stop_scenario_title,
+        R.string.item_stop_scenario_desc,
+        getStopScenarioIconRes(),
     )
 }

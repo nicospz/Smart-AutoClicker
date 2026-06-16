@@ -70,7 +70,7 @@ import java.io.PrintWriter
  *
  * Two menu items are supported by default and are not mandatory (if you don't need it, don't declare it in your layout).
  * Those items must be a direct child of [R.id.menu_items]:
- * - [R.id.btn_move]: the button allowing the move the overlay menu when drag and drop by the user.
+ * - [R.id.btn_move]: legacy move button. It is hidden if declared, as the menu can be moved by dragging anywhere.
  * - [R.id.btn_hide_overlay]: the button allowing to show/hide the overlay view on the screen. When hidden, the user can
  * click on the activity overlaid.
  *
@@ -134,8 +134,10 @@ abstract class OverlayMenu(
 
     /** The hide overlay button, if provided. */
     private var hideOverlayButton: ImageButton? = null
-    /** The move button, if provided. */
+    /** The legacy move button, if provided. */
     private var moveButton: View? = null
+    /** Tells if the menu position can be moved manually. */
+    private var canMoveMenu: Boolean = true
 
     /**
      * The view to be displayed between the current activity and the overlay menu.
@@ -198,17 +200,21 @@ abstract class OverlayMenu(
         // Set the clicks listener on the menu items
         menuBackground = menuLayout.findViewById(R.id.menu_background)
         buttonsContainer = menuLayout.findViewById(R.id.menu_items)
-        setupButtons(buttonsContainer)
 
-        // Setup the touch event handler for the move button
+        // Setup the touch event handler for dragging the menu.
         moveTouchEventHandler = OverlayMenuMoveTouchEventHandler(::updateMenuPosition)
+        setupButtons(buttonsContainer)
+        @SuppressLint("ClickableViewAccessibility")
+        menuBackground.setOnTouchListener { view: View, event: MotionEvent ->
+            onMoveTouched(view, event) || event.actionMasked == MotionEvent.ACTION_DOWN
+        }
 
         // Restore the last menu position, if any.
         menuLayoutParams.gravity = Gravity.TOP or Gravity.START
         overlayLayoutParams.gravity = Gravity.TOP or Gravity.START
         positionDataSource.addOnLockedPositionChangedListener(onLockedPositionChangedListener)
         loadMenuPosition(displayConfigManager.displayConfig.orientation)
-        moveButton?.visibility = if (positionDataSource.isPositionLocked()) View.GONE else View.VISIBLE
+        canMoveMenu = !positionDataSource.isPositionLocked()
 
         // Handle window resize animations
         resizeController = OverlayMenuResizeController(
@@ -237,11 +243,13 @@ abstract class OverlayMenu(
 
     private fun setupButtons(buttonsContainer: ViewGroup) {
         buttonsContainer.forEach { view ->
-            @SuppressLint("ClickableViewAccessibility") // View is only drag and drop, no click
+            @SuppressLint("ClickableViewAccessibility")
+            view.setOnTouchListener { touchedView: View, event: MotionEvent -> onMoveTouched(touchedView, event) }
+
             when (view.id) {
                 R.id.btn_move -> {
                     moveButton = view
-                    view.setOnTouchListener { _: View, event: MotionEvent -> onMoveTouched(event) }
+                    view.visibility = View.GONE
                 }
                 R.id.btn_hide_overlay -> {
                     hideOverlayButton = (view as ImageButton)
@@ -527,17 +535,18 @@ abstract class OverlayMenu(
     }
 
     /**
-     * Called when the user touch the [R.id.btn_move] menu item.
-     * Handle the long press and move on this button in order to drag and drop the overlay menu on the screen.
+     * Called when the user touches the menu.
+     * Handles a move on the touched view in order to drag and drop the overlay menu on the screen.
      *
-     * @param event the touch event occurring on the menu item.
+     * @param touchedView the touched menu view.
+     * @param event the touch event occurring on the menu.
      *
      * @return true if the event is handled, false if not.
      */
-    private fun onMoveTouched(event: MotionEvent) : Boolean {
+    private fun onMoveTouched(touchedView: View, event: MotionEvent) : Boolean {
         if (resizeController.isAnimating) return false
 
-        return moveTouchEventHandler.onTouchEvent(menuLayout, event)
+        return moveTouchEventHandler.onTouchEvent(menuLayout, touchedView, event, canMoveMenu)
     }
 
 
@@ -581,12 +590,14 @@ abstract class OverlayMenu(
     private fun onLockedPositionChanged(lockedPosition: Point?) {
         if (lockedPosition != null) {
             Log.d(TAG, "Locking menu position of overlay ${hashCode()}")
+            canMoveMenu = false
             moveButton?.let { setMenuItemVisibility(it, false) }
             saveMenuPosition(displayConfigManager.displayConfig.orientation)
             updateMenuPosition(lockedPosition)
         } else {
             Log.d(TAG, "Unlocking menu position of overlay ${hashCode()}")
-            moveButton?.let { setMenuItemVisibility(it, true) }
+            canMoveMenu = true
+            moveButton?.let { setMenuItemVisibility(it, false) }
             loadMenuPosition(displayConfigManager.displayConfig.orientation)
         }
     }

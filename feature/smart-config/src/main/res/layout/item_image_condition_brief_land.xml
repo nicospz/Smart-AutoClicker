@@ -51,6 +51,8 @@
                 tools:visibility="visible"
                 tools:ignore="ContentDescription" />
 
+
+
             <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/item_name"
                 android:textAppearance="@style/AppTheme.TextAppearance.CardTitle"

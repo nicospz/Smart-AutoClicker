@@ -17,9 +17,9 @@
 package com.buzbuz.smartautoclicker.core.common.overlays.menu.implementation.common
 
 import android.graphics.Point
-import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.WindowManager
 
 internal class OverlayMenuMoveTouchEventHandler(
@@ -31,21 +31,41 @@ internal class OverlayMenuMoveTouchEventHandler(
     /** The initial position of the touch event that as initiated the move of the overlay menu. */
     private var moveInitialTouchPosition: Point = Point(0, 0)
 
-    fun onTouchEvent(viewToMove: View, event: MotionEvent): Boolean =
-        when (event.action) {
+    private var isMoving: Boolean = false
+
+    fun onTouchEvent(viewToMove: View, touchView: View, event: MotionEvent, canMove: Boolean): Boolean {
+        if (!canMove) {
+            cancelMove()
+            return false
+        }
+
+        return when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
-                viewToMove.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                 onDownEvent(viewToMove, event)
-                true
+                isMoving = false
+                false
             }
 
             MotionEvent.ACTION_MOVE -> {
-                onMoveEvent(event)
-                true
+                if (!isMoving && !hasMovedBeyondTouchSlop(touchView, event)) return false
+
+                isMoving = true
+                if (isMoving) {
+                    onMoveEvent(event)
+                    true
+                } else false
             }
 
-            else -> false
+            MotionEvent.ACTION_UP,
+            MotionEvent.ACTION_CANCEL -> {
+                val wasMoving = isMoving
+                cancelMove()
+                wasMoving
+            }
+
+            else -> isMoving
         }
+    }
 
     private fun onDownEvent(viewToMove: View, event: MotionEvent) {
         val layoutParams = (viewToMove.layoutParams as WindowManager.LayoutParams)
@@ -60,5 +80,17 @@ internal class OverlayMenuMoveTouchEventHandler(
                 moveInitialViewPosition.y + (event.rawY.toInt() - moveInitialTouchPosition.y),
             )
         )
+    }
+
+    private fun hasMovedBeyondTouchSlop(touchView: View, event: MotionEvent): Boolean {
+        val touchSlop = ViewConfiguration.get(touchView.context).scaledTouchSlop
+        val deltaX = event.rawX.toInt() - moveInitialTouchPosition.x
+        val deltaY = event.rawY.toInt() - moveInitialTouchPosition.y
+
+        return (deltaX * deltaX) + (deltaY * deltaY) > touchSlop * touchSlop
+    }
+
+    private fun cancelMove() {
+        isMoving = false
     }
 }

@@ -124,6 +124,7 @@ internal abstract class ScenarioBackupDataSource<Backup, BackupScenario>(private
             }
 
             loadedBackups.add(backup)
+            Log.d(TAG, "Loaded backup entry $fileName")
 
             return true
         }
@@ -159,6 +160,7 @@ internal abstract class ScenarioBackupDataSource<Backup, BackupScenario>(private
         }
 
         zipStream.readAndCopyEntryFile(additionalFile)
+        Log.d(TAG, "Extracted additional file $fileName to ${additionalFile.name}")
         return true
     }
 
@@ -169,9 +171,14 @@ internal abstract class ScenarioBackupDataSource<Backup, BackupScenario>(private
     fun verifyExtractedScenarios(screenSize: Point) {
         loadedBackups.forEach { backup ->
             val scenario = verifyExtractedBackup(backup, screenSize)
-            if (scenario != null) _validBackups.add(scenario)
-            else failureCount++
+            if (scenario != null) {
+                _validBackups.add(scenario)
+            } else {
+                Log.w(TAG, "Extracted backup failed verification.")
+                failureCount++
+            }
         }
+        Log.i(TAG, "Verification completed: valid=${_validBackups.size}, failures=$failureCount")
     }
 }
 

@@ -49,6 +49,12 @@ internal class ConditionsResults {
         _results[conditionId] = result
     }
 
+    fun setResults(results: List<Pair<Long, ProcessedConditionResult>>, fulfilledState: Boolean) {
+        _results.clear()
+        results.forEach { (conditionId, result) -> _results[conditionId] = result }
+        fulfilled = fulfilledState
+    }
+
     fun setFulfilledState(state: Boolean) {
         fulfilled = state
     }

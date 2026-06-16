@@ -27,7 +27,10 @@ import com.buzbuz.smartautoclicker.core.base.di.Dispatcher
 import com.buzbuz.smartautoclicker.core.base.di.HiltCoroutineDispatchers.IO
 import com.buzbuz.smartautoclicker.core.bitmaps.BitmapRepository
 import com.buzbuz.smartautoclicker.core.common.actions.AndroidActionExecutor
+import com.buzbuz.smartautoclicker.core.common.actions.precision.PrecisionGestureExecutor
+import com.buzbuz.smartautoclicker.core.common.actions.precision.PrecisionTextExecutor
 import com.buzbuz.smartautoclicker.core.display.recorder.DisplayRecorder
+import com.buzbuz.smartautoclicker.core.display.recorder.ScreenFrameBroker
 import com.buzbuz.smartautoclicker.core.detection.ImageDetector
 import com.buzbuz.smartautoclicker.core.detection.NativeDetector
 import com.buzbuz.smartautoclicker.core.display.config.DisplayConfigManager
@@ -70,7 +73,10 @@ class DetectorEngine @Inject constructor(
     private val bitmapRepository: BitmapRepository,
     private val scalingManager: ScalingManager,
     private val displayRecorder: DisplayRecorder,
+    private val screenFrameBroker: ScreenFrameBroker,
     private val actionExecutor: AndroidActionExecutor,
+    private val precisionGestureExecutor: PrecisionGestureExecutor,
+    private val precisionTextExecutor: PrecisionTextExecutor,
     private val settingsRepository: SettingsRepository,
     private val appComponentsProvider: AppComponentsProvider,
     private val debuggingListener: SmartProcessingListener,
@@ -147,6 +153,7 @@ class DetectorEngine @Inject constructor(
             }
 
             _state.emit(DetectorState.RECORDING)
+            screenFrameBroker.start()
         }
     }
 
@@ -219,6 +226,8 @@ class DetectorEngine @Inject constructor(
                 triggerEvents = triggerEvents,
                 bitmapSupplier = bitmapRepository::getImageConditionBitmap,
                 androidExecutor = actionExecutor,
+                precisionGestureExecutor = precisionGestureExecutor,
+                precisionTextExecutor = precisionTextExecutor,
                 unblockWorkaroundEnabled = settingsRepository.isInputBlockWorkaroundEnabled(),
                 onStopRequested = { stopDetection() },
                 progressListener  = if (liveDebugging || generateReport) debuggingListener else null,
@@ -313,6 +322,7 @@ class DetectorEngine @Inject constructor(
             processingShutdownJob?.join()
 
             displayConfigManager.removeOrientationListener(screenOrientationListener)
+            screenFrameBroker.stop()
             displayRecorder.stopProjection()
             _state.emit(DetectorState.CREATED)
 

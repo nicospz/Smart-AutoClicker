@@ -47,6 +47,9 @@ data class DumbScenarioEntity(
     @ColumnInfo(name = "max_duration_minutes") val maxDurationMin: Int,
     @ColumnInfo(name = "is_duration_infinite") val isDurationInfinite: Boolean,
     @ColumnInfo(name = "randomize") val randomize: Boolean,
+    @ColumnInfo(name = "is_favorite", defaultValue = "0") val isFavorite: Boolean = false,
+    @ColumnInfo(name = "auto_start", defaultValue = "0") val autoStart: Boolean = false,
+    @ColumnInfo(name = "auto_start_delay_ms", defaultValue = "0") val autoStartDelayMs: Long = 0L,
 ) : EntityWithId
 
 /**

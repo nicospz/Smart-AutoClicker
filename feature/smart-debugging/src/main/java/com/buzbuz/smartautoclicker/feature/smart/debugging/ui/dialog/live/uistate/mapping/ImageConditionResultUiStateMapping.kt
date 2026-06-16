@@ -29,7 +29,7 @@ internal fun DebugLiveEventOccurrence.Image.toConditionResultsUiState(): List<Im
 internal fun DebugLiveEventConditionResult.Image.toConditionUiState(): ImageConditionResultUiState =
     ImageConditionResultUiState(
         positive = isFulfilled,
-        coordinates = detectionArea ?: Rect(),
+        coordinates = detectionArea ?: bestMatchArea ?: Rect(),
         confidenceRate = confidenceRate,
         resultText = confidenceRate.formatDebugConfidenceRate(),
     )

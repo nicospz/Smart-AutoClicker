@@ -43,6 +43,7 @@ import com.buzbuz.smartautoclicker.feature.smart.config.ui.common.model.conditio
 import com.buzbuz.smartautoclicker.feature.smart.config.utils.getEventConfigPreferences
 import com.buzbuz.smartautoclicker.feature.smart.config.utils.getImageConditionBitmap
 import com.buzbuz.smartautoclicker.feature.smart.config.utils.putClickPressDurationConfig
+import com.buzbuz.smartautoclicker.feature.smart.config.utils.putClickWaitAfterConfig
 import dagger.hilt.android.qualifiers.ApplicationContext
 
 import kotlinx.coroutines.Dispatchers
@@ -105,6 +106,14 @@ class ClickViewModel @Inject constructor(
     val pressDurationError: Flow<Boolean> = configuredClick
         .map { (it.pressDuration ?: -1) <= 0 }
 
+    /** The wait after the click in milliseconds. */
+    val waitAfterClick: Flow<String> = configuredClick
+        .map { it.waitAfterClickMs.toString() }
+        .take(1)
+    /** Tells if the wait after click value is valid or not. */
+    val waitAfterClickError: Flow<Boolean> = configuredClick
+        .map { it.waitAfterClickMs < 0 }
+
     val availableConditions: StateFlow<List<UiImageCondition>> = editionRepository.editionState.editedEventImageConditionsState
         .map { editedConditions ->
             editedConditions.value?.filter { it.shouldBeDetected }
@@ -163,7 +172,16 @@ class ClickViewModel @Inject constructor(
     /** Set if this click should be made on the detected condition. */
     fun setClickOnCondition(newType: Click.PositionType) {
         editionRepository.editionState.getEditedAction<Click>()?.let { click ->
-            editionRepository.updateEditedAction(click.copy(positionType = newType))
+            val firstConditionId = availableConditions.value.firstOrNull()?.condition?.id
+            val updatedClick = when {
+                newType != Click.PositionType.ON_DETECTED_CONDITION -> click.copy(positionType = newType)
+                click.clickOnConditionId != null &&
+                        availableConditions.value.any { it.condition.id == click.clickOnConditionId } ->
+                    click.copy(positionType = newType)
+                else -> click.copy(positionType = newType, clickOnConditionId = firstConditionId)
+            }
+
+            editionRepository.updateEditedAction(updatedClick)
         }
     }
 
@@ -187,6 +205,13 @@ class ClickViewModel @Inject constructor(
         }
     }
 
+    /** Set the wait after the click. */
+    fun setWaitAfterClick(durationMs: Long) {
+        editionRepository.editionState.getEditedAction<Click>()?.let { click ->
+            editionRepository.updateEditedAction(click.copy(waitAfterClickMs = durationMs.coerceAtLeast(0)))
+        }
+    }
+
     /**
      * Get the bitmap corresponding to a condition.
      * Loading is async and the result notified via the onBitmapLoaded argument.
@@ -207,7 +232,10 @@ class ClickViewModel @Inject constructor(
     /** Save the configured values to restore them at next creation. */
     fun saveLastConfig() {
         editionRepository.editionState.getEditedAction<Click>()?.let { click ->
-            sharedPreferences.edit { putClickPressDurationConfig(click.pressDuration ?: 0) }
+            sharedPreferences.edit {
+                putClickPressDurationConfig(click.pressDuration ?: 0)
+                putClickWaitAfterConfig(click.waitAfterClickMs)
+            }
         }
     }
 

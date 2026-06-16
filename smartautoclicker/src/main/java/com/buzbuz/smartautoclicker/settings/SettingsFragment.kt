@@ -27,6 +27,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.buzbuz.smartautoclicker.R
+import com.buzbuz.smartautoclicker.core.common.actions.precision.PrecisionGestureSetupResult
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setChecked
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setDescription
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setOnClickListener
@@ -81,6 +82,12 @@ class SettingsFragment : Fragment() {
             setOnClickListener(viewModel::toggleInputBlockWorkaround)
         }
 
+        viewBinding.fieldShizukuHelperStatus.apply {
+            setTitle(requireContext().getString(R.string.field_shizuku_helper_status_title))
+            setDescription(requireContext().getString(R.string.field_shizuku_helper_status_checking))
+            setOnClickListener { viewModel.startPrecisionGestureHelper(requireActivity()) }
+        }
+
         viewBinding.fieldPrivacySettings.apply {
             setTitle(requireContext().getString(R.string.field_privacy))
             setOnClickListener { viewModel.showPrivacySettings(requireActivity()) }
@@ -107,8 +114,40 @@ class SettingsFragment : Fragment() {
                 launch { viewModel.shouldShowEntireScreenCapture.collect(::updateForceEntireScreenVisibility) }
                 launch { viewModel.shouldShowPrivacySettings.collect(::updatePrivacySettingsVisibility) }
                 launch { viewModel.shouldShowPurchase.collect(::updateRemoveAdsVisibility) }
+                launch { viewModel.precisionGestureHelperStatus.collect(::updatePrecisionGestureHelperStatus) }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        viewModel.refreshPrecisionGestureHelperStatus()
+    }
+
+    private fun updatePrecisionGestureHelperStatus(status: PrecisionGestureSetupResult?) {
+        viewBinding.fieldShizukuHelperStatus.setDescription(
+            when (status) {
+                null -> getString(R.string.field_shizuku_helper_status_checking)
+                is PrecisionGestureSetupResult.Running -> getString(
+                    R.string.field_shizuku_helper_status_running,
+                    status.status,
+                )
+                PrecisionGestureSetupResult.UnsupportedAbi -> getString(R.string.field_shizuku_helper_status_unsupported)
+                PrecisionGestureSetupResult.ShizukuUnavailable -> getString(
+                    R.string.field_shizuku_helper_status_shizuku_unavailable,
+                )
+                PrecisionGestureSetupResult.PermissionDenied -> getString(
+                    R.string.field_shizuku_helper_status_permission_denied,
+                )
+                is PrecisionGestureSetupResult.NotStarted -> getString(
+                    R.string.field_shizuku_helper_status_not_started,
+                )
+                is PrecisionGestureSetupResult.StartFailed -> getString(
+                    R.string.field_shizuku_helper_status_failed,
+                    status.error.message ?: status.error.javaClass.simpleName,
+                )
+            }
+        )
     }
 
     private fun updateForceEntireScreenVisibility(shouldBeVisible: Boolean) {

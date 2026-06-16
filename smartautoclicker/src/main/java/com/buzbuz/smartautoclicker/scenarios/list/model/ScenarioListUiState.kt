@@ -109,24 +109,28 @@ data class ScenarioListUiState(
             val sortType: ScenarioSortType,
             val smartVisible: Boolean,
             val dumbVisible: Boolean,
+            val favoritesOnly: Boolean,
             val changeOrderChecked: Boolean,
         ): Item()
 
         sealed class ScenarioItem(val displayName: String, val scenarioTypeIcon: Int): Item() {
 
             abstract val scenario: Any
+            abstract val isFavorite: Boolean
             abstract val lastStartTimestamp: Long
             abstract val startCount: Long
 
             sealed class Empty(displayName: String, scenarioTypeIcon: Int) : ScenarioItem(displayName, scenarioTypeIcon) {
                 data class Dumb(
                     override val scenario: DumbScenario,
+                    override val isFavorite: Boolean = scenario.isFavorite,
                     override val lastStartTimestamp: Long,
                     override val startCount: Long,
                 ) : Empty(displayName = scenario.name, scenarioTypeIcon = R.drawable.ic_dumb)
 
                 data class Smart(
                     override val scenario: Scenario,
+                    override val isFavorite: Boolean = scenario.isFavorite,
                     override val lastStartTimestamp: Long,
                     override val startCount: Long,
                 ) : Empty(displayName = scenario.name, scenarioTypeIcon = R.drawable.ic_smart)
@@ -142,6 +146,7 @@ data class ScenarioListUiState(
 
                 data class Dumb(
                     override val scenario: DumbScenario,
+                    override val isFavorite: Boolean = scenario.isFavorite,
                     override val showExportCheckbox: Boolean = false,
                     override val checkedForExport: Boolean = false,
                     override val expanded: Boolean = false,
@@ -158,6 +163,7 @@ data class ScenarioListUiState(
 
                 data class Smart(
                     override val scenario: Scenario,
+                    override val isFavorite: Boolean = scenario.isFavorite,
                     override val showExportCheckbox: Boolean = false,
                     override val checkedForExport: Boolean = false,
                     override val expanded: Boolean = false,

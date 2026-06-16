@@ -32,6 +32,8 @@ import com.buzbuz.smartautoclicker.feature.dumb.config.R
 import com.buzbuz.smartautoclicker.feature.dumb.config.ui.actions.click.DumbClickDialog
 import com.buzbuz.smartautoclicker.feature.dumb.config.ui.actions.copy.DumbActionCopyDialog
 import com.buzbuz.smartautoclicker.feature.dumb.config.ui.actions.pause.DumbPauseDialog
+import com.buzbuz.smartautoclicker.feature.dumb.config.ui.actions.precision.DumbPrecisionGestureDialog
+import com.buzbuz.smartautoclicker.feature.dumb.config.ui.actions.precision.DumbPrecisionTextDialog
 import com.buzbuz.smartautoclicker.feature.dumb.config.ui.actions.swipe.DumbSwipeDialog
 
 internal fun OverlayManager.startDumbActionCreationUiFlow(
@@ -52,6 +54,16 @@ internal fun OverlayManager.startDumbActionCreationUiFlow(
                     DumbActionTypeChoice.Copy -> onCopyDumbActionSelected(context, creator, listener)
                     DumbActionTypeChoice.Click -> onDumbClickCreationSelected(context, creator, listener)
                     DumbActionTypeChoice.Swipe -> onDumbSwipeCreationSelected(context, creator, listener)
+                    DumbActionTypeChoice.PrecisionGesture -> startDumbPrecisionGestureEditionFlow(
+                        context,
+                        creator.createNewDumbPrecisionGesture(),
+                        listener,
+                    )
+                    DumbActionTypeChoice.PrecisionText -> startDumbPrecisionTextEditionFlow(
+                        context,
+                        creator.createNewDumbPrecisionText(),
+                        listener,
+                    )
                     DumbActionTypeChoice.Pause -> startDumbPauseEditionFlow(
                         context,
                         creator.createNewDumbPause(),
@@ -75,6 +87,8 @@ internal fun OverlayManager.startDumbActionEditionUiFlow(
         is DumbAction.DumbClick -> startDumbClickEditionUiFlow(context, dumbAction, listener)
         is DumbAction.DumbSwipe -> startDumbSwipeEditionFlow(context, dumbAction, listener)
         is DumbAction.DumbPause -> startDumbPauseEditionFlow(context, dumbAction, listener)
+        is DumbAction.DumbPrecisionGesture -> startDumbPrecisionGestureEditionFlow(context, dumbAction, listener)
+        is DumbAction.DumbPrecisionText -> startDumbPrecisionTextEditionFlow(context, dumbAction, listener)
     }
 }
 
@@ -228,6 +242,40 @@ private fun OverlayManager.startDumbPauseEditionFlow(
     )
 }
 
+private fun OverlayManager.startDumbPrecisionGestureEditionFlow(
+    context: Context,
+    dumbPrecisionGesture: DumbAction.DumbPrecisionGesture,
+    listener: DumbActionUiFlowListener,
+) {
+    navigateTo(
+        context = context,
+        newOverlay = DumbPrecisionGestureDialog(
+            dumbPrecisionGesture = dumbPrecisionGesture,
+            onConfirmClicked = listener.onDumbActionSaved,
+            onDeleteClicked = listener.onDumbActionDeleted,
+            onDismissClicked = listener.onDumbActionCreationCancelled,
+        ),
+        hideCurrent = true,
+    )
+}
+
+private fun OverlayManager.startDumbPrecisionTextEditionFlow(
+    context: Context,
+    dumbPrecisionText: DumbAction.DumbPrecisionText,
+    listener: DumbActionUiFlowListener,
+) {
+    navigateTo(
+        context = context,
+        newOverlay = DumbPrecisionTextDialog(
+            dumbPrecisionText = dumbPrecisionText,
+            onConfirmClicked = listener.onDumbActionSaved,
+            onDeleteClicked = listener.onDumbActionDeleted,
+            onDismissClicked = listener.onDumbActionCreationCancelled,
+        ),
+        hideCurrent = true,
+    )
+}
+
 
 
 internal class DumbActionUiFlowListener(
@@ -240,6 +288,8 @@ internal class DumbActionCreator(
     val createNewDumbClick: (position: Point) -> DumbAction.DumbClick,
     val createNewDumbSwipe: (from: Point, to: Point) -> DumbAction.DumbSwipe,
     val createNewDumbPause: () -> DumbAction.DumbPause,
+    val createNewDumbPrecisionGesture: () -> DumbAction.DumbPrecisionGesture,
+    val createNewDumbPrecisionText: () -> DumbAction.DumbPrecisionText,
     val createDumbActionCopy: ((DumbAction) -> DumbAction)? = null,
 )
 

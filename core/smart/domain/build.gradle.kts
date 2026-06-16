@@ -33,6 +33,7 @@ dependencies {
     implementation(libs.androidx.room.ktx)
 
     implementation(project(":core:common:base"))
+    implementation(project(":core:common:actions"))
     implementation(project(":core:common:bitmaps"))
     implementation(project(":core:smart:database"))
 

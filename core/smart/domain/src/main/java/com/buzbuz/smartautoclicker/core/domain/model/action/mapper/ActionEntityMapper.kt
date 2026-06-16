@@ -26,7 +26,10 @@ import com.buzbuz.smartautoclicker.core.domain.model.action.Click
 import com.buzbuz.smartautoclicker.core.domain.model.action.Intent
 import com.buzbuz.smartautoclicker.core.domain.model.action.Notification
 import com.buzbuz.smartautoclicker.core.domain.model.action.Pause
+import com.buzbuz.smartautoclicker.core.domain.model.action.PrecisionGesture
+import com.buzbuz.smartautoclicker.core.domain.model.action.PrecisionText
 import com.buzbuz.smartautoclicker.core.domain.model.action.SetText
+import com.buzbuz.smartautoclicker.core.domain.model.action.StopScenario
 import com.buzbuz.smartautoclicker.core.domain.model.action.Swipe
 import com.buzbuz.smartautoclicker.core.domain.model.action.SystemAction
 import com.buzbuz.smartautoclicker.core.domain.model.action.ToggleEvent
@@ -45,6 +48,9 @@ internal fun Action.toEntity(): ActionEntity {
         is Notification -> toNotificationEntity()
         is SystemAction -> toSystemActionEntity()
         is SetText -> toSetTextEntity()
+        is StopScenario -> toStopScenarioEntity()
+        is PrecisionGesture -> toPrecisionGestureEntity()
+        is PrecisionText -> toPrecisionTextEntity()
     }
 }
 
@@ -62,6 +68,7 @@ private fun Click.toClickEntity(): ActionEntity =
         clickOnConditionId = clickOnConditionId?.databaseId,
         clickOffsetX = clickOffset?.x,
         clickOffsetY = clickOffset?.y,
+        clickWaitAfterMs = waitAfterClickMs,
     )
 
 private fun Swipe.toSwipeEntity(): ActionEntity =
@@ -162,4 +169,37 @@ private fun SetText.toSetTextEntity(): ActionEntity =
         type = ActionType.TEXT,
         textValue = text,
         textValidateInput = validateInput,
+    )
+
+private fun StopScenario.toStopScenarioEntity(): ActionEntity =
+    ActionEntity(
+        id = id.databaseId,
+        eventId = eventId.databaseId,
+        priority = priority,
+        name = name!!,
+        type = ActionType.STOP_SCENARIO,
+    )
+
+private fun PrecisionGesture.toPrecisionGestureEntity(): ActionEntity =
+    ActionEntity(
+        id = id.databaseId,
+        eventId = eventId.databaseId,
+        priority = priority,
+        name = name!!,
+        type = ActionType.PRECISION_GESTURE,
+        precisionGesturePayloadHex = payloadHex,
+        precisionGestureEventCount = eventCount,
+        precisionGestureDurationMs = durationMs,
+        precisionGestureHelperMode = helperMode,
+    )
+
+private fun PrecisionText.toPrecisionTextEntity(): ActionEntity =
+    ActionEntity(
+        id = id.databaseId,
+        eventId = eventId.databaseId,
+        priority = priority,
+        name = name!!,
+        type = ActionType.PRECISION_TEXT,
+        precisionTextValue = text,
+        precisionTextMode = mode.name,
     )

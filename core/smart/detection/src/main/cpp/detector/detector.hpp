@@ -19,6 +19,7 @@
 #define KLICK_R_DETECTOR_HPP
 
 #include <opencv2/imgproc/imgproc.hpp>
+#include <vector>
 
 #include "matching/template_matcher.hpp"
 #include "matching/template_matching_result.hpp"
@@ -48,6 +49,14 @@ namespace smartautoclicker {
                 int targetConditionHeight,
                 const cv::Rect& roi,
                 int threshold);
+
+        std::vector<TemplateMatchingResult> detectConditionOccurrences(
+                std::unique_ptr<cv::Mat> conditionMat,
+                int targetConditionWidth,
+                int targetConditionHeight,
+                const cv::Rect& roi,
+                int threshold,
+                int maxResults);
     };
 }
 

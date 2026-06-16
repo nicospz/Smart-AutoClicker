@@ -76,6 +76,7 @@ class FilteredScenarioListUseCase @Inject constructor(
                         sortType = sortConfig.type,
                         smartVisible = sortConfig.showSmartScenario,
                         dumbVisible = sortConfig.showDumbScenario,
+                        favoritesOnly = sortConfig.showFavoritesOnly,
                         changeOrderChecked = sortConfig.inverted,
                     )
 
@@ -111,16 +112,16 @@ class FilteredScenarioListUseCase @Inject constructor(
         )
         else ScenarioListUiState.Item.ScenarioItem.Valid.Smart(
             scenario = this,
-            eventsItems = smartRepository.getImageEvents(id.databaseId).map { event ->
+            eventsItems = smartRepository.getImageEventListData(id.databaseId).map { event ->
                 ScenarioListUiState.Item.ScenarioItem.Valid.Smart.EventItem(
                     id = event.id.databaseId,
                     eventName = event.name,
-                    actionsCount = event.actions.size,
-                    conditionsCount = event.conditions.size,
-                    firstCondition = if (event.conditions.isNotEmpty()) event.conditions.first() else null,
+                    actionsCount = event.actionsCount,
+                    conditionsCount = event.conditionsCount,
+                    firstCondition = event.firstCondition,
                 )
             },
-            triggerEventCount = smartRepository.getTriggerEvents(id.databaseId).size,
+            triggerEventCount = smartRepository.getTriggerEventCount(id.databaseId),
             detectionQuality = detectionQuality,
             lastStartTimestamp = stats?.lastStartTimestampMs ?: 0,
             startCount = stats?.startCount ?: 0
@@ -169,6 +170,10 @@ private fun Collection<ScenarioListUiState.Item.ScenarioItem>.sortAndFilter(
     val filteredList = filter { item ->
         (sortConfig.showSmartScenario && item.scenario is Scenario) ||
                 (sortConfig.showDumbScenario && item.scenario is DumbScenario)
+    }.filter { item ->
+        !sortConfig.showFavoritesOnly ||
+                (item.scenario as? Scenario)?.isFavorite == true ||
+                (item.scenario as? DumbScenario)?.isFavorite == true
     }
 
     return when (sortConfig.type) {
@@ -181,7 +186,7 @@ private fun Collection<ScenarioListUiState.Item.ScenarioItem>.sortAndFilter(
             else filteredList.sortedByDescending { it.lastStartTimestamp }
 
         ScenarioSortType.MOST_USED ->
-            if (sortConfig.inverted) filteredList.sortedBy { it.startCount }
-            else filteredList.sortedByDescending { it.startCount }
+            if (sortConfig.inverted) filteredList.sortedByDescending { it.displayName }
+            else filteredList.sortedBy { it.displayName }
     }
 }

@@ -24,6 +24,8 @@ import com.buzbuz.smartautoclicker.core.domain.model.event.TriggerEvent
 interface IEventsState {
 
     fun isEventEnabled(eventId: Long): Boolean
+    fun isEventOnCooldown(eventId: Long): Boolean
+    fun startEventCooldown(event: Event)
     fun areAllEventsDisabled(): Boolean
     fun areAllImageEventsDisabled(): Boolean
     fun areAllTriggerEventsDisabled(): Boolean
@@ -70,6 +72,14 @@ internal class EventsState(
 
     override fun isEventEnabled(eventId: Long): Boolean =
         triggerEventList.isEventEnabled(eventId) || imageEventList.isEventEnabled(eventId)
+
+    override fun isEventOnCooldown(eventId: Long): Boolean =
+        triggerEventList.isEventOnCooldown(eventId) || imageEventList.isEventOnCooldown(eventId)
+
+    override fun startEventCooldown(event: Event) {
+        imageEventList.startEventCooldown(event)
+        triggerEventList.startEventCooldown(event)
+    }
 
     override fun areAllEventsDisabled(): Boolean =
         imageEventList.areAllEventsDisabled() && triggerEventList.areAllEventsDisabled()
@@ -121,6 +131,8 @@ private class EventList<T : Event>(events: List<T>) {
 
     /** Set of enabled events ids. */
     private val enabledEventsMap: MutableMap<Long, T> = mutableMapOf()
+    /** Cooldown end timestamps by event id, in elapsed realtime milliseconds. */
+    private val cooldownEndTimestamps: MutableMap<Long, Long> = mutableMapOf()
     /** Map of the all events. */
     private val eventsMap: Map<Long, T> = buildMap {
         events.forEach { event ->
@@ -133,6 +145,22 @@ private class EventList<T : Event>(events: List<T>) {
 
     fun isEventEnabled(eventDbId: Long): Boolean =
         enabledEventsMap.containsKey(eventDbId)
+
+    fun isEventOnCooldown(eventDbId: Long): Boolean {
+        val cooldownEndTimestamp = cooldownEndTimestamps[eventDbId] ?: return false
+        if (android.os.SystemClock.elapsedRealtime() < cooldownEndTimestamp) return true
+
+        cooldownEndTimestamps.remove(eventDbId)
+        return false
+    }
+
+    fun startEventCooldown(event: Event) {
+        val eventId = event.getValidId()
+        val cooldownMs = event.cooldownMs
+        if (!eventsMap.containsKey(eventId) || cooldownMs <= 0) return
+
+        cooldownEndTimestamps[eventId] = android.os.SystemClock.elapsedRealtime() + cooldownMs
+    }
 
     fun areAllEventsDisabled(): Boolean =
         enabledEventsMap.isEmpty()

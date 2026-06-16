@@ -18,6 +18,7 @@ package com.buzbuz.smartautoclicker.feature.dumb.config.ui.scenario.config
 
 import android.content.Context
 import android.text.InputFilter
+import android.text.InputType
 import android.view.LayoutInflater
 import android.view.ViewGroup
 
@@ -101,6 +102,26 @@ class DumbScenarioConfigContent(appContext: Context) : NavBarDialogContent(appCo
                 setOnClickListener(dialogViewModel::toggleRandomization)
 
             }
+
+            fieldAutoStart.apply {
+                setTitle(context.resources.getString(R.string.field_scenario_auto_start_title))
+                setupDescriptions(
+                    listOf(
+                        context.getString(R.string.field_scenario_auto_start_disabled),
+                        context.getString(R.string.field_scenario_auto_start_enabled),
+                    )
+                )
+                setOnClickListener(dialogViewModel::toggleAutoStart)
+            }
+
+            fieldAutoStartDelay.apply {
+                setLabel(R.string.input_field_label_auto_start_delay)
+                textField.filters = arrayOf(MinMaxInputFilter(0))
+                setOnTextChangedListener {
+                    dialogViewModel.setAutoStartDelay(if (it.isNotEmpty()) it.toString().toLong() else 0L)
+                }
+            }
+            dialogController.hideSoftInputOnFocusLoss(fieldAutoStartDelay.textField)
         }
 
         return viewBinding.root
@@ -118,6 +139,9 @@ class DumbScenarioConfigContent(appContext: Context) : NavBarDialogContent(appCo
                 launch { dialogViewModel.maxDurationMinError.collect(viewBinding.fieldMaxDuration::setError) }
                 launch { dialogViewModel.maxDurationMinInfiniteState.collect(viewBinding.fieldMaxDuration::setChecked) }
                 launch { dialogViewModel.randomization.collect(::updateFieldRandomization) }
+                launch { dialogViewModel.autoStart.collect(::updateAutoStart) }
+                launch { dialogViewModel.autoStartDelay.collect(::updateAutoStartDelay) }
+                launch { dialogViewModel.autoStartDelayError.collect(viewBinding.fieldAutoStartDelay::setError) }
             }
         }
     }
@@ -127,5 +151,21 @@ class DumbScenarioConfigContent(appContext: Context) : NavBarDialogContent(appCo
             setChecked(isEnabled)
             setDescription(if (isEnabled) 1 else 0)
         }
+    }
+
+    private fun updateAutoStart(isEnabled: Boolean) {
+        viewBinding.fieldAutoStart.apply {
+            setChecked(isEnabled)
+            setDescription(if (isEnabled) 1 else 0)
+        }
+
+        viewBinding.fieldAutoStartDelay.root.apply {
+            this.isEnabled = isEnabled
+            alpha = if (isEnabled) 1f else 0.5f
+        }
+    }
+
+    private fun updateAutoStartDelay(delayMs: String) {
+        viewBinding.fieldAutoStartDelay.setText(delayMs, InputType.TYPE_CLASS_NUMBER)
     }
 }

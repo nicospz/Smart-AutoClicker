@@ -111,6 +111,15 @@ class ClickDialog(
             }
             hideSoftInputOnFocusLoss(fieldPressDuration.textField)
 
+            fieldWaitAfterClick.apply {
+                textField.filters = arrayOf(MinMaxInputFilter(0))
+                setLabel(R.string.input_field_label_click_wait_after)
+                setOnTextChangedListener {
+                    viewModel.setWaitAfterClick(if (it.isNotEmpty()) it.toString().toLong() else 0L)
+                }
+            }
+            hideSoftInputOnFocusLoss(fieldWaitAfterClick.textField)
+
             fieldClickType.apply {
                 setTitle(context.getString(R.string.field_click_type_title))
                 setupDescriptions(
@@ -155,6 +164,8 @@ class ClickDialog(
                 launch { viewModel.nameError.collect(viewBinding.fieldName::setError)}
                 launch { viewModel.pressDuration.collect(::updateClickDuration) }
                 launch { viewModel.pressDurationError.collect(viewBinding.fieldPressDuration::setError)}
+                launch { viewModel.waitAfterClick.collect(::updateWaitAfterClick) }
+                launch { viewModel.waitAfterClickError.collect(viewBinding.fieldWaitAfterClick::setError)}
                 launch { viewModel.positionStateUi.collect(::updateClickPositionUiState) }
                 launch { viewModel.isValidAction.collect(::updateSaveButton) }
             }
@@ -205,6 +216,10 @@ class ClickDialog(
 
     private fun updateClickDuration(newDuration: String?) {
         viewBinding.fieldPressDuration.setText(newDuration, InputType.TYPE_CLASS_NUMBER)
+    }
+
+    private fun updateWaitAfterClick(newDuration: String) {
+        viewBinding.fieldWaitAfterClick.setText(newDuration, InputType.TYPE_CLASS_NUMBER)
     }
 
     private fun updateClickPositionUiState(state: ClickPositionUiState?) {

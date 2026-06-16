@@ -51,7 +51,9 @@ class ScenarioAdapter(
     private val onSortTypeClicked: (ScenarioSortType) -> Unit,
     private val onSmartChipClicked: (Boolean) -> Unit,
     private val onDumbChipClicked: (Boolean) -> Unit,
+    private val onFavoritesChipClicked: (Boolean) -> Unit,
     private val onSortOrderClicked: (Boolean) -> Unit,
+    private val onFavoriteClicked: ((ScenarioListUiState.Item.ScenarioItem) -> Unit),
 ) : ListAdapter<ScenarioListUiState.Item, RecyclerView.ViewHolder>(ScenarioDiffUtilCallback) {
 
     override fun getItemViewType(position: Int): Int =
@@ -68,6 +70,7 @@ class ScenarioAdapter(
                 viewBinding = ItemEmptyScenarioBinding.inflate(LayoutInflater.from(parent.context), parent, false),
                 startScenarioListener = startScenarioListener,
                 deleteScenarioListener = deleteScenarioListener,
+                favoriteClickedListener = onFavoriteClicked,
             )
 
             R.layout.item_dumb_scenario -> DumbScenarioViewHolder(
@@ -77,6 +80,7 @@ class ScenarioAdapter(
                 exportClickListener = exportClickListener,
                 copyClickedListener = copyClickedListener,
                 deleteScenarioListener = deleteScenarioListener,
+                favoriteClickedListener = onFavoriteClicked,
             )
 
             R.layout.item_smart_scenario -> SmartScenarioViewHolder(
@@ -87,6 +91,7 @@ class ScenarioAdapter(
                 exportClickListener = exportClickListener,
                 copyClickedListener = copyClickedListener,
                 deleteScenarioListener = deleteScenarioListener,
+                favoriteClickedListener = onFavoriteClicked,
             )
 
             R.layout.item_ordering_and_filtering -> SortViewHolder(
@@ -94,6 +99,7 @@ class ScenarioAdapter(
                 onSortTypeClicked = onSortTypeClicked,
                 onSmartChipClicked = onSmartChipClicked,
                 onDumbChipClicked = onDumbChipClicked,
+                onFavoritesChipClicked = onFavoritesChipClicked,
                 onSortOrderClicked = onSortOrderClicked,
             )
 

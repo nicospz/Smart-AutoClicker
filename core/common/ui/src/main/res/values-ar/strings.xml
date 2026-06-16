@@ -25,8 +25,6 @@
       -->
     <string name="dialog_overlay_title_warning">تحذير</string>
     <string name="dialog_overlay_title_copy_from">نسخ من</string>
-    <string name="dialog_title_tutorial">درس تعليمي</string>
-
     <!--
       - Text for items in a list or vertical layout.
       -  * Title should be short and concise.
@@ -48,9 +46,6 @@
       - Messages.
       - Views handles any length here, so no limitations.
       -->
-    <string name="message_tutorial_volume_down_stop">إذا كان السيناريو الخاص بك يتم النقر عليه بسرعة كبيرة، فقد يحدث ذلك
-        منعك من استخدام قائمة Klick\'r لإيقافها.\n\nفي هذه الحالة، يمكنك الضغط على
-        زر \"خفض مستوى الصوت\" الفعلي لجهازك لإيقاف سيناريو التشغيل.</string>
     <string name="message_dont_show_again">لا تظهر هذه الرسالة مرة أخرى</string>
 
 

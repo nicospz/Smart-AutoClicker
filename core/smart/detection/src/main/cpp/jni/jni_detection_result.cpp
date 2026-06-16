@@ -30,3 +30,31 @@ void setDetectionResult(JNIEnv *env, jobject self, TemplateMatchingResult* resul
                         (int) result->getResultAreaCenterX(), (int) result->getResultAreaCenterY(),
                         result->getResultConfidence());
 }
+
+jobject createDetectionResultsList(JNIEnv *env, const std::vector<TemplateMatchingResult>& results) {
+    jclass arrayListCls = env->FindClass("java/util/ArrayList");
+    if (!arrayListCls) env->FatalError("FindClass ArrayList failed");
+
+    jmethodID arrayListCtor = env->GetMethodID(arrayListCls, "<init>", "()V");
+    jmethodID arrayListAdd = env->GetMethodID(arrayListCls, "add", "(Ljava/lang/Object;)Z");
+    if (!arrayListCtor || !arrayListAdd) env->FatalError("ArrayList method lookup failed");
+
+    jobject list = env->NewObject(arrayListCls, arrayListCtor);
+
+    jclass resultCls = env->FindClass("com/buzbuz/smartautoclicker/core/detection/DetectionResult");
+    if (!resultCls) env->FatalError("FindClass DetectionResult failed");
+
+    jmethodID resultCtor = env->GetMethodID(resultCls, "<init>", "()V");
+    if (!resultCtor) env->FatalError("DetectionResult constructor lookup failed");
+
+    for (auto result : results) {
+        jobject resultObject = env->NewObject(resultCls, resultCtor);
+        setDetectionResult(env, resultObject, &result);
+        env->CallBooleanMethod(list, arrayListAdd, resultObject);
+        env->DeleteLocalRef(resultObject);
+    }
+
+    env->DeleteLocalRef(resultCls);
+    env->DeleteLocalRef(arrayListCls);
+    return list;
+}

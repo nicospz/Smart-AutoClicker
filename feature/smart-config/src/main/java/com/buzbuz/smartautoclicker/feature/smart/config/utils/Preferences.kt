@@ -39,6 +39,16 @@ fun SharedPreferences.getClickPressDurationConfig(context: Context) : Long = get
 fun SharedPreferences.Editor.putClickPressDurationConfig(durationMs: Long) : SharedPreferences.Editor =
     putLong(PREF_LAST_CLICK_PRESS_DURATION, durationMs)
 
+/** @return the default wait after a click. */
+fun SharedPreferences.getClickWaitAfterConfig() : Long = getLong(
+    PREF_LAST_CLICK_WAIT_AFTER_DURATION,
+    0L
+)
+
+/** Save a new default wait after a click. */
+fun SharedPreferences.Editor.putClickWaitAfterConfig(durationMs: Long) : SharedPreferences.Editor =
+    putLong(PREF_LAST_CLICK_WAIT_AFTER_DURATION, durationMs)
+
 /** @return the default duration for a swipe. */
 fun SharedPreferences.getSwipeDurationConfig(context: Context) : Long = getLong(
     PREF_LAST_SWIPE_DURATION,
@@ -59,6 +69,16 @@ fun SharedPreferences.getPauseDurationConfig(context: Context) : Long = getLong(
 fun SharedPreferences.Editor.putPauseDurationConfig(durationMs: Long) : SharedPreferences.Editor =
     putLong(PREF_LAST_PAUSE_DURATION, durationMs)
 
+/** @return the default threshold for image conditions. */
+fun SharedPreferences.getConditionThresholdConfig(context: Context): Int = getInt(
+    PREF_LAST_CONDITION_THRESHOLD,
+    context.resources.getInteger(R.integer.default_condition_threshold),
+)
+
+/** Save a new default threshold for image conditions. */
+fun SharedPreferences.Editor.putConditionThresholdConfig(threshold: Int): SharedPreferences.Editor =
+    putInt(PREF_LAST_CONDITION_THRESHOLD, threshold)
+
 /** @return the default isAdvanced for the intents. */
 fun SharedPreferences.getIntentIsAdvancedConfig(context: Context) : Boolean = getBoolean(
     PREF_LAST_INTENT_IS_ADVANCED,
@@ -75,9 +95,13 @@ fun SharedPreferences.Editor.putIntentIsAdvancedConfig(isAdvanced: Boolean) : Sh
 private const val EVENT_CONFIG_PREFERENCES_NAME = "EventConfigPreferences"
 /** User last click press duration key in the SharedPreferences. */
 private const val PREF_LAST_CLICK_PRESS_DURATION = "Last_Click_Press_Duration"
+/** User last click wait after duration key in the SharedPreferences. */
+private const val PREF_LAST_CLICK_WAIT_AFTER_DURATION = "Last_Click_Wait_After_Duration"
 /** User last swipe press duration key in the SharedPreferences. */
 private const val PREF_LAST_SWIPE_DURATION = "Last_Swipe_Duration"
 /** User last pause press duration key in the SharedPreferences. */
 private const val PREF_LAST_PAUSE_DURATION = "Last_Pause_Duration"
+/** User last image condition threshold key in the SharedPreferences. */
+private const val PREF_LAST_CONDITION_THRESHOLD = "Last_Condition_Threshold"
 /** User last pause press duration key in the SharedPreferences. */
 private const val PREF_LAST_INTENT_IS_ADVANCED = "Last_Intent_IsAdvanced"

@@ -21,6 +21,7 @@
 #include <android/bitmap.h>
 #include <jni.h>
 #include <opencv2/imgproc/imgproc.hpp>
+#include <vector>
 
 #include "../detector/detector.hpp"
 #include "../detector/matching/template_matching_result.hpp"
@@ -39,5 +40,6 @@ std::unique_ptr<cv::Mat> loadMatFromRGBA8888Bitmap(JNIEnv *env, jobject bitmap);
 void releaseBitmapLock(JNIEnv *env, jobject bitmap);
 
 void setDetectionResult(JNIEnv *env, jobject self, TemplateMatchingResult* result);
+jobject createDetectionResultsList(JNIEnv *env, const std::vector<TemplateMatchingResult>& results);
 
 #endif //KLICK_R_JNI_HPP

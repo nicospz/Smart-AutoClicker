@@ -67,7 +67,9 @@ internal class DebugOverlayView(context: Context) : View(context) {
             return
         }
 
-        results.forEach { result -> displayedResults.add(result.toDisplayResult()) }
+        results
+            .filterNot { result -> result.coordinates.isEmpty }
+            .forEach { result -> displayedResults.add(result.toDisplayResult()) }
     }
 
     private fun ImageConditionResultUiState.toDisplayResult(): Pair<Paint, Rect> = Pair(

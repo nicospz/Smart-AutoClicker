@@ -169,8 +169,6 @@
     <string name="warning_dialog_message_event_delete_associated_action">此事件被其他操作引用。删除该事件将同时删除相关操作。\n是否确认删除？</string>
     <string name="warning_dialog_message_condition_delete_associated_action">此条件被其他操作引用。删除该条件将同时删除关联操作。\n是否确认删除？</string>
     <string name="warning_dialog_message_close_without_saving">存在未保存的更改，是否放弃？</string>
-
-    <string name="field_tutorial_desc">了解如何使用 Klick\'r</string>
     <string name="error_dialog_message_scenario_saving">由于内部错误，场景无法保存。要继续编辑还是放弃所有更改？</string>
     <string name="error_dialog_message_error_native_lib">Klick\'r 安装错误，无法启动检测。\n\n如果您是从合法的应用程序商店安装的，请在 GitHub 上联系我们，这将有助于我们修复此问题。</string>
 
@@ -181,7 +179,6 @@
     <string name="field_title_condition_threshold">允许差异</string>
     <string name="field_scenario_quality_title">检测分辨率</string>
     <string name="field_intent_extra_value_title">参数值</string>
-    <string name="field_tutorial_title">教程</string>
 
     <!--
       - List header.

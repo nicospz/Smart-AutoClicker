@@ -19,6 +19,9 @@ package com.buzbuz.smartautoclicker.core.dumb.domain.model
 import android.graphics.Point
 import com.buzbuz.smartautoclicker.core.base.interfaces.Identifiable
 import com.buzbuz.smartautoclicker.core.base.identifier.Identifier
+import com.buzbuz.smartautoclicker.core.common.actions.precision.PRECISION_GESTURE_HELPER_MODE
+import com.buzbuz.smartautoclicker.core.common.actions.precision.PrecisionGesturePayload
+import com.buzbuz.smartautoclicker.core.common.actions.precision.PrecisionTextMode
 
 sealed class DumbAction : Identifiable {
 
@@ -36,6 +39,8 @@ sealed class DumbAction : Identifiable {
             is DumbClick -> copy(scenarioId = scenarioId)
             is DumbPause -> copy(scenarioId = scenarioId)
             is DumbSwipe -> copy(scenarioId = scenarioId)
+            is DumbPrecisionGesture -> copy(scenarioId = scenarioId)
+            is DumbPrecisionText -> copy(scenarioId = scenarioId)
         }
 
     data class DumbClick(
@@ -79,5 +84,40 @@ sealed class DumbAction : Identifiable {
     ) : DumbAction() {
 
         override fun isValid(): Boolean = name.isNotEmpty()
+    }
+
+    data class DumbPrecisionGesture(
+        override val id: Identifier,
+        override val scenarioId: Identifier,
+        override val name: String,
+        override val priority: Int = 0,
+        override val repeatCount: Int,
+        override val isRepeatInfinite: Boolean,
+        override val repeatDelayMs: Long,
+        val payloadHex: String? = null,
+        val eventCount: Int? = null,
+        val durationMs: Long? = null,
+        val helperMode: String? = PRECISION_GESTURE_HELPER_MODE,
+    ) : DumbAction(), RepeatableWithDelay {
+
+        override fun isValid(): Boolean =
+            name.isNotEmpty() && isRepeatCountValid() && isRepeatDelayValid() &&
+                PrecisionGesturePayload.validate(payloadHex, eventCount, durationMs)
+    }
+
+    data class DumbPrecisionText(
+        override val id: Identifier,
+        override val scenarioId: Identifier,
+        override val name: String,
+        override val priority: Int = 0,
+        override val repeatCount: Int,
+        override val isRepeatInfinite: Boolean,
+        override val repeatDelayMs: Long,
+        val text: String = "",
+        val mode: PrecisionTextMode = PrecisionTextMode.KEY_EVENTS,
+    ) : DumbAction(), RepeatableWithDelay {
+
+        override fun isValid(): Boolean =
+            name.isNotEmpty() && text.isNotEmpty() && isRepeatCountValid() && isRepeatDelayValid()
     }
 }

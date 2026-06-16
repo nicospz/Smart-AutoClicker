@@ -75,7 +75,13 @@
                         android:layout_height="wrap_content"
                         android:visibility="gone"/>
 
+                    <include layout="@layout/include_field_dual_state_text"
+                        android:id="@+id/field_image_detection_mode"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"/>
+
                     <com.google.android.material.divider.MaterialDivider
+                        android:id="@+id/divider_conditions_operator"
                         style="@style/AppTheme.Widget.Divider.Horizontal"
                         android:layout_width="match_parent"
                         android:layout_height="1dp"/>
@@ -125,6 +131,17 @@
                         android:id="@+id/field_is_enabled"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"/>
+
+                    <com.google.android.material.divider.MaterialDivider
+                        style="@style/AppTheme.Widget.Divider.Horizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"/>
+
+                    <include layout="@layout/include_field_text_input"
+                        android:id="@+id/field_event_cooldown"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginVertical="@dimen/margin_vertical_small"/>
 
                     <com.google.android.material.divider.MaterialDivider
                         android:id="@+id/divider_keep_detecting"

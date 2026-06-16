@@ -23,6 +23,8 @@ import android.util.Log
 import com.buzbuz.smartautoclicker.core.base.workarounds.UnblockGestureScheduler
 import com.buzbuz.smartautoclicker.core.base.workarounds.buildUnblockGesture
 import com.buzbuz.smartautoclicker.core.common.actions.AndroidActionExecutor
+import com.buzbuz.smartautoclicker.core.common.actions.precision.PrecisionGestureExecutor
+import com.buzbuz.smartautoclicker.core.common.actions.precision.PrecisionTextExecutor
 import com.buzbuz.smartautoclicker.core.common.actions.gesture.buildSingleStroke
 import com.buzbuz.smartautoclicker.core.common.actions.gesture.line
 import com.buzbuz.smartautoclicker.core.common.actions.gesture.moveTo
@@ -40,6 +42,8 @@ import kotlin.random.Random
 @Singleton
 class DumbActionExecutor @Inject constructor(
     private val androidExecutor: AndroidActionExecutor,
+    private val precisionGestureExecutor: PrecisionGestureExecutor,
+    private val precisionTextExecutor: PrecisionTextExecutor,
 ) {
 
     private val random: Random = Random(System.currentTimeMillis())
@@ -72,6 +76,8 @@ class DumbActionExecutor @Inject constructor(
             is DumbAction.DumbClick -> executeDumbClick(action)
             is DumbAction.DumbSwipe -> executeDumbSwipe(action)
             is DumbAction.DumbPause -> executeDumbPause(action)
+            is DumbAction.DumbPrecisionGesture -> executeDumbPrecisionGesture(action)
+            is DumbAction.DumbPrecisionText -> executeDumbPrecisionText(action)
         }
     }
 
@@ -110,6 +116,22 @@ class DumbActionExecutor @Inject constructor(
             withContext(Dispatchers.Main) {
                 androidExecutor.dispatchGesture(gesture)
             }
+        }
+    }
+
+    private suspend fun executeDumbPrecisionGesture(precisionGesture: DumbAction.DumbPrecisionGesture) {
+        val payload = precisionGesture.payloadHex ?: return
+
+        precisionGesture.repeat {
+            runCatching { precisionGestureExecutor.play(payload) }
+                .onFailure { Log.w(TAG, "Precision gesture playback failed", it) }
+        }
+    }
+
+    private suspend fun executeDumbPrecisionText(precisionText: DumbAction.DumbPrecisionText) {
+        precisionText.repeat {
+            runCatching { precisionTextExecutor.typeText(precisionText.text, precisionText.mode) }
+                .onFailure { Log.w(TAG, "Precision text input failed", it) }
         }
     }
 }

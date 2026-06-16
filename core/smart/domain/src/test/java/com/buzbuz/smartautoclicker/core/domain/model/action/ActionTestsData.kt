@@ -41,6 +41,7 @@ internal object ActionTestsData {
     private const val CLICK_ID = 7L
     private const val CLICK_NAME = "Click name"
     private const val CLICK_PRESS_DURATION = 250L
+    private const val CLICK_WAIT_AFTER_DURATION = 100L
     private const val CLICK_X_POSITION = 24
     private const val CLICK_Y_POSITION = 87
 
@@ -52,6 +53,7 @@ internal object ActionTestsData {
         x: Int? = CLICK_X_POSITION,
         y: Int? = CLICK_Y_POSITION,
         clickOnConditionId: Long? = null,
+        waitAfterClickMs: Long = CLICK_WAIT_AFTER_DURATION,
         positionType: ClickPositionType =
             if (x != null && y != null) ClickPositionType.USER_SELECTED
             else ClickPositionType.ON_DETECTED_CONDITION,
@@ -59,7 +61,7 @@ internal object ActionTestsData {
     ) = CompleteActionEntity(
         action = ActionEntity(id, eventId, priority, name, ActionType.CLICK, x = x, y = y,
             clickOnConditionId = clickOnConditionId, clickPositionType = positionType,
-            pressDuration = pressDuration),
+            pressDuration = pressDuration, clickWaitAfterMs = waitAfterClickMs),
         intentExtras = emptyList(),
         eventsToggle = emptyList(),
     )
@@ -72,6 +74,7 @@ internal object ActionTestsData {
         x: Int? = CLICK_X_POSITION,
         y: Int? = CLICK_Y_POSITION,
         clickOnConditionId: Long? = null,
+        waitAfterClickMs: Long = CLICK_WAIT_AFTER_DURATION,
         positionType: Click.PositionType =
             if (x != null && y != null) Click.PositionType.USER_SELECTED
             else Click.PositionType.ON_DETECTED_CONDITION,
@@ -79,7 +82,32 @@ internal object ActionTestsData {
     ) = Click(id.asIdentifier(), eventId.asIdentifier(), name, priority, pressDuration, positionType,
         if (x != null && y != null) Point(x, y) else null,
         clickOnConditionId?.let { Identifier(databaseId = clickOnConditionId) },
+        waitAfterClickMs = waitAfterClickMs,
     )
+
+
+    /* ------- Stop Scenario Action Data ------- */
+
+    private const val STOP_SCENARIO_ID = 10L
+    private const val STOP_SCENARIO_NAME = "Stop scenario name"
+
+    fun getNewStopScenarioEntity(
+        id: Long = STOP_SCENARIO_ID,
+        name: String = STOP_SCENARIO_NAME,
+        priority: Int = 0,
+        eventId: Long,
+    ) = CompleteActionEntity(
+        action = ActionEntity(id, eventId, priority, name, ActionType.STOP_SCENARIO),
+        intentExtras = emptyList(),
+        eventsToggle = emptyList(),
+    )
+
+    fun getNewStopScenario(
+        id: Long = STOP_SCENARIO_ID,
+        name: String? = STOP_SCENARIO_NAME,
+        priority: Int = 0,
+        eventId: Long,
+    ) = StopScenario(id.asIdentifier(), eventId.asIdentifier(), name, priority)
 
 
     /* ------- Swipe Action Data ------- */

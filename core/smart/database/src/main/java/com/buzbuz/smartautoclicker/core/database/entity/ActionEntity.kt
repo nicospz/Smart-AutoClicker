@@ -127,6 +127,7 @@ data class ActionEntity(
     @ColumnInfo(name = "pressDuration") val pressDuration: Long? = null,
     @ColumnInfo(name = "clickOffsetX") val clickOffsetX: Int? = null,
     @ColumnInfo(name = "clickOffsetY") val clickOffsetY: Int? = null,
+    @ColumnInfo(name = "click_wait_after_ms", defaultValue = "0") val clickWaitAfterMs: Long = 0L,
 
     // ActionType.SWIPE
     @ColumnInfo(name = "fromX") val fromX: Int? = null,
@@ -168,6 +169,16 @@ data class ActionEntity(
     // ActionType.TEXT
     @ColumnInfo(name = "text_value") val textValue: String? = null,
     @ColumnInfo(name = "text_validate_input") val textValidateInput: Boolean? = null,
+
+    // ActionType.PRECISION_GESTURE
+    @ColumnInfo(name = "precision_gesture_payload_hex") val precisionGesturePayloadHex: String? = null,
+    @ColumnInfo(name = "precision_gesture_event_count") val precisionGestureEventCount: Int? = null,
+    @ColumnInfo(name = "precision_gesture_duration_ms") val precisionGestureDurationMs: Long? = null,
+    @ColumnInfo(name = "precision_gesture_helper_mode") val precisionGestureHelperMode: String? = null,
+
+    // ActionType.PRECISION_TEXT
+    @ColumnInfo(name = "precision_text_value") val precisionTextValue: String? = null,
+    @ColumnInfo(name = "precision_text_mode") val precisionTextMode: String? = null,
 ) : EntityWithId
 
 /**

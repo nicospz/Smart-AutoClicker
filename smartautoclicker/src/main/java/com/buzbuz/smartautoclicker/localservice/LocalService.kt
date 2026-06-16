@@ -45,6 +45,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -66,6 +68,8 @@ class LocalService(
     private val serviceScope: CoroutineScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     /** Coroutine job for the delayed start of engine & ui. */
     private var startJob: Job? = null
+    /** Coroutine job for delayed auto-start. */
+    private var autoStartJob: Job? = null
     /** Coroutine job for the paywall result upon start from notification. */
     private var paywallResultJob: Job? = null
 
@@ -109,6 +113,7 @@ class LocalService(
 
     override fun startDumbScenario(dumbScenario: DumbScenario) {
         if (state.isStarted) return
+        autoStartJob?.cancel()
         state = LocalServiceState(isStarted = true, isSmartLoaded = false)
         onStart(dumbScenario.id.databaseId, false, null)
 
@@ -121,6 +126,8 @@ class LocalService(
                 context = context,
                 newOverlay = DumbMainMenu(dumbScenario.id) { stop() },
             )
+
+            scheduleDumbAutoStart(dumbScenario)
         }
     }
 
@@ -140,6 +147,7 @@ class LocalService(
      */
     override fun startSmartScenario(resultCode: Int, data: Intent, scenario: Scenario) {
         if (isStarted) return
+        autoStartJob?.cancel()
         state = LocalServiceState(isStarted = true, isSmartLoaded = true)
 
         onStart(
@@ -170,6 +178,8 @@ class LocalService(
                 resultCode = resultCode,
                 data = data,
             )
+
+            scheduleSmartAutoStart(scenario)
         }
     }
 
@@ -180,6 +190,8 @@ class LocalService(
         serviceScope.launch {
             startJob?.join()
             startJob = null
+            autoStartJob?.cancel()
+            autoStartJob = null
 
             dumbEngine.release()
             overlayManager.closeAll(context)
@@ -191,6 +203,7 @@ class LocalService(
     }
 
     override fun release() {
+        autoStartJob?.cancel()
         serviceScope.cancel()
     }
 
@@ -201,6 +214,8 @@ class LocalService(
 
     private fun play() {
         serviceScope.launch {
+            autoStartJob?.cancel()
+            autoStartJob = null
             if (state.isSmartLoaded && !smartProcessingRepository.isRunning()) {
                 if (revenueRepository.userBillingState.value == UserBillingState.AD_REQUESTED) startPaywall()
                 else startSmartScenario()
@@ -212,6 +227,8 @@ class LocalService(
 
     private fun pause() {
         serviceScope.launch {
+            autoStartJob?.cancel()
+            autoStartJob = null
             when {
                 dumbEngine.isRunning.value -> dumbEngine.stopDumbScenario()
                 smartProcessingRepository.isRunning() -> smartProcessingRepository.stopDetection()
@@ -239,6 +256,33 @@ class LocalService(
                 liveDebugging = debuggingRepository.isDebugViewEnabled(),
                 generateReport = debuggingRepository.isDebugReportEnabled(),
             )
+        }
+    }
+
+    private fun scheduleDumbAutoStart(dumbScenario: DumbScenario) {
+        if (!dumbScenario.autoStart) return
+
+        autoStartJob = serviceScope.launch {
+            delay(dumbScenario.autoStartDelayMs)
+            if (state.isStarted && !state.isSmartLoaded && !dumbEngine.isRunning.value) {
+                dumbEngine.startDumbScenario()
+            }
+        }
+    }
+
+    private fun scheduleSmartAutoStart(scenario: Scenario) {
+        if (!scenario.autoStart) return
+
+        autoStartJob = serviceScope.launch {
+            smartProcessingRepository.detectionState
+                .filter { it == DetectionState.RECORDING }
+                .first()
+
+            delay(scenario.autoStartDelayMs)
+            if (state.isStarted && state.isSmartLoaded && !smartProcessingRepository.isRunning()) {
+                if (revenueRepository.userBillingState.value == UserBillingState.AD_REQUESTED) startPaywall()
+                else startSmartScenario()
+            }
         }
     }
 

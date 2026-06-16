@@ -23,11 +23,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.buzbuz.smartautoclicker.core.bitmaps.BitmapRepository
 
+import com.buzbuz.smartautoclicker.core.domain.model.AND
 import com.buzbuz.smartautoclicker.core.domain.model.ConditionOperator
 import com.buzbuz.smartautoclicker.core.domain.model.action.Action
 import com.buzbuz.smartautoclicker.core.domain.model.condition.ImageCondition
 import com.buzbuz.smartautoclicker.core.domain.model.condition.TriggerCondition
 import com.buzbuz.smartautoclicker.core.domain.model.event.Event
+import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEventDetectionMode
+import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEventDetectionMode.ANCHORED_REPEAT
 import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEvent
 import com.buzbuz.smartautoclicker.core.domain.model.scenario.Scenario
 import com.buzbuz.smartautoclicker.core.settings.SettingsRepository
@@ -47,6 +50,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterIsInstance
@@ -92,16 +96,19 @@ class EventDialogViewModel @Inject constructor(
         .map { it.name.isEmpty() }
 
     val imageConditions: Flow<List<UiImageCondition>> =
-        editionRepository.editionState.editedEventImageConditionsState
-            .mapNotNull { imageConditionsState ->
-                imageConditionsState.value?.map { imageCondition ->
+        combine(
+            configuredEvent.filterIsInstance<ImageEvent>(),
+            editionRepository.editionState.editedEventImageConditionsState,
+        ) { event, imageConditionsState ->
+                imageConditionsState.value?.mapIndexed { index, imageCondition ->
                     imageCondition.toUiImageCondition(
                         context = context,
                         shortThreshold = true,
-                        inError = !imageCondition.isComplete(),
+                        inError = !imageConditionsState.itemValidity[index],
+                        isAnchor = event.detectionMode == ANCHORED_REPEAT && imageCondition.id == event.anchorConditionId,
                     )
                 }
-            }
+            }.filterNotNull()
 
     val triggerConditionsDescription:  Flow<List<EventChildrenItem>> =
         editionRepository.editionState.editedEventTriggerConditionsState.mapNotNull { conditionsListState ->
@@ -118,12 +125,26 @@ class EventDialogViewModel @Inject constructor(
     val eventEnabledOnStart: Flow<Boolean> = configuredEvent
         .map { event -> event.enabledOnStart }
 
+    val eventCooldown: Flow<String> = configuredEvent
+        .map { event -> event.cooldownMs.toString() }
+        .take(1)
+
+    val eventCooldownError: Flow<Boolean> = configuredEvent
+        .map { event -> event.cooldownMs < 0 }
+
     val isImageEvent: Flow<Boolean> = configuredEvent
         .map { it is ImageEvent }
 
     val keepDetecting: Flow<Boolean> = configuredEvent
         .filterIsInstance<ImageEvent>()
         .map { event -> event.keepDetecting }
+
+    val detectionMode: Flow<ImageEventDetectionMode> = configuredEvent
+        .filterIsInstance<ImageEvent>()
+        .map { event -> event.detectionMode }
+
+    val isAnchoredDetectionMode: Flow<Boolean> = detectionMode
+        .map { it == ANCHORED_REPEAT }
 
     val canTryEvent: Flow<Boolean> = configuredEvent
         .filterIsInstance<ImageEvent>()
@@ -159,9 +180,47 @@ class EventDialogViewModel @Inject constructor(
         }
     }
 
+    fun setDetectionMode(mode: ImageEventDetectionMode) {
+        updateEditedEvent { oldValue ->
+            if (oldValue is ImageEvent) {
+                oldValue.copy(
+                    detectionMode = mode,
+                    conditionOperator = if (mode == ANCHORED_REPEAT) AND else oldValue.conditionOperator,
+                    anchorConditionId = if (mode == ANCHORED_REPEAT) {
+                        oldValue.conditions.find { it.id == oldValue.anchorConditionId && it.shouldBeDetected }?.id
+                            ?: oldValue.conditions.firstOrNull { it.shouldBeDetected }?.id
+                    } else null,
+                )
+            } else oldValue
+        }
+    }
+
+    fun setAnchorCondition(index: Int): Boolean {
+        val event = editionRepository.editionState.getEditedEvent<ImageEvent>() ?: return false
+        if (event.detectionMode != ANCHORED_REPEAT) return false
+        if (index !in event.conditions.indices) return false
+
+        val condition = event.conditions[index]
+        if (!condition.shouldBeDetected) return false
+
+        updateEditedEvent { oldValue ->
+            if (oldValue is ImageEvent) oldValue.copy(
+                conditionOperator = AND,
+                anchorConditionId = condition.id,
+            ) else oldValue
+        }
+        return true
+    }
+
     fun toggleEventState() {
         updateEditedEvent { oldValue ->
             oldValue.copyBase(enabledOnStart = !oldValue.enabledOnStart)
+        }
+    }
+
+    fun setEventCooldown(cooldownMs: Long) {
+        updateEditedEvent { oldValue ->
+            oldValue.copyBase(cooldownMs = cooldownMs.coerceAtLeast(0))
         }
     }
 

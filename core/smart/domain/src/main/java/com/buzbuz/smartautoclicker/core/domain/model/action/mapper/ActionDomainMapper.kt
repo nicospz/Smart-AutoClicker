@@ -17,10 +17,14 @@ import com.buzbuz.smartautoclicker.core.domain.model.action.Click
 import com.buzbuz.smartautoclicker.core.domain.model.action.Intent
 import com.buzbuz.smartautoclicker.core.domain.model.action.Notification
 import com.buzbuz.smartautoclicker.core.domain.model.action.Pause
+import com.buzbuz.smartautoclicker.core.domain.model.action.PrecisionGesture
+import com.buzbuz.smartautoclicker.core.domain.model.action.PrecisionText
 import com.buzbuz.smartautoclicker.core.domain.model.action.SetText
+import com.buzbuz.smartautoclicker.core.domain.model.action.StopScenario
 import com.buzbuz.smartautoclicker.core.domain.model.action.Swipe
 import com.buzbuz.smartautoclicker.core.domain.model.action.SystemAction
 import com.buzbuz.smartautoclicker.core.domain.model.action.ToggleEvent
+import com.buzbuz.smartautoclicker.core.common.actions.precision.PrecisionTextMode
 import com.buzbuz.smartautoclicker.core.domain.model.action.intent.toDomainIntentExtra
 import com.buzbuz.smartautoclicker.core.domain.model.action.toggleevent.toDomain
 
@@ -35,6 +39,9 @@ internal fun CompleteActionEntity.toDomain(cleanIds: Boolean = false): Action = 
     ActionType.NOTIFICATION -> toDomainNotification(cleanIds)
     ActionType.SYSTEM -> toDomainSystem(cleanIds)
     ActionType.TEXT -> toDomainSetText(cleanIds)
+    ActionType.STOP_SCENARIO -> toDomainStopScenario(cleanIds)
+    ActionType.PRECISION_GESTURE -> toDomainPrecisionGesture(cleanIds)
+    ActionType.PRECISION_TEXT -> toDomainPrecisionText(cleanIds)
 }
 
 private fun CompleteActionEntity.toDomainClick(cleanIds: Boolean = false) = Click(
@@ -48,7 +55,8 @@ private fun CompleteActionEntity.toDomainClick(cleanIds: Boolean = false) = Clic
     clickOnConditionId = action.clickOnConditionId?.let { Identifier(id = it, asTemporary = cleanIds) },
     clickOffset =
         if (action.clickOffsetX != null && action.clickOffsetY != null) Point(action.clickOffsetX!!, action.clickOffsetY!!)
-        else null
+        else null,
+    waitAfterClickMs = action.clickWaitAfterMs,
 )
 
 private fun CompleteActionEntity.toDomainSwipe(cleanIds: Boolean = false) = Swipe(
@@ -132,6 +140,34 @@ private fun CompleteActionEntity.toDomainSetText(cleanIds: Boolean = false) = Se
     priority = action.priority,
     text = action.textValue ?: "",
     validateInput = action.textValidateInput ?: false,
+)
+
+private fun CompleteActionEntity.toDomainStopScenario(cleanIds: Boolean = false) = StopScenario(
+    id = Identifier(id = action.id, asTemporary = cleanIds),
+    eventId = Identifier(id = action.eventId, asTemporary = cleanIds),
+    name = action.name,
+    priority = action.priority,
+)
+
+private fun CompleteActionEntity.toDomainPrecisionGesture(cleanIds: Boolean = false) = PrecisionGesture(
+    id = Identifier(id = action.id, asTemporary = cleanIds),
+    eventId = Identifier(id = action.eventId, asTemporary = cleanIds),
+    name = action.name,
+    priority = action.priority,
+    payloadHex = action.precisionGesturePayloadHex,
+    eventCount = action.precisionGestureEventCount,
+    durationMs = action.precisionGestureDurationMs,
+    helperMode = action.precisionGestureHelperMode,
+)
+
+private fun CompleteActionEntity.toDomainPrecisionText(cleanIds: Boolean = false) = PrecisionText(
+    id = Identifier(id = action.id, asTemporary = cleanIds),
+    eventId = Identifier(id = action.eventId, asTemporary = cleanIds),
+    name = action.name,
+    priority = action.priority,
+    text = action.precisionTextValue ?: "",
+    mode = action.precisionTextMode?.let { runCatching { PrecisionTextMode.valueOf(it) }.getOrNull() }
+        ?: PrecisionTextMode.KEY_EVENTS,
 )
 
 private fun ClickPositionType.toDomain(): Click.PositionType =

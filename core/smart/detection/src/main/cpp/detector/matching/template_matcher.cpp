@@ -48,10 +48,16 @@ void TemplateMatcher::matchTemplate(
         return;
     }
 
+    if (screenCroppedGrayMat.rows < condition.getGrayMat()->rows ||
+        screenCroppedGrayMat.cols < condition.getGrayMat()->cols) {
+        LOGE("TemplateMatcher", "Detection area is smaller than condition image.");
+        return;
+    }
+
     // Initialize result mat
     cv::Mat newResultsMat = cv::Mat(
-            std::max(screenCroppedGrayMat.rows - condition.getGrayMat()->rows + 1, 0),
-            std::max(screenCroppedGrayMat.cols - condition.getGrayMat()->cols + 1, 0),
+            screenCroppedGrayMat.rows - condition.getGrayMat()->rows + 1,
+            screenCroppedGrayMat.cols - condition.getGrayMat()->cols + 1,
             CV_32F);
 
     try {
@@ -74,6 +80,73 @@ void TemplateMatcher::matchTemplate(
 
     // Parse result Mat to check for matching
     parseMatchingResult(screenImage, condition, detectionArea, threshold, newResultsMat);
+}
+
+
+std::vector<TemplateMatchingResult> TemplateMatcher::matchTemplateOccurrences(
+        const ScreenImage& screenImage,
+        const ConditionImage& condition,
+        const cv::Rect& detectionArea,
+        int threshold,
+        int maxResults
+) {
+    std::vector<TemplateMatchingResult> results;
+    if (maxResults <= 0) return results;
+
+    cv::Mat screenCroppedGrayMat = screenImage.cropGray(detectionArea);
+    if (screenCroppedGrayMat.empty()) {
+        LOGE("TemplateMatcher", "screenCroppedGrayMat is empty after cropping occurrences.");
+        return results;
+    }
+
+    if (screenCroppedGrayMat.rows < condition.getGrayMat()->rows ||
+        screenCroppedGrayMat.cols < condition.getGrayMat()->cols) {
+        LOGE("TemplateMatcher", "Detection area is smaller than condition image for occurrences.");
+        return results;
+    }
+
+    cv::Mat newResultsMat = cv::Mat(
+            screenCroppedGrayMat.rows - condition.getGrayMat()->rows + 1,
+            screenCroppedGrayMat.cols - condition.getGrayMat()->cols + 1,
+            CV_32F);
+
+    try {
+        cv::matchTemplate(
+                screenCroppedGrayMat,
+                *condition.getGrayMat(),
+                newResultsMat,
+                cv::TM_CCOEFF_NORMED);
+    } catch (const cv::Exception& e) {
+        LOGE("TemplateMatcher", "OpenCV Exception caught: %s", e.what());
+        throw;
+    } catch (const std::exception& e) {
+        LOGE("TemplateMatcher", "Standard Exception caught: %s", e.what());
+        throw;
+    } catch (...) {
+        LOGE("TemplateMatcher", "Unknown exception caught!");
+        throw std::runtime_error("Unknown exception in TemplateMatcher");
+    }
+
+    while ((int) results.size() < maxResults) {
+        TemplateMatchingResult candidate;
+        candidate.reset();
+        candidate.updateResults(detectionArea, *condition.getGrayMat(), newResultsMat);
+
+        if (!isConfidenceValid(candidate.getResultConfidence(), threshold)) break;
+
+        candidate.invalidateCurrentResult(*condition.getGrayMat(), newResultsMat);
+
+        if (!isRoiBiggerOrEquals(screenImage.getRoi(), candidate.getResultArea())) continue;
+
+        cv::Mat fullSizeColorCroppedCurrentImage = screenImage.cropColor(candidate.getResultArea());
+        double colorDiff = getColorDiff(fullSizeColorCroppedCurrentImage, condition.getColorMean());
+        if (colorDiff >= threshold) continue;
+
+        candidate.markResultAsDetected();
+        results.push_back(candidate);
+    }
+
+    return results;
 }
 
 void TemplateMatcher::parseMatchingResult(

@@ -125,8 +125,11 @@ class SmartActionsBriefViewModel @Inject constructor(
                 if (!legacyEnabled && canCopy) add(ActionTypeChoice.Copy)
                 add(ActionTypeChoice.Click)
                 add(ActionTypeChoice.Swipe)
+                add(ActionTypeChoice.PrecisionGesture)
                 add(ActionTypeChoice.Pause)
                 add(ActionTypeChoice.SetText)
+                add(ActionTypeChoice.PrecisionText)
+                add(ActionTypeChoice.StopScenario)
                 add(ActionTypeChoice.System)
                 add(ActionTypeChoice.ChangeCounter)
                 add(ActionTypeChoice.ToggleEvent)
@@ -134,9 +137,6 @@ class SmartActionsBriefViewModel @Inject constructor(
                 add(ActionTypeChoice.Intent)
             }
         }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
-
-    val isTutorialModeEnabled: Flow<Boolean> =
-        repository.isTutorialModeEnabled
 
     fun startGestureCaptureState() {
         briefVisualizationState.value = briefVisualizationState.value
@@ -169,6 +169,7 @@ class SmartActionsBriefViewModel @Inject constructor(
     override fun createAction(context: Context, choice: ActionTypeChoice): Action = when (choice) {
         ActionTypeChoice.Click -> editionRepository.editedItemsBuilder.createNewClick(context)
         ActionTypeChoice.Swipe -> editionRepository.editedItemsBuilder.createNewSwipe(context)
+        ActionTypeChoice.PrecisionGesture -> editionRepository.editedItemsBuilder.createNewPrecisionGesture(context)
         ActionTypeChoice.Pause -> editionRepository.editedItemsBuilder.createNewPause(context)
         ActionTypeChoice.Intent -> editionRepository.editedItemsBuilder.createNewIntent(context)
         ActionTypeChoice.ToggleEvent -> editionRepository.editedItemsBuilder.createNewToggleEvent(context)
@@ -176,6 +177,8 @@ class SmartActionsBriefViewModel @Inject constructor(
         ActionTypeChoice.Notification -> editionRepository.editedItemsBuilder.createNewNotification(context)
         ActionTypeChoice.System -> editionRepository.editedItemsBuilder.createNewSystemAction(context)
         ActionTypeChoice.SetText -> editionRepository.editedItemsBuilder.createNewSetText(context)
+        ActionTypeChoice.PrecisionText -> editionRepository.editedItemsBuilder.createNewPrecisionText(context)
+        ActionTypeChoice.StopScenario -> editionRepository.editedItemsBuilder.createNewStopScenario(context)
         ActionTypeChoice.Copy -> throw IllegalArgumentException("Unsupported action type for creation $choice")
     }
 
@@ -312,6 +315,10 @@ class SmartActionsBriefViewModel @Inject constructor(
 
         is Pause -> PauseDescription(
             pauseDurationMs = pauseDuration ?: 1,
+        )
+
+        is com.buzbuz.smartautoclicker.core.domain.model.action.PrecisionGesture -> PauseDescription(
+            pauseDurationMs = durationMs ?: 1,
         )
 
         else -> DefaultDescription(

@@ -67,6 +67,16 @@ data class DumbActionEntity(
 
     // ActionType.PAUSE
     @ColumnInfo(name = "pause_duration") val pauseDuration: Long? = null,
+
+    // ActionType.PRECISION_GESTURE
+    @ColumnInfo(name = "precision_gesture_payload_hex") val precisionGesturePayloadHex: String? = null,
+    @ColumnInfo(name = "precision_gesture_event_count") val precisionGestureEventCount: Int? = null,
+    @ColumnInfo(name = "precision_gesture_duration_ms") val precisionGestureDurationMs: Long? = null,
+    @ColumnInfo(name = "precision_gesture_helper_mode") val precisionGestureHelperMode: String? = null,
+
+    // ActionType.PRECISION_TEXT
+    @ColumnInfo(name = "precision_text_value") val precisionTextValue: String? = null,
+    @ColumnInfo(name = "precision_text_mode") val precisionTextMode: String? = null,
 ) : EntityWithId
 
 /**
@@ -83,6 +93,10 @@ enum class DumbActionType {
     SWIPE,
     /** A pause, waiting before the next action. */
     PAUSE,
+    /** Raw precision gesture recorded and replayed through the Shizuku helper. */
+    PRECISION_GESTURE,
+    /** Text injected through Shizuku shell key events or input text. */
+    PRECISION_TEXT,
 }
 
 /** Type converter to read/write the [DumbActionType] into the database. */

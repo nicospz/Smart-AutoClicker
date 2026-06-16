@@ -42,4 +42,5 @@
     <string name="default_system_action_name">System action</string>
 
     <string name="default_set_text_name">Write text</string>
+    <string name="default_precision_text_name">Precision text</string>
 </resources>

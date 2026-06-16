@@ -89,6 +89,43 @@ extern "C" {
         releaseBitmapLock(env, conditionBitmap);
     }
 
+
+    JNIEXPORT jobject JNICALL Java_com_buzbuz_smartautoclicker_core_detection_NativeDetector_detectOccurrences(
+            JNIEnv *env,
+            jobject self,
+            jobject conditionBitmap,
+            jint conditionWidth,
+            jint conditionHeight,
+            jint x,
+            jint y,
+            jint width,
+            jint height,
+            jint threshold,
+            jint maxResults
+    ) {
+        auto detector = getDetectorFromJavaRef(env, self);
+        if (!detector) return createDetectionResultsList(env, std::vector<TemplateMatchingResult>());
+
+        std::unique_ptr<cv::Mat> conditionMat = loadMatFromRGBA8888Bitmap(env, conditionBitmap);
+        if (!conditionMat) return createDetectionResultsList(env, std::vector<TemplateMatchingResult>());
+
+        try {
+            auto results = detector->detectConditionOccurrences(
+                    std::move(conditionMat),
+                    conditionWidth,
+                    conditionHeight,
+                    cv::Rect(x, y, width, height),
+                    threshold,
+                    maxResults);
+            releaseBitmapLock(env, conditionBitmap);
+            return createDetectionResultsList(env, results);
+        } catch (...) {
+            releaseBitmapLock(env, conditionBitmap);
+            env->ThrowNew(env->FindClass("java/lang/RuntimeException"), "Invalid detection occurrence arguments");
+            return nullptr;
+        }
+    }
+
     JNIEXPORT void JNICALL Java_com_buzbuz_smartautoclicker_core_detection_NativeDetector_releaseScreenImage(
             JNIEnv *env,
             jobject self,

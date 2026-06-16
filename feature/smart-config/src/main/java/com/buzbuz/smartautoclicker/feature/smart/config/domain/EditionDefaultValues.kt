@@ -18,7 +18,6 @@ package com.buzbuz.smartautoclicker.feature.smart.config.domain
 
 import android.content.Context
 
-import com.buzbuz.smartautoclicker.core.domain.IRepository
 import com.buzbuz.smartautoclicker.core.domain.model.AND
 import com.buzbuz.smartautoclicker.core.domain.model.ConditionOperator
 import com.buzbuz.smartautoclicker.core.domain.model.EXACT
@@ -27,12 +26,14 @@ import com.buzbuz.smartautoclicker.core.domain.model.action.ToggleEvent
 import com.buzbuz.smartautoclicker.core.domain.model.condition.TriggerCondition
 import com.buzbuz.smartautoclicker.feature.smart.config.R
 import com.buzbuz.smartautoclicker.feature.smart.config.utils.getClickPressDurationConfig
+import com.buzbuz.smartautoclicker.feature.smart.config.utils.getConditionThresholdConfig
+import com.buzbuz.smartautoclicker.feature.smart.config.utils.getClickWaitAfterConfig
 import com.buzbuz.smartautoclicker.feature.smart.config.utils.getEventConfigPreferences
 import com.buzbuz.smartautoclicker.feature.smart.config.utils.getIntentIsAdvancedConfig
 import com.buzbuz.smartautoclicker.feature.smart.config.utils.getPauseDurationConfig
 import com.buzbuz.smartautoclicker.feature.smart.config.utils.getSwipeDurationConfig
 
-internal class EditionDefaultValues(private val scenarioRepository: IRepository) {
+internal class EditionDefaultValues {
 
     fun eventName(context: Context): String =
         context.getString(R.string.default_event_name)
@@ -42,8 +43,7 @@ internal class EditionDefaultValues(private val scenarioRepository: IRepository)
     fun conditionName(context: Context): String =
         context.getString(R.string.default_condition_name)
     fun conditionThreshold(context: Context): Int =
-        if (isTutorialModeEnabled()) 15
-        else context.resources.getInteger(R.integer.default_condition_threshold)
+        context.getEventConfigPreferences().getConditionThresholdConfig(context)
     fun conditionDetectionType(): Int =
         EXACT
     fun conditionShouldBeDetected(): Boolean =
@@ -52,8 +52,9 @@ internal class EditionDefaultValues(private val scenarioRepository: IRepository)
     fun clickName(context: Context): String =
         context.getString(R.string.default_click_name)
     fun clickPressDuration(context: Context): Long =
-        if (isTutorialModeEnabled()) 1
-        else context.getEventConfigPreferences().getClickPressDurationConfig(context)
+        context.getEventConfigPreferences().getClickPressDurationConfig(context)
+    fun clickWaitAfterDuration(context: Context): Long =
+        context.getEventConfigPreferences().getClickWaitAfterConfig()
     fun clickPositionType(): Click.PositionType =
         Click.PositionType.USER_SELECTED
 
@@ -61,6 +62,9 @@ internal class EditionDefaultValues(private val scenarioRepository: IRepository)
         context.getString(R.string.default_swipe_name)
     fun swipeDuration(context: Context): Long =
         context.getEventConfigPreferences().getSwipeDurationConfig(context)
+
+    fun precisionGestureName(context: Context): String =
+        context.getString(R.string.default_precision_gesture_name)
 
     fun pauseName(context: Context): String =
         context.getString(R.string.default_pause_name)
@@ -89,9 +93,12 @@ internal class EditionDefaultValues(private val scenarioRepository: IRepository)
     fun setTextName(context: Context): String =
         context.getString(R.string.default_set_text_name)
 
+    fun precisionTextName(context: Context): String =
+        context.getString(R.string.default_precision_text_name)
+
+    fun stopScenarioName(context: Context): String =
+        context.getString(R.string.default_stop_scenario_name)
+
     fun counterComparisonOperation(): TriggerCondition.OnCounterCountReached.ComparisonOperation =
         TriggerCondition.OnCounterCountReached.ComparisonOperation.EQUALS
-
-    private fun isTutorialModeEnabled(): Boolean =
-        scenarioRepository.isTutorialModeEnabled()
 }

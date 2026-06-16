@@ -51,6 +51,7 @@ import kotlinx.serialization.Serializable
  * @param priority the order in the scenario. Lowest priority will always be checked first when detecting.
  * @param enabledOnStart if true, the event will be evaluated while the scenario is playing. If false, it must be
  *                       enabled via an action TOGGLE_EVENT to be evaluated.
+ * @param cooldownMs time in milliseconds this event won't be checked after it has been executed.
  * @param keepDetecting only for [EventType.IMAGE_EVENT]. If true, keep interpreting the next events in the list with
  *                      the current screen frame. If false, stops and start over the event list with the next frame.
  */
@@ -74,6 +75,10 @@ data class EventEntity(
     @ColumnInfo(name = "enabled_on_start", defaultValue="1") var enabledOnStart: Boolean = true,
     @ColumnInfo(name = "type") val type: EventType,
     @ColumnInfo(name = "keep_detecting") val keepDetecting: Boolean? = null,
+    @ColumnInfo(name = "image_detection_mode", defaultValue = "'STANDARD'")
+    val imageDetectionMode: ImageEventDetectionMode = ImageEventDetectionMode.STANDARD,
+    @ColumnInfo(name = "anchor_condition_id") val anchorConditionId: Long? = null,
+    @ColumnInfo(name = "cooldown_ms", defaultValue = "0") val cooldownMs: Long = 0,
 ) : EntityWithId
 
 /**
@@ -100,4 +105,22 @@ data class CompleteEventEntity(
         entityColumn = "eventId"
     )
     val conditions: List<ConditionEntity>,
+)
+
+/**
+ * Lightweight event information for list screens.
+ *
+ * Unlike [CompleteEventEntity], this intentionally does not load complete actions. Some actions can contain large
+ * payloads (for example raw precision gestures), while list screens only need their count.
+ */
+data class EventListDataEntity(
+    @Embedded val event: EventEntity,
+    @ColumnInfo(name = "actions_count") val actionsCount: Int,
+    @ColumnInfo(name = "conditions_count") val conditionsCount: Int,
+    @ColumnInfo(name = "first_condition_id") val firstConditionId: Long?,
+    @Relation(
+        parentColumn = "first_condition_id",
+        entityColumn = "id"
+    )
+    val firstCondition: ConditionEntity?,
 )

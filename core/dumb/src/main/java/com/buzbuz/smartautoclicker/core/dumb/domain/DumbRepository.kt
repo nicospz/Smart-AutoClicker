@@ -71,6 +71,10 @@ class DumbRepository @Inject constructor(
         dumbScenarioDataSource.updateDumbScenario(scenario)
     }
 
+    override suspend fun updateDumbScenarioFavorite(scenarioId: Identifier, isFavorite: Boolean) {
+        dumbScenarioDataSource.updateDumbScenarioFavorite(scenarioId.databaseId, isFavorite)
+    }
+
     override suspend fun deleteDumbScenario(scenario: DumbScenario) {
         dumbScenarioDataSource.deleteDumbScenario(scenario)
     }

@@ -58,6 +58,12 @@ class DumbActionListViewModel @Inject constructor(
     fun createNewDumbPause(context: Context): DumbAction.DumbPause =
         dumbEditionRepository.dumbActionBuilder.createNewDumbPause(context)
 
+    fun createNewDumbPrecisionGesture(context: Context): DumbAction.DumbPrecisionGesture =
+        dumbEditionRepository.dumbActionBuilder.createNewDumbPrecisionGesture(context)
+
+    fun createNewDumbPrecisionText(context: Context): DumbAction.DumbPrecisionText =
+        dumbEditionRepository.dumbActionBuilder.createNewDumbPrecisionText(context)
+
     fun createDumbActionCopy(actionToCopy: DumbAction): DumbAction =
         dumbEditionRepository.dumbActionBuilder.createNewDumbActionFrom(actionToCopy)
 

@@ -72,6 +72,26 @@ class EditedDumbActionsBuilder {
             pauseDurationMs = context.getDefaultDumbPauseDurationMs(),
         )
 
+    fun createNewDumbPrecisionGesture(context: Context): DumbAction.DumbPrecisionGesture =
+        DumbAction.DumbPrecisionGesture(
+            id = dumbActionsIdCreator.generateNewIdentifier(),
+            scenarioId = getEditedScenarioIdOrThrow(),
+            name = context.getDefaultDumbPrecisionGestureName(),
+            repeatCount = context.getDefaultDumbPrecisionGestureRepeatCount(),
+            isRepeatInfinite = false,
+            repeatDelayMs = context.getDefaultDumbPrecisionGestureRepeatDelay(),
+        )
+
+    fun createNewDumbPrecisionText(context: Context): DumbAction.DumbPrecisionText =
+        DumbAction.DumbPrecisionText(
+            id = dumbActionsIdCreator.generateNewIdentifier(),
+            scenarioId = getEditedScenarioIdOrThrow(),
+            name = context.getDefaultDumbPrecisionTextName(),
+            repeatCount = context.getDefaultDumbPrecisionTextRepeatCount(),
+            isRepeatInfinite = false,
+            repeatDelayMs = context.getDefaultDumbPrecisionTextRepeatDelay(),
+        )
+
     fun createNewDumbActionFrom(from: DumbAction): DumbAction =
         when (from) {
             is DumbAction.DumbClick -> from.copy(
@@ -83,6 +103,14 @@ class EditedDumbActionsBuilder {
                 scenarioId = getEditedScenarioIdOrThrow(),
             )
             is DumbAction.DumbPause -> from.copy(
+                id = dumbActionsIdCreator.generateNewIdentifier(),
+                scenarioId = getEditedScenarioIdOrThrow(),
+            )
+            is DumbAction.DumbPrecisionGesture -> from.copy(
+                id = dumbActionsIdCreator.generateNewIdentifier(),
+                scenarioId = getEditedScenarioIdOrThrow(),
+            )
+            is DumbAction.DumbPrecisionText -> from.copy(
                 id = dumbActionsIdCreator.generateNewIdentifier(),
                 scenarioId = getEditedScenarioIdOrThrow(),
             )

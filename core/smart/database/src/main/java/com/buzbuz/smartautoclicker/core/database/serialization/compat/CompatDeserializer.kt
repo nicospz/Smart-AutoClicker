@@ -44,6 +44,7 @@ import com.buzbuz.smartautoclicker.core.database.entity.EventEntity
 import com.buzbuz.smartautoclicker.core.database.entity.EventToggleEntity
 import com.buzbuz.smartautoclicker.core.database.entity.EventToggleType
 import com.buzbuz.smartautoclicker.core.database.entity.EventType
+import com.buzbuz.smartautoclicker.core.database.entity.ImageEventDetectionMode
 import com.buzbuz.smartautoclicker.core.database.entity.IntentExtraEntity
 import com.buzbuz.smartautoclicker.core.database.entity.IntentExtraType
 import com.buzbuz.smartautoclicker.core.database.entity.NotificationMessageType
@@ -196,6 +197,9 @@ internal open class CompatDeserializer : Deserializer {
             detectionQuality = detectionQuality,
             randomize = jsonScenario.getBoolean("randomize") ?: false,
             keepScreenOn = jsonScenario.getBoolean("keepScreenOn") ?: false,
+            isFavorite = jsonScenario.getBoolean("isFavorite") ?: false,
+            autoStart = jsonScenario.getBoolean("autoStart") ?: false,
+            autoStartDelayMs = jsonScenario.getLong("autoStartDelayMs")?.coerceAtLeast(0) ?: 0L,
         )
     }
 
@@ -217,6 +221,12 @@ internal open class CompatDeserializer : Deserializer {
             ?: OPERATOR_DEFAULT_VALUE
 
         val keepDetecting = jsonEvent.getBoolean("keepDetecting") ?: false
+        val imageDetectionMode = jsonEvent.getEnum<ImageEventDetectionMode>("imageDetectionMode")
+            ?: ImageEventDetectionMode.STANDARD
+        val anchorConditionId = jsonEvent.getLong("anchorConditionId")
+        val cooldownMs = jsonEvent.getLong("cooldownMs")
+            ?: jsonEvent.getLong("cooldown_ms", true)
+            ?: 0L
 
         return EventEntity(
             id = id,
@@ -225,8 +235,11 @@ internal open class CompatDeserializer : Deserializer {
             conditionOperator = conditionOperator,
             priority = jsonEvent.getInt("priority")?.coerceAtLeast(0) ?: 0,
             enabledOnStart = jsonEvent.getBoolean("enabledOnStart") ?: true,
+            cooldownMs = cooldownMs.coerceAtLeast(0),
             type = type,
             keepDetecting = keepDetecting,
+            imageDetectionMode = imageDetectionMode,
+            anchorConditionId = anchorConditionId,
         )
     }
 
@@ -368,6 +381,9 @@ internal open class CompatDeserializer : Deserializer {
             ActionType.NOTIFICATION -> deserializeActionNotification(jsonAction)
             ActionType.SYSTEM -> deserializeActionSystem(jsonAction)
             ActionType.TEXT -> deserializeActionSetText(jsonAction)
+            ActionType.STOP_SCENARIO -> deserializeActionStopScenario(jsonAction)
+            ActionType.PRECISION_GESTURE -> deserializeActionPrecisionGesture(jsonAction)
+            ActionType.PRECISION_TEXT -> deserializeActionPrecisionText(jsonAction)
             null -> null
         }
 
@@ -427,6 +443,70 @@ internal open class CompatDeserializer : Deserializer {
                 ?: DEFAULT_CLICK_DURATION,
             clickOffsetX = clickOffsetX,
             clickOffsetY = clickOffsetY,
+            clickWaitAfterMs = (jsonClick.getLong("clickWaitAfterMs") ?: jsonClick.getLong("waitAfterClickMs"))
+                ?.coerceAtLeast(0) ?: 0L,
+        )
+    }
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PROTECTED)
+    open fun deserializeActionStopScenario(jsonStopScenario: JsonObject): ActionEntity? {
+        val id = jsonStopScenario.getLong("id", true) ?: return null
+        val eventId = jsonStopScenario.getLong("eventId", true) ?: return null
+
+        return ActionEntity(
+            id = id,
+            eventId = eventId,
+            name = jsonStopScenario.getString("name") ?: "",
+            priority = jsonStopScenario.getInt("priority")?.coerceAtLeast(0) ?: 0,
+            type = ActionType.STOP_SCENARIO,
+        )
+    }
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PROTECTED)
+    open fun deserializeActionPrecisionGesture(jsonPrecisionGesture: JsonObject): ActionEntity? {
+        val id = jsonPrecisionGesture.getLong("id", true) ?: return null
+        val eventId = jsonPrecisionGesture.getLong("eventId", true) ?: return null
+        val payloadHex = jsonPrecisionGesture.getString("precisionGesturePayloadHex")
+            ?: jsonPrecisionGesture.getString("precision_gesture_payload_hex", true)
+            ?: return null
+        val eventCount = jsonPrecisionGesture.getInt("precisionGestureEventCount")
+            ?: jsonPrecisionGesture.getInt("precision_gesture_event_count", true)
+            ?: return null
+        val durationMs = jsonPrecisionGesture.getLong("precisionGestureDurationMs")
+            ?: jsonPrecisionGesture.getLong("precision_gesture_duration_ms", true)
+            ?: return null
+
+        return ActionEntity(
+            id = id,
+            eventId = eventId,
+            name = jsonPrecisionGesture.getString("name") ?: "",
+            priority = jsonPrecisionGesture.getInt("priority")?.coerceAtLeast(0) ?: 0,
+            type = ActionType.PRECISION_GESTURE,
+            precisionGesturePayloadHex = payloadHex,
+            precisionGestureEventCount = eventCount.coerceAtLeast(0),
+            precisionGestureDurationMs = durationMs.coerceAtLeast(0),
+            precisionGestureHelperMode = jsonPrecisionGesture.getString("precisionGestureHelperMode")
+                ?: jsonPrecisionGesture.getString("precision_gesture_helper_mode"),
+        )
+    }
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PROTECTED)
+    open fun deserializeActionPrecisionText(jsonPrecisionText: JsonObject): ActionEntity? {
+        val id = jsonPrecisionText.getLong("id", true) ?: return null
+        val eventId = jsonPrecisionText.getLong("eventId", true) ?: return null
+        val text = jsonPrecisionText.getString("precisionTextValue")
+            ?: jsonPrecisionText.getString("precision_text_value", true)
+            ?: return null
+
+        return ActionEntity(
+            id = id,
+            eventId = eventId,
+            name = jsonPrecisionText.getString("name") ?: "",
+            priority = jsonPrecisionText.getInt("priority")?.coerceAtLeast(0) ?: 0,
+            type = ActionType.PRECISION_TEXT,
+            precisionTextValue = text,
+            precisionTextMode = jsonPrecisionText.getString("precisionTextMode")
+                ?: jsonPrecisionText.getString("precision_text_mode"),
         )
     }
 

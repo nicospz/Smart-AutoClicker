@@ -24,6 +24,7 @@ import com.buzbuz.smartautoclicker.core.database.serialization.DeserializerFacto
 import com.buzbuz.smartautoclicker.feature.backup.data.base.ScenarioBackupSerializer
 
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToStream
 import kotlinx.serialization.json.jsonObject
@@ -58,16 +59,28 @@ internal class ScenarioSerializer : ScenarioBackupSerializer<ScenarioBackup> {
     override fun deserialize(json: InputStream): ScenarioBackup? {
         Log.d(TAG, "Deserializing smart scenario")
 
-        val jsonBackup = Json.parseToJsonElement(json.readBytes().toString(Charsets.UTF_8)).jsonObject
+        val jsonBackup = try {
+            Json.parseToJsonElement(json.readBytes().toString(Charsets.UTF_8)).jsonObject
+        } catch (exception: IllegalArgumentException) {
+            Log.w(TAG, "Can't parse smart scenario backup JSON.", exception)
+            return null
+        } catch (exception: SerializationException) {
+            Log.w(TAG, "Can't parse smart scenario backup JSON.", exception)
+            return null
+        }
+
         val version = jsonBackup.getInt("version", true) ?: -1
+        Log.d(TAG, "Smart scenario backup version=$version")
 
         val scenario = jsonBackup.getJsonObject("scenario", true)?.let { scenario ->
             DeserializerFactory.create(version)
                 ?.deserializeCompleteScenario(scenario)
         } ?:let {
-            Log.w(TAG, "Can't deserialize scenario.")
+            Log.w(TAG, "Can't deserialize smart scenario for version=$version.")
             return null
         }
+
+        Log.d(TAG, "Smart scenario backup deserialized: scenarioId=${scenario.scenario.id}")
 
         return ScenarioBackup(
             version = version,

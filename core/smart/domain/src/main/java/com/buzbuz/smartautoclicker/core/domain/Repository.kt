@@ -25,13 +25,16 @@ import com.buzbuz.smartautoclicker.core.base.extensions.mapList
 import com.buzbuz.smartautoclicker.core.base.identifier.Identifier
 import com.buzbuz.smartautoclicker.core.bitmaps.BitmapRepository
 import com.buzbuz.smartautoclicker.core.database.entity.CompleteScenario
+import com.buzbuz.smartautoclicker.core.database.entity.EventListDataEntity
 import com.buzbuz.smartautoclicker.core.domain.data.ScenarioDataSource
 import com.buzbuz.smartautoclicker.core.domain.model.action.Action
 import com.buzbuz.smartautoclicker.core.domain.model.action.mapper.toDomain
 import com.buzbuz.smartautoclicker.core.domain.model.condition.Condition
+import com.buzbuz.smartautoclicker.core.domain.model.condition.ImageCondition
 import com.buzbuz.smartautoclicker.core.domain.model.condition.toDomain
 import com.buzbuz.smartautoclicker.core.domain.model.event.Event
 import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEvent
+import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEventListData
 import com.buzbuz.smartautoclicker.core.domain.model.event.TriggerEvent
 import com.buzbuz.smartautoclicker.core.domain.model.event.toDomainImageEvent
 import com.buzbuz.smartautoclicker.core.domain.model.event.toDomainTriggerEvent
@@ -62,9 +65,6 @@ internal class Repository @Inject internal constructor(
 
     private val coroutineScopeIo: CoroutineScope =
         CoroutineScope(SupervisorJob() + ioDispatcher)
-
-    override val isTutorialModeEnabled: Flow<Boolean> =
-        dataSource.isTutorialModeEnabled
 
     override val scenarios: Flow<List<Scenario>> =
         dataSource.scenarios.mapList { it.toDomain() }
@@ -104,11 +104,17 @@ internal class Repository @Inject internal constructor(
     override suspend fun getImageEvents(scenarioId: Long): List<ImageEvent> =
         dataSource.getImageEvents(scenarioId).map { it.toDomainImageEvent() }
 
+    override suspend fun getImageEventListData(scenarioId: Long): List<ImageEventListData> =
+        dataSource.getImageEventListData(scenarioId).map { it.toDomain() }
+
     override fun getImageEventsFlow(scenarioId: Long): Flow<List<ImageEvent>> =
         dataSource.getImageEventsFlow(scenarioId).mapList { it.toDomainImageEvent() }
 
     override suspend fun getTriggerEvents(scenarioId: Long): List<TriggerEvent> =
         dataSource.getTriggerEvents(scenarioId).map { it.toDomainTriggerEvent() }
+
+    override suspend fun getTriggerEventCount(scenarioId: Long): Int =
+        dataSource.getTriggerEventCount(scenarioId)
 
     override fun getTriggerEventsFlow(scenarioId: Long): Flow<List<TriggerEvent>> =
         dataSource.getTriggerEventsFlow(scenarioId).mapList { it.toDomainTriggerEvent() }
@@ -143,25 +149,12 @@ internal class Repository @Inject internal constructor(
     override suspend fun updateScenario(scenario: Scenario, events: List<Event>): Boolean =
         dataSource.updateScenario(scenario, events, ::clearRemovedConditionsBitmaps)
 
-    override fun startTutorialMode() {
-        Log.d(TAG, "Start tutorial mode, use tutorial database")
-        dataSource.useTutorialDatabase()
+    override suspend fun updateScenarioFavorite(scenarioId: Identifier, isFavorite: Boolean) {
+        dataSource.updateScenarioFavorite(scenarioId.databaseId, isFavorite)
     }
-
-    override fun stopTutorialMode() {
-        Log.d(TAG, "Stop tutorial mode, use regular database")
-        dataSource.useNormalDatabase()
-    }
-
-    override fun isTutorialModeEnabled(): Boolean =
-        dataSource.isUsingTutorialDatabase()
 
     override suspend fun migrateLegacyImageConditions(): Boolean {
-        return migrateLegacyImageConditions(false) && migrateLegacyImageConditions(true)
-    }
-
-    private suspend fun migrateLegacyImageConditions(forTutorial: Boolean): Boolean {
-        val legacyConditions = dataSource.getLegacyImageConditions(forTutorial)
+        val legacyConditions = dataSource.getLegacyImageConditions()
         Log.i(TAG, "Migrating ${legacyConditions.size} image conditions...")
 
         var success = true
@@ -189,7 +182,6 @@ internal class Repository @Inject internal constructor(
             dataSource.updateLegacyImageCondition(
                 condition = conditionEntity,
                 newPath = newPath,
-                forTutorial = forTutorial,
             )
         }
 
@@ -210,6 +202,14 @@ internal class Repository @Inject internal constructor(
         if (deletedPaths.isNotEmpty()) bitmapRepository.deleteImageConditionBitmaps(deletedPaths)
     }
 }
+
+private fun EventListDataEntity.toDomain(): ImageEventListData = ImageEventListData(
+    id = Identifier(id = event.id),
+    name = event.name,
+    actionsCount = actionsCount,
+    conditionsCount = conditionsCount,
+    firstCondition = firstCondition?.toDomain() as? ImageCondition,
+)
 
 /** Tag for logs. */
 private const val TAG = "RepositoryImpl"

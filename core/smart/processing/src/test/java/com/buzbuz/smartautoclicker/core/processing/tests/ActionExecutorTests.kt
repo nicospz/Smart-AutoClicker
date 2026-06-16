@@ -210,6 +210,32 @@ class ActionExecutorTests {
     }
 
     @Test
+    fun execute_clickOnAbsentCondition_withoutPosition_doesNothing() = runTest {
+        val condition = getNewDefaultCondition(42L).copy(shouldBeDetected = false)
+        val clickAction = getNewDefaultClickCondition(1, condition.id.databaseId)
+        val event = getNewDefaultEvent(
+            AND,
+            conditions = listOf(condition),
+            actions = listOf(clickAction),
+        )
+        val results = ConditionsResults()
+        results.addResult(
+            conditionId = condition.getDatabaseId(),
+            result = ProcessedConditionResult.Image(
+                isFulfilled = true,
+                haveBeenDetected = false,
+                condition = condition,
+                position = null,
+                confidenceRate = 0.0,
+            )
+        )
+
+        actionExecutor.executeActions(event, results)
+
+        verify(mockAndroidExecutor, never()).dispatchGesture(anyNotNull())
+    }
+
+    @Test
     fun execute_oneSwipe() = runTest {
         val swipeAction = getNewDefaultSwipe(1)
 

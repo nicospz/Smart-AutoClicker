@@ -43,6 +43,7 @@ data class Click(
     val position: Point? = null,
     val clickOnConditionId: Identifier? = null,
     val clickOffset: Point? = null,
+    val waitAfterClickMs: Long = 0L,
 ) : Action() {
 
     /**
@@ -67,7 +68,7 @@ data class Click(
 
     override fun hashCodeNoIds(): Int =
         name.hashCode() + pressDuration.hashCode() + positionType.hashCode() + position.hashCode() +
-                clickOnConditionId.hashCode() + clickOffset.hashCode()
+                clickOnConditionId.hashCode() + clickOffset.hashCode() + waitAfterClickMs.hashCode()
 
 
     override fun deepCopy(): Click = copy(name = "" + name)

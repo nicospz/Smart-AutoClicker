@@ -25,7 +25,6 @@ import com.buzbuz.smartautoclicker.core.base.identifier.Identifier
 import com.buzbuz.smartautoclicker.core.base.identifier.IdentifierCreator
 import com.buzbuz.smartautoclicker.core.bitmaps.BitmapRepository
 import com.buzbuz.smartautoclicker.core.bitmaps.CONDITION_FILE_PREFIX
-import com.buzbuz.smartautoclicker.core.bitmaps.TUTORIAL_CONDITION_FILE_PREFIX
 import com.buzbuz.smartautoclicker.core.domain.IRepository
 import com.buzbuz.smartautoclicker.core.domain.model.CounterOperationValue
 import com.buzbuz.smartautoclicker.core.domain.model.action.Action
@@ -35,7 +34,10 @@ import com.buzbuz.smartautoclicker.core.domain.model.action.Click.PositionType
 import com.buzbuz.smartautoclicker.core.domain.model.action.Intent
 import com.buzbuz.smartautoclicker.core.domain.model.action.Notification
 import com.buzbuz.smartautoclicker.core.domain.model.action.Pause
+import com.buzbuz.smartautoclicker.core.domain.model.action.PrecisionGesture
+import com.buzbuz.smartautoclicker.core.domain.model.action.PrecisionText
 import com.buzbuz.smartautoclicker.core.domain.model.action.SetText
+import com.buzbuz.smartautoclicker.core.domain.model.action.StopScenario
 import com.buzbuz.smartautoclicker.core.domain.model.action.Swipe
 import com.buzbuz.smartautoclicker.core.domain.model.action.SystemAction
 import com.buzbuz.smartautoclicker.core.domain.model.action.ToggleEvent
@@ -53,7 +55,7 @@ class EditedItemsBuilder internal constructor(
     private val editor: ScenarioEditor,
 ) {
 
-    private val defaultValues = EditionDefaultValues(repository)
+    private val defaultValues = EditionDefaultValues()
     private val eventsIdCreator = IdentifierCreator()
     private val conditionsIdCreator = IdentifierCreator()
     private val actionsIdCreator = IdentifierCreator()
@@ -139,7 +141,7 @@ class EditedItemsBuilder internal constructor(
         val id = conditionsIdCreator.generateNewIdentifier()
         val newPath = bitmapRepository.saveImageConditionBitmap(
             bitmap = bitmap,
-            prefix = if (repository.isTutorialModeEnabled()) TUTORIAL_CONDITION_FILE_PREFIX else CONDITION_FILE_PREFIX,
+            prefix = CONDITION_FILE_PREFIX,
         )
         _newImageConditionsPaths.add(newPath)
 
@@ -227,6 +229,7 @@ class EditedItemsBuilder internal constructor(
             eventId = getEditedEventIdOrThrow(),
             name = defaultValues.clickName(context),
             pressDuration = defaultValues.clickPressDuration(context),
+            waitAfterClickMs = defaultValues.clickWaitAfterDuration(context),
             positionType = defaultValues.clickPositionType(),
             priority = 0,
         )
@@ -246,6 +249,14 @@ class EditedItemsBuilder internal constructor(
             eventId = getEditedEventIdOrThrow(),
             name = defaultValues.pauseName(context),
             pauseDuration = defaultValues.pauseDuration(context),
+            priority = 0,
+        )
+
+    fun createNewPrecisionGesture(context: Context): PrecisionGesture =
+        PrecisionGesture(
+            id = actionsIdCreator.generateNewIdentifier(),
+            eventId = getEditedEventIdOrThrow(),
+            name = defaultValues.precisionGestureName(context),
             priority = 0,
         )
 
@@ -331,16 +342,35 @@ class EditedItemsBuilder internal constructor(
             priority = 0,
         )
 
+    fun createNewPrecisionText(context: Context): PrecisionText =
+        PrecisionText(
+            id = actionsIdCreator.generateNewIdentifier(),
+            eventId = getEditedEventIdOrThrow(),
+            name = defaultValues.precisionTextName(context),
+            priority = 0,
+        )
+
+    fun createNewStopScenario(context: Context): StopScenario =
+        StopScenario(
+            id = actionsIdCreator.generateNewIdentifier(),
+            eventId = getEditedEventIdOrThrow(),
+            name = defaultValues.stopScenarioName(context),
+            priority = 0,
+        )
+
     fun createNewActionFrom(from: Action, eventId: Identifier = getEditedEventIdOrThrow()): Action = when (from) {
         is Click -> createNewClickFrom(from, eventId)
         is Swipe -> createNewSwipeFrom(from, eventId)
         is Pause -> createNewPauseFrom(from, eventId)
+        is PrecisionGesture -> createNewPrecisionGestureFrom(from, eventId)
+        is PrecisionText -> createNewPrecisionTextFrom(from, eventId)
         is Intent -> createNewIntentFrom(from, eventId)
         is ToggleEvent -> createNewToggleEventFrom(from, eventId)
         is ChangeCounter -> createNewChangeCounterFrom(from, eventId)
         is Notification -> createNewNotificationFrom(from, eventId)
         is SystemAction -> createNewSystemActionFrom(from, eventId)
         is SetText -> createNewSetTextFrom(from, eventId)
+        is StopScenario -> createNewStopScenarioFrom(from, eventId)
     }
 
     private fun createNewClickFrom(from: Click, eventId: Identifier): Click {
@@ -369,6 +399,22 @@ class EditedItemsBuilder internal constructor(
             id = actionsIdCreator.generateNewIdentifier(),
             eventId = eventId,
             name = "" + from.name,
+        )
+
+    private fun createNewPrecisionGestureFrom(from: PrecisionGesture, eventId: Identifier): PrecisionGesture =
+        from.copy(
+            id = actionsIdCreator.generateNewIdentifier(),
+            eventId = eventId,
+            name = "" + from.name,
+            payloadHex = from.payloadHex?.let { "" + it },
+        )
+
+    private fun createNewPrecisionTextFrom(from: PrecisionText, eventId: Identifier): PrecisionText =
+        from.copy(
+            id = actionsIdCreator.generateNewIdentifier(),
+            eventId = eventId,
+            name = "" + from.name,
+            text = "" + from.text,
         )
 
     private fun createNewIntentFrom(from: Intent, eventId: Identifier): Intent {
@@ -461,6 +507,13 @@ class EditedItemsBuilder internal constructor(
             validateInput = from.validateInput,
         )
     }
+
+    private fun createNewStopScenarioFrom(from: StopScenario, eventId: Identifier): StopScenario =
+        from.copy(
+            id = actionsIdCreator.generateNewIdentifier(),
+            eventId = eventId,
+            name = "" + from.name,
+        )
 
     private fun isEventIdValidInEditedScenario(eventId: Identifier): Boolean =
         editor.getAllEditedEvents().find { eventId == it.id } != null

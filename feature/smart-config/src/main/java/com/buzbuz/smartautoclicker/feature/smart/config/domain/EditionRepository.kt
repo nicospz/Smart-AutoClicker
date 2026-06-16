@@ -21,7 +21,9 @@ package com.buzbuz.smartautoclicker.feature.smart.config.domain
 import android.util.Log
 import com.buzbuz.smartautoclicker.core.bitmaps.BitmapRepository
 
+import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEventDetectionMode.ANCHORED_REPEAT
 import com.buzbuz.smartautoclicker.core.domain.IRepository
+import com.buzbuz.smartautoclicker.core.domain.model.AND
 import com.buzbuz.smartautoclicker.core.domain.model.action.Action
 import com.buzbuz.smartautoclicker.core.domain.model.action.intent.IntentExtra
 import com.buzbuz.smartautoclicker.core.domain.model.condition.Condition
@@ -138,7 +140,7 @@ class EditionRepository @Inject constructor(
     fun startEventEdition(event: Event) =
         scenarioEditor.startEventEdition(event)
     fun updateEditedEvent(event: Event) =
-        scenarioEditor.updateEditedEvent(event)
+        scenarioEditor.updateEditedEvent(event.sanitizeAnchoredEvent())
     fun updateActionsOrder(actions: List<Action>) {
         scenarioEditor.updateActionsOrder(
             actions.mapIndexed { index, action -> action.copyBase(priority = index) }
@@ -150,8 +152,11 @@ class EditionRepository @Inject constructor(
         )
     }
 
-    fun upsertEditedEvent() =
+    fun upsertEditedEvent() {
+        val event = scenarioEditor.currentEventEditor.value?.editedItem?.value
+        if (event != null) scenarioEditor.updateEditedEvent(event.sanitizeAnchoredEvent())
         scenarioEditor.upsertEditedEvent()
+    }
     fun deleteEditedEvent() =
         scenarioEditor.deleteEditedEvent()
     fun stopEventEdition(): Unit =
@@ -203,3 +208,14 @@ class EditionRepository @Inject constructor(
 
 /** Tag for logs */
 private const val TAG = "EditionRepository"
+private fun Event.sanitizeAnchoredEvent(): Event =
+    if (this !is ImageEvent || detectionMode != ANCHORED_REPEAT) this
+    else {
+        val validAnchor = conditions.find { it.id == anchorConditionId && it.shouldBeDetected }
+            ?: conditions.firstOrNull { it.shouldBeDetected }
+
+        copy(
+            conditionOperator = AND,
+            anchorConditionId = validAnchor?.id,
+        )
+    }

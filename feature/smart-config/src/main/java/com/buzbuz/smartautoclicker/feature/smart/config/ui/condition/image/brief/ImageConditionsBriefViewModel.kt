@@ -34,6 +34,8 @@ import com.buzbuz.smartautoclicker.core.domain.IRepository
 import com.buzbuz.smartautoclicker.core.domain.model.EXACT
 import com.buzbuz.smartautoclicker.core.domain.model.IN_AREA
 import com.buzbuz.smartautoclicker.core.domain.model.WHOLE_SCREEN
+import com.buzbuz.smartautoclicker.core.domain.model.action.Action
+import com.buzbuz.smartautoclicker.core.domain.model.action.Click
 import com.buzbuz.smartautoclicker.core.domain.model.condition.Condition
 import com.buzbuz.smartautoclicker.core.domain.model.condition.ImageCondition
 import com.buzbuz.smartautoclicker.core.domain.model.scenario.Scenario
@@ -45,6 +47,8 @@ import com.buzbuz.smartautoclicker.core.ui.views.itembrief.renderers.ImageCondit
 import com.buzbuz.smartautoclicker.feature.smart.config.domain.EditionRepository
 import com.buzbuz.smartautoclicker.feature.smart.config.domain.model.EditedListState
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.common.model.condition.toUiImageCondition
+import com.buzbuz.smartautoclicker.feature.smart.config.utils.getEventConfigPreferences
+import com.buzbuz.smartautoclicker.feature.smart.config.utils.putConditionThresholdConfig
 
 import dagger.hilt.android.qualifiers.ApplicationContext
 
@@ -63,7 +67,7 @@ import javax.inject.Inject
 
 
 class ImageConditionsBriefViewModel @Inject constructor(
-    @ApplicationContext context: Context,
+    @param:ApplicationContext private val context: Context,
     @param:Dispatcher(IO) private val ioDispatcher: CoroutineDispatcher,
     private val displayConfigManager: DisplayConfigManager,
     repository: IRepository,
@@ -99,9 +103,6 @@ class ImageConditionsBriefViewModel @Inject constructor(
         }
     }
 
-    val isTutorialModeEnabled: Flow<Boolean> =
-        repository.isTutorialModeEnabled
-
     fun setFocusedItemIndex(index: Int) {
         currentFocusItemIndex.value = index
     }
@@ -129,9 +130,26 @@ class ImageConditionsBriefViewModel @Inject constructor(
     fun removeEditedCondition() = editionRepository.deleteEditedCondition()
     fun dismissEditedCondition() = editionRepository.stopConditionEdition()
 
+    fun createClickOnConditionIfNoActions(context: Context, condition: ImageCondition) {
+        val actions = editionRepository.editionState.getEditedEventActions<Action>() ?: return
+        if (actions.isNotEmpty()) return
+
+        val click = editionRepository.editedItemsBuilder.createNewClick(context).copy(
+            positionType = Click.PositionType.ON_DETECTED_CONDITION,
+            clickOnConditionId = condition.id,
+        )
+
+        editionRepository.startActionEdition(click)
+        editionRepository.upsertEditedAction()
+    }
+
     fun updateConditionThreshold(newThreshold: Int) {
         val condition = focusedCondition.value?.first ?: return
         if (condition.threshold == newThreshold) return
+
+        context.getEventConfigPreferences().edit()
+            .putConditionThresholdConfig(newThreshold)
+            .apply()
 
         editionRepository.apply {
             startConditionEdition(condition)

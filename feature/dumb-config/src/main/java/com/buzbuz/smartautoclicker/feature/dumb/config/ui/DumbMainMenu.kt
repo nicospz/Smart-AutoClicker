@@ -27,7 +27,6 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.buzbuz.smartautoclicker.core.base.identifier.Identifier
 import com.buzbuz.smartautoclicker.core.base.isStopScenarioKey
 import com.buzbuz.smartautoclicker.core.common.overlays.base.viewModels
-import com.buzbuz.smartautoclicker.core.common.overlays.manager.OverlayManager.Companion.showAsOverlay
 import com.buzbuz.smartautoclicker.core.common.overlays.menu.OverlayMenu
 import com.buzbuz.smartautoclicker.core.ui.utils.AnimatedStatesImageButtonController
 import com.buzbuz.smartautoclicker.feature.dumb.config.R
@@ -35,7 +34,6 @@ import com.buzbuz.smartautoclicker.feature.dumb.config.databinding.OverlayDumbMa
 import com.buzbuz.smartautoclicker.feature.dumb.config.di.DumbConfigViewModelsEntryPoint
 import com.buzbuz.smartautoclicker.feature.dumb.config.ui.brief.DumbScenarioBriefMenu
 import com.buzbuz.smartautoclicker.feature.dumb.config.ui.scenario.DumbScenarioDialog
-import com.buzbuz.smartautoclicker.feature.tutorial.ui.dialogs.createStopWithVolumeDownTutorialDialog
 
 import kotlinx.coroutines.launch
 
@@ -160,11 +158,6 @@ class DumbMainMenu(
     }
 
     private fun onPlayPauseClicked() {
-        if (viewModel.shouldShowStopVolumeDownTutorialDialog()) {
-            showStopVolumeDownTutorialDialog()
-            return
-        }
-
         viewModel.toggleScenarioPlay()
     }
 
@@ -193,13 +186,4 @@ class DumbMainMenu(
         }
     }
 
-    private fun showStopVolumeDownTutorialDialog() {
-        context.createStopWithVolumeDownTutorialDialog(
-            theme = R.style.AppTheme,
-            onDismissed = { showAgain ->
-                if (!showAgain) viewModel.setStopWithVolumeDownDontShowAgain()
-                viewModel.toggleScenarioPlay()
-            }
-        ).showAsOverlay()
-    }
 }

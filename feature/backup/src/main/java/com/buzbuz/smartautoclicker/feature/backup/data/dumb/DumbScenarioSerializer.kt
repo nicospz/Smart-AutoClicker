@@ -41,6 +41,7 @@ import com.buzbuz.smartautoclicker.core.dumb.domain.model.REPEAT_DELAY_MIN_MS
 import com.buzbuz.smartautoclicker.feature.backup.data.base.ScenarioBackupSerializer
 
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -75,8 +76,18 @@ internal class DumbScenarioSerializer : ScenarioBackupSerializer<DumbScenarioBac
     override fun deserialize(json: InputStream): DumbScenarioBackup? {
         Log.d(TAG, "Deserializing dumb scenario")
 
-        val jsonBackup = Json.parseToJsonElement(json.readBytes().toString(Charsets.UTF_8)).jsonObject
+        val jsonBackup = try {
+            Json.parseToJsonElement(json.readBytes().toString(Charsets.UTF_8)).jsonObject
+        } catch (exception: IllegalArgumentException) {
+            Log.w(TAG, "Can't parse dumb scenario backup JSON.", exception)
+            return null
+        } catch (exception: SerializationException) {
+            Log.w(TAG, "Can't parse dumb scenario backup JSON.", exception)
+            return null
+        }
+
         val version = jsonBackup.getInt("version", true) ?: -1
+        Log.d(TAG, "Dumb scenario backup version=$version")
 
         val scenario = when {
             version < 1 -> {
@@ -85,7 +96,15 @@ internal class DumbScenarioSerializer : ScenarioBackupSerializer<DumbScenarioBac
             }
             version == DUMB_DATABASE_VERSION -> {
                 Log.d(TAG, "Current version, use standard serialization.")
-                Json.decodeFromJsonElement<DumbScenarioBackup>(jsonBackup).dumbScenario
+                try {
+                    Json.decodeFromJsonElement<DumbScenarioBackup>(jsonBackup).dumbScenario
+                } catch (exception: SerializationException) {
+                    Log.w(TAG, "Can't deserialize current dumb scenario backup JSON.", exception)
+                    null
+                } catch (exception: IllegalArgumentException) {
+                    Log.w(TAG, "Can't deserialize current dumb scenario backup JSON.", exception)
+                    null
+                }
             }
             else -> {
                 Log.d(TAG, "$version is not the current version, use compat serialization.")
@@ -97,6 +116,8 @@ internal class DumbScenarioSerializer : ScenarioBackupSerializer<DumbScenarioBac
             Log.w(TAG, "Can't deserialize dumb scenario.")
             return null
         }
+
+        Log.d(TAG, "Dumb scenario backup deserialized: scenarioId=${scenario.scenario.id}")
 
         return DumbScenarioBackup(
             version = version,
@@ -145,6 +166,9 @@ internal class DumbScenarioSerializer : ScenarioBackupSerializer<DumbScenarioBac
                 ?: DEFAULT_DUMB_MAX_DURATION_MINUTES,
             isDurationInfinite = getBoolean("isDurationInfinite") ?: DEFAULT_DUMB_DURATION_IS_INFINITE,
             randomize = getBoolean("randomize") ?: DEFAULT_DUMB_RANDOMIZE,
+            isFavorite = getBoolean("isFavorite") ?: false,
+            autoStart = getBoolean("autoStart") ?: false,
+            autoStartDelayMs = getLong("autoStartDelayMs")?.coerceAtLeast(0) ?: 0L,
         )
     }
 
@@ -155,6 +179,7 @@ internal class DumbScenarioSerializer : ScenarioBackupSerializer<DumbScenarioBac
                     DumbActionType.CLICK -> jsonDumbAction.deserializeDumbClickCompat()
                     DumbActionType.SWIPE -> jsonDumbAction.deserializeDumbSwipeCompat()
                     DumbActionType.PAUSE -> jsonDumbAction.deserializeDumbPauseCompat()
+                    DumbActionType.PRECISION_GESTURE -> jsonDumbAction.deserializeDumbPrecisionGestureCompat()
                     else -> null
                 }
             }
@@ -242,6 +267,44 @@ internal class DumbScenarioSerializer : ScenarioBackupSerializer<DumbScenarioBac
             pauseDuration = getLong("pauseDuration")
                 ?.coerceAtLeast(0)
                 ?: DEFAULT_DUMB_PAUSE_DURATION,
+        )
+    }
+
+    private fun JsonObject.deserializeDumbPrecisionGestureCompat(): DumbActionEntity? {
+        val id = getLong("id", true) ?: return null
+        val scenarioId = getLong("dumb_scenario_id", true) ?: return null
+
+        val name = getString("name", true)
+        if (name.isNullOrEmpty()) return null
+
+        val payloadHex = getString("precisionGesturePayloadHex")
+            ?: getString("precision_gesture_payload_hex", true)
+            ?: return null
+        val eventCount = getInt("precisionGestureEventCount")
+            ?: getInt("precision_gesture_event_count", true)
+            ?: return null
+        val durationMs = getLong("precisionGestureDurationMs")
+            ?: getLong("precision_gesture_duration_ms", true)
+            ?: return null
+
+        return DumbActionEntity(
+            id = id,
+            dumbScenarioId = scenarioId,
+            name = name,
+            priority = getInt("priority")?.coerceAtLeast(0) ?: 0,
+            type = DumbActionType.PRECISION_GESTURE,
+            repeatCount = getInt("repeatCount")
+                ?.coerceIn(REPEAT_COUNT_MIN_VALUE..REPEAT_COUNT_MAX_VALUE)
+                ?: DEFAULT_DUMB_REPEAT_COUNT,
+            isRepeatInfinite = getBoolean("isRepeatInfinite") ?: DEFAULT_DUMB_REPEAT_IS_INFINITE,
+            repeatDelay = getLong("repeatDelay")
+                ?.coerceIn(REPEAT_DELAY_MIN_MS.. REPEAT_DELAY_MAX_MS)
+                ?: DEFAULT_DUMB_REPEAT_DELAY_MS,
+            precisionGesturePayloadHex = payloadHex,
+            precisionGestureEventCount = eventCount.coerceAtLeast(0),
+            precisionGestureDurationMs = durationMs.coerceAtLeast(0),
+            precisionGestureHelperMode = getString("precisionGestureHelperMode")
+                ?: getString("precision_gesture_helper_mode"),
         )
     }
 }

@@ -35,9 +35,15 @@ data class UiImageCondition(
     @field:StringRes val shouldBeVisibleTextRes: Int,
     @field:DrawableRes val detectionTypeIconRes: Int,
     val thresholdText: String,
+    val isAnchor: Boolean = false,
 ) : UiCondition()
 
-fun ImageCondition.toUiImageCondition(context: Context, shortThreshold: Boolean, inError: Boolean) = UiImageCondition(
+fun ImageCondition.toUiImageCondition(
+    context: Context,
+    shortThreshold: Boolean,
+    inError: Boolean,
+    isAnchor: Boolean = false,
+) = UiImageCondition(
     condition = this,
     name = name,
     shouldBeVisibleIconRes = getShouldBeDetectedIconRes(),
@@ -45,6 +51,7 @@ fun ImageCondition.toUiImageCondition(context: Context, shortThreshold: Boolean,
     detectionTypeIconRes = getDetectionTypeIconRes(),
     thresholdText = if (shortThreshold) getShortThresholdText(context) else getThresholdText(context),
     haveError = inError,
+    isAnchor = isAnchor,
 )
 
 @DrawableRes

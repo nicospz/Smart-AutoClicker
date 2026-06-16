@@ -51,6 +51,20 @@ internal fun Context.getDefaultDumbSwipeRepeatCount(): Int = getDumbConfigPrefer
 internal fun Context.getDefaultDumbSwipeRepeatDelay(): Long = getDumbConfigPreferences()
     .getSwipeRepeatDelayConfig(0)
 
+internal fun Context.getDefaultDumbPrecisionGestureName(): String =
+    getString(R.string.default_dumb_precision_gesture_name)
+
+internal fun Context.getDefaultDumbPrecisionGestureRepeatCount(): Int = getDefaultDumbSwipeRepeatCount()
+
+internal fun Context.getDefaultDumbPrecisionGestureRepeatDelay(): Long = getDefaultDumbSwipeRepeatDelay()
+
+internal fun Context.getDefaultDumbPrecisionTextName(): String =
+    getString(R.string.default_dumb_precision_text_name)
+
+internal fun Context.getDefaultDumbPrecisionTextRepeatCount(): Int = getDefaultDumbSwipeRepeatCount()
+
+internal fun Context.getDefaultDumbPrecisionTextRepeatDelay(): Long = getDefaultDumbSwipeRepeatDelay()
+
 internal fun Context.getDefaultDumbPauseName(): String =
     getString(R.string.default_dumb_pause_name)
 

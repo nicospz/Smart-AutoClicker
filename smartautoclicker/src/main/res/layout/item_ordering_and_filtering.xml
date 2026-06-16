@@ -49,23 +49,16 @@
             android:text="@string/item_scenario_filter_by_recent"
             app:icon="@drawable/ic_sort_recent"/>
 
-        <Button
-            style="?attr/materialButtonOutlinedStyle"
-            android:id="@+id/button_most_used"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/item_scenario_filter_by_favorite"
-            app:icon="@drawable/ic_sort_favourites"/>
-
     </com.google.android.material.button.MaterialButtonToggleGroup>
 
     <com.google.android.material.chip.ChipGroup
         android:id="@+id/chipGroup"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/margin_vertical_default"
         android:layout_marginBottom="@dimen/margin_vertical_default"
-        app:layout_constraintStart_toStartOf="@id/button_group_ordering"
+        android:layout_marginEnd="@dimen/margin_horizontal_default"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toStartOf="@id/checkbox_sort_order"
         app:layout_constraintTop_toBottomOf="@+id/button_group_ordering"
         app:layout_constraintBottom_toBottomOf="parent">
@@ -86,6 +79,14 @@
             android:text="@string/item_title_dumb_scenario"
             app:chipIcon="@drawable/ic_dumb"/>
 
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chip_favorites"
+            style="@style/Widget.Material3.Chip.Filter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/item_scenario_filter_by_favorite"
+            app:chipIcon="@drawable/ic_sort_favourites"/>
+
     </com.google.android.material.chip.ChipGroup>
 
     <com.google.android.material.button.MaterialButton
@@ -93,7 +94,7 @@
         style="@style/AppTheme.Widget.CheckableButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        app:layout_constraintEnd_toEndOf="@id/button_group_ordering"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@id/chipGroup"
         app:layout_constraintBottom_toBottomOf="@id/chipGroup"
         app:icon="@drawable/ic_sort_order"/>

@@ -38,4 +38,7 @@ data class Scenario(
     val keepScreenOn: Boolean = false,
     val eventCount: Int = 0,
     val stats: ScenarioStats? = null,
+    val isFavorite: Boolean = false,
+    val autoStart: Boolean = false,
+    val autoStartDelayMs: Long = 0L,
 ): Identifiable

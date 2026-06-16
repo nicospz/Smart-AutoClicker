@@ -98,7 +98,9 @@ class ScenarioListFragment : Fragment() {
             onSortTypeClicked = scenarioListViewModel::updateSortType,
             onSmartChipClicked = scenarioListViewModel::updateSmartVisible,
             onDumbChipClicked = scenarioListViewModel::updateDumbVisible,
+            onFavoritesChipClicked = scenarioListViewModel::updateFavoritesOnly,
             onSortOrderClicked = scenarioListViewModel::updateSortOrder,
+            onFavoriteClicked = scenarioListViewModel::toggleFavorite,
         )
     }
 

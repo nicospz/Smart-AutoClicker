@@ -50,5 +50,4 @@ dependencies {
     implementation(project(":core:smart:processing"))
     implementation(project(":feature:revenue"))
     implementation(project(":feature:smart-debugging"))
-    implementation(project(":feature:tutorial"))
 }

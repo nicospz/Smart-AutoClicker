@@ -87,6 +87,10 @@ interface ScenarioDao {
     @Update
     suspend fun update(scenarioEntity: ScenarioEntity)
 
+    /** Update favorite state for a scenario. */
+    @Query("UPDATE scenario_table SET is_favorite = :isFavorite WHERE id = :scenarioId")
+    suspend fun updateFavorite(scenarioId: Long, isFavorite: Boolean)
+
     /**
      * Delete the provided click scenario from the database.
      *

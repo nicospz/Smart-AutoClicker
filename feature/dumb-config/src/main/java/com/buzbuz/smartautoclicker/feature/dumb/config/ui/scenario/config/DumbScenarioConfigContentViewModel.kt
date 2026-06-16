@@ -72,6 +72,20 @@ class DumbScenarioConfigContentViewModel @Inject constructor(
     val randomization: Flow<Boolean> = userModifications
         .map { it?.randomize == true }
 
+    /** Tells if the scenario should start automatically. */
+    val autoStart: Flow<Boolean> = userModifications
+        .map { it?.autoStart == true }
+
+    /** The auto start delay in milliseconds. */
+    val autoStartDelay: Flow<String> = userModifications
+        .filterNotNull()
+        .map { it.autoStartDelayMs.toString() }
+        .take(1)
+
+    /** Tells if the auto start delay is valid or not. */
+    val autoStartDelayError: Flow<Boolean> = userModifications
+        .map { it == null || it.autoStartDelayMs < 0 }
+
     fun setDumbScenarioName(name: String) {
         userModifications.value?.copy(name = name)?.let {
             dumbEditionRepository.updateDumbScenario(it)
@@ -107,6 +121,18 @@ class DumbScenarioConfigContentViewModel @Inject constructor(
     fun toggleRandomization() {
         userModifications.value?.let { scenario ->
             dumbEditionRepository.updateDumbScenario(scenario.copy(randomize = !scenario.randomize))
+        }
+    }
+
+    fun toggleAutoStart() {
+        userModifications.value?.let { scenario ->
+            dumbEditionRepository.updateDumbScenario(scenario.copy(autoStart = !scenario.autoStart))
+        }
+    }
+
+    fun setAutoStartDelay(delayMs: Long) {
+        userModifications.value?.let { scenario ->
+            dumbEditionRepository.updateDumbScenario(scenario.copy(autoStartDelayMs = delayMs.coerceAtLeast(0)))
         }
     }
 }

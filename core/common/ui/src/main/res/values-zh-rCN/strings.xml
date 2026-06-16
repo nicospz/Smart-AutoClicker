@@ -4,13 +4,11 @@
     <string name="no">否</string>
     <string name="dialog_overlay_title_copy_from">复制来源</string>
     <string name="dialog_overlay_title_warning">警告</string>
-    <string name="dialog_title_tutorial">教程</string>
     <string name="field_click_position_title">点击位置</string>
     <string name="field_swipe_positions_title">滑动位置</string>
     <string name="item_title_try_element">测试您的 %1$s</string>
     <string name="item_error_action_invalid_generic">此操作无效</string>
     <string name="message_empty_copy">没有可复制的内容</string>
-    <string name="message_tutorial_volume_down_stop">若场景点击过快，可能无法通过悬浮菜单停止。\n\n此时可按下设备的实体「音量减」键以停止当前场景。</string>
     <string name="message_dont_show_again">不再显示此消息</string>
     <string name="button_understood">知道了</string>
     <string name="input_field_label_anti_detection">反检测</string>

@@ -31,6 +31,9 @@ internal fun DumbScenarioWithActions.toDomain(asDomain: Boolean = false): DumbSc
         maxDurationMin = scenario.maxDurationMin,
         isDurationInfinite = scenario.isDurationInfinite,
         randomize = scenario.randomize,
+        isFavorite = scenario.isFavorite,
+        autoStart = scenario.autoStart,
+        autoStartDelayMs = scenario.autoStartDelayMs,
         dumbActions = dumbActions
             .sortedBy { it.priority }
             .map { dumbAction -> dumbAction.toDomain(asDomain) },
@@ -46,6 +49,9 @@ internal fun DumbScenario.toEntity(): DumbScenarioEntity =
         maxDurationMin = maxDurationMin,
         isDurationInfinite = isDurationInfinite,
         randomize = randomize,
+        isFavorite = isFavorite,
+        autoStart = autoStart,
+        autoStartDelayMs = autoStartDelayMs,
     )
 
 

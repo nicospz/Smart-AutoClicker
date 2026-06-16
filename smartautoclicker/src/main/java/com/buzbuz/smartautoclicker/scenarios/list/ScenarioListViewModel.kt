@@ -133,6 +133,21 @@ class ScenarioListViewModel @Inject constructor(
         }
     }
 
+    fun updateFavoritesOnly(show: Boolean) {
+        viewModelScope.launch {
+            sortConfigRepository.setShowFavorites(show)
+        }
+    }
+
+    fun toggleFavorite(item: ScenarioListUiState.Item.ScenarioItem) {
+        viewModelScope.launch(Dispatchers.IO) {
+            when (val scenario = item.scenario) {
+                is DumbScenario -> dumbRepository.updateDumbScenarioFavorite(scenario.id, !scenario.isFavorite)
+                is Scenario -> smartRepository.updateScenarioFavorite(scenario.id, !scenario.isFavorite)
+            }
+        }
+    }
+
     fun refreshScenarioList() {
         viewModelScope.launch {
             filteredScenarioListUseCase.refresh()

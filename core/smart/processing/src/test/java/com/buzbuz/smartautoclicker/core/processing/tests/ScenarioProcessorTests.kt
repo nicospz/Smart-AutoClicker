@@ -36,6 +36,7 @@ import com.buzbuz.smartautoclicker.core.domain.model.WHOLE_SCREEN
 import com.buzbuz.smartautoclicker.core.domain.model.action.Click
 import com.buzbuz.smartautoclicker.core.domain.model.condition.ImageCondition
 import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEvent
+import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEventDetectionMode.ANCHORED_REPEAT
 import com.buzbuz.smartautoclicker.core.domain.model.event.TriggerEvent
 import com.buzbuz.smartautoclicker.core.processing.data.processor.ScenarioProcessor
 import com.buzbuz.smartautoclicker.core.processing.data.scaling.ImageConditionScalingInfo
@@ -1149,6 +1150,154 @@ class ScenarioProcessorTests {
 
         verify(mockImageDetector).setScreenBitmap(mockScreenBitmap, "")
         assertActionGesture(actionDuration1)
+        verifyNoInteractions(mockEndListener)
+    }
+
+    @Test
+    fun anchoredRepeat_anchorAndChildOnSameCard_triggers() = runTest {
+        val anchor = newCondition("ANCHOR", Rect(10, 10, 30, 30), 1, EXACT, true)
+            .copy(id = Identifier(databaseId = 101L))
+        val child = newCondition("CHILD", Rect(40, 15, 50, 25), 1, EXACT, true)
+            .copy(id = Identifier(databaseId = 102L))
+        val anchorBitmap = mock(Bitmap::class.java)
+        val childBitmap = mock(Bitmap::class.java)
+
+        mockWhen(mockBitmapSupplier.getBitmap(anchor.path, 20, 20)).thenReturn(anchorBitmap)
+        mockWhen(mockBitmapSupplier.getBitmap(child.path, 10, 10)).thenReturn(childBitmap)
+        mockWhen(mockScalingManager.getImageConditionScalingInfo(anchor))
+            .thenReturn(ImageConditionScalingInfo(anchor, anchor.area, Rect(0, 0, 100, 100)))
+        mockWhen(mockScalingManager.getImageConditionScalingInfo(child))
+            .thenReturn(ImageConditionScalingInfo(child, child.area, child.area))
+        mockWhen(mockImageDetector.detectConditionOccurrences(anchorBitmap, 20, 20, Rect(0, 0, 100, 100), 1))
+            .thenReturn(listOf(DetectionResult(true, Point(20, 20), 100.0)))
+        mockWhen(mockImageDetector.detectCondition(childBitmap, 10, 10, Rect(40, 15, 50, 25), 1))
+            .thenReturn(DetectionResult(true, Point(45, 20), 100.0))
+
+        val event = newEvent(
+            operator = AND,
+            conditions = listOf(anchor, child),
+            actions = listOf(newDefaultClickAction()),
+        ).copy(detectionMode = ANCHORED_REPEAT, anchorConditionId = anchor.id)
+
+        scenarioProcessor = createNewScenarioProcessor(listOf(event), emptyList())
+        scenarioProcessor.process(mockScreenBitmap)
+
+        verify(mockImageDetector).setScreenBitmap(mockScreenBitmap, "")
+        assertActionGesture(1L)
+        verifyNoInteractions(mockEndListener)
+    }
+
+    @Test
+    fun anchoredRepeat_anchorOnOneCardChildOnAnother_doesNotTrigger() = runTest {
+        val anchor = newCondition("ANCHOR", Rect(10, 10, 30, 30), 1, EXACT, true)
+            .copy(id = Identifier(databaseId = 101L))
+        val child = newCondition("CHILD", Rect(40, 15, 50, 25), 1, EXACT, true)
+            .copy(id = Identifier(databaseId = 102L))
+        val anchorBitmap = mock(Bitmap::class.java)
+        val childBitmap = mock(Bitmap::class.java)
+
+        mockWhen(mockBitmapSupplier.getBitmap(anchor.path, 20, 20)).thenReturn(anchorBitmap)
+        mockWhen(mockBitmapSupplier.getBitmap(child.path, 10, 10)).thenReturn(childBitmap)
+        mockWhen(mockScalingManager.getImageConditionScalingInfo(anchor))
+            .thenReturn(ImageConditionScalingInfo(anchor, anchor.area, Rect(0, 0, 100, 100)))
+        mockWhen(mockScalingManager.getImageConditionScalingInfo(child))
+            .thenReturn(ImageConditionScalingInfo(child, child.area, child.area))
+        mockWhen(mockImageDetector.detectConditionOccurrences(anchorBitmap, 20, 20, Rect(0, 0, 100, 100), 1))
+            .thenReturn(listOf(DetectionResult(true, Point(20, 20), 100.0)))
+        mockWhen(mockImageDetector.detectCondition(childBitmap, 10, 10, Rect(40, 15, 50, 25), 1))
+            .thenReturn(DetectionResult(false, Point(0, 0), 0.0))
+
+        val event = newEvent(
+            operator = AND,
+            conditions = listOf(anchor, child),
+            actions = listOf(newDefaultClickAction()),
+        ).copy(detectionMode = ANCHORED_REPEAT, anchorConditionId = anchor.id)
+
+        scenarioProcessor = createNewScenarioProcessor(listOf(event), emptyList())
+        scenarioProcessor.process(mockScreenBitmap)
+
+        verify(mockImageDetector).setScreenBitmap(mockScreenBitmap, "")
+        verifyNoInteractions(mockAndroidExecutor, mockEndListener)
+    }
+
+    @Test
+    fun anchoredRepeat_firstCardFailsSecondCardPasses_triggersOnSecond() = runTest {
+        val anchor = newCondition("ANCHOR", Rect(10, 10, 30, 30), 1, EXACT, true)
+            .copy(id = Identifier(databaseId = 101L))
+        val child = newCondition("CHILD", Rect(40, 15, 50, 25), 1, EXACT, true)
+            .copy(id = Identifier(databaseId = 102L))
+        val anchorBitmap = mock(Bitmap::class.java)
+        val childBitmap = mock(Bitmap::class.java)
+
+        mockWhen(mockBitmapSupplier.getBitmap(anchor.path, 20, 20)).thenReturn(anchorBitmap)
+        mockWhen(mockBitmapSupplier.getBitmap(child.path, 10, 10)).thenReturn(childBitmap)
+        mockWhen(mockScalingManager.getImageConditionScalingInfo(anchor))
+            .thenReturn(ImageConditionScalingInfo(anchor, anchor.area, Rect(0, 0, 200, 200)))
+        mockWhen(mockScalingManager.getImageConditionScalingInfo(child))
+            .thenReturn(ImageConditionScalingInfo(child, child.area, child.area))
+        mockWhen(mockImageDetector.detectConditionOccurrences(anchorBitmap, 20, 20, Rect(0, 0, 200, 200), 1))
+            .thenReturn(listOf(
+                DetectionResult(true, Point(20, 20), 100.0),
+                DetectionResult(true, Point(20, 70), 100.0),
+            ))
+        mockWhen(mockImageDetector.detectCondition(childBitmap, 10, 10, Rect(40, 15, 50, 25), 1))
+            .thenReturn(DetectionResult(false, Point(0, 0), 0.0))
+        mockWhen(mockImageDetector.detectCondition(childBitmap, 10, 10, Rect(40, 65, 50, 75), 1))
+            .thenReturn(DetectionResult(true, Point(45, 70), 100.0))
+
+        val clickOnChild = Click(
+            id = Identifier(databaseId = 1),
+            eventId = Identifier(databaseId = 1),
+            priority = 0,
+            pressDuration = 1,
+            positionType = Click.PositionType.ON_DETECTED_CONDITION,
+            clickOnConditionId = child.id,
+        )
+        val event = newEvent(
+            operator = AND,
+            conditions = listOf(anchor, child),
+            actions = listOf(clickOnChild),
+        ).copy(detectionMode = ANCHORED_REPEAT, anchorConditionId = anchor.id)
+
+        scenarioProcessor = createNewScenarioProcessor(listOf(event), emptyList())
+        scenarioProcessor.process(mockScreenBitmap)
+
+        assertActionGesture(1L)
+        verify(mockImageDetector).detectCondition(childBitmap, 10, 10, Rect(40, 15, 50, 25), 1)
+        verify(mockImageDetector).detectCondition(childBitmap, 10, 10, Rect(40, 65, 50, 75), 1)
+        verifyNoInteractions(mockEndListener)
+    }
+
+    @Test
+    fun anchoredRepeat_absentRelativeChildAbsentInsideCard_triggers() = runTest {
+        val anchor = newCondition("ANCHOR", Rect(10, 10, 30, 30), 1, EXACT, true)
+            .copy(id = Identifier(databaseId = 101L))
+        val child = newCondition("ABSENT_CHILD", Rect(40, 15, 50, 25), 1, EXACT, false)
+            .copy(id = Identifier(databaseId = 102L))
+        val anchorBitmap = mock(Bitmap::class.java)
+        val childBitmap = mock(Bitmap::class.java)
+
+        mockWhen(mockBitmapSupplier.getBitmap(anchor.path, 20, 20)).thenReturn(anchorBitmap)
+        mockWhen(mockBitmapSupplier.getBitmap(child.path, 10, 10)).thenReturn(childBitmap)
+        mockWhen(mockScalingManager.getImageConditionScalingInfo(anchor))
+            .thenReturn(ImageConditionScalingInfo(anchor, anchor.area, Rect(0, 0, 100, 100)))
+        mockWhen(mockScalingManager.getImageConditionScalingInfo(child))
+            .thenReturn(ImageConditionScalingInfo(child, child.area, child.area))
+        mockWhen(mockImageDetector.detectConditionOccurrences(anchorBitmap, 20, 20, Rect(0, 0, 100, 100), 1))
+            .thenReturn(listOf(DetectionResult(true, Point(20, 20), 100.0)))
+        mockWhen(mockImageDetector.detectCondition(childBitmap, 10, 10, Rect(40, 15, 50, 25), 1))
+            .thenReturn(DetectionResult(false, Point(0, 0), 0.0))
+
+        val event = newEvent(
+            operator = AND,
+            conditions = listOf(anchor, child),
+            actions = listOf(newDefaultClickAction()),
+        ).copy(detectionMode = ANCHORED_REPEAT, anchorConditionId = anchor.id)
+
+        scenarioProcessor = createNewScenarioProcessor(listOf(event), emptyList())
+        scenarioProcessor.process(mockScreenBitmap)
+
+        assertActionGesture(1L)
         verifyNoInteractions(mockEndListener)
     }
 

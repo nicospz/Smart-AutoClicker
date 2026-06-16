@@ -33,6 +33,8 @@ import com.buzbuz.smartautoclicker.core.ui.monitoring.MonitoredViewType
 import com.buzbuz.smartautoclicker.core.ui.monitoring.MonitoredViewsManager
 import com.buzbuz.smartautoclicker.feature.smart.config.R
 import com.buzbuz.smartautoclicker.feature.smart.config.domain.EditionRepository
+import com.buzbuz.smartautoclicker.feature.smart.config.utils.getEventConfigPreferences
+import com.buzbuz.smartautoclicker.feature.smart.config.utils.putConditionThresholdConfig
 import dagger.hilt.android.qualifiers.ApplicationContext
 
 import kotlinx.coroutines.Dispatchers
@@ -53,7 +55,7 @@ import kotlin.math.max
 
 @OptIn(FlowPreview::class)
 class ImageConditionViewModel @Inject constructor(
-    @ApplicationContext context: Context,
+    @param:ApplicationContext private val context: Context,
     private val bitmapRepository: BitmapRepository,
     private val editionRepository: EditionRepository,
     private val monitoredViewsManager: MonitoredViewsManager,
@@ -141,6 +143,10 @@ class ImageConditionViewModel @Inject constructor(
      * @param value the new threshold value.
      */
     fun setThreshold(value: Int) {
+        context.getEventConfigPreferences().edit()
+            .putConditionThresholdConfig(value)
+            .apply()
+
         updateEditedCondition { oldCondition ->
             oldCondition.copy(threshold = value)
         }

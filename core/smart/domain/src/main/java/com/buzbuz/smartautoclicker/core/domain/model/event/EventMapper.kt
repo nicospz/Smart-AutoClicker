@@ -21,6 +21,7 @@ import com.buzbuz.smartautoclicker.core.database.entity.EventEntity
 import com.buzbuz.smartautoclicker.core.base.identifier.Identifier
 import com.buzbuz.smartautoclicker.core.base.interfaces.sortedByPriority
 import com.buzbuz.smartautoclicker.core.database.entity.EventType
+import com.buzbuz.smartautoclicker.core.database.entity.ImageEventDetectionMode as EntityImageEventDetectionMode
 import com.buzbuz.smartautoclicker.core.domain.model.action.mapper.toDomain
 import com.buzbuz.smartautoclicker.core.domain.model.condition.ImageCondition
 import com.buzbuz.smartautoclicker.core.domain.model.condition.TriggerCondition
@@ -41,7 +42,10 @@ private fun ImageEvent.toEntity() = EventEntity(
     priority = priority,
     keepDetecting = keepDetecting,
     enabledOnStart = enabledOnStart,
+    cooldownMs = cooldownMs,
     type = EventType.IMAGE_EVENT,
+    imageDetectionMode = detectionMode.toEntity(),
+    anchorConditionId = anchorConditionId?.databaseId?.takeIf { it != 0L },
 )
 
 private fun TriggerEvent.toEntity() : EventEntity =
@@ -51,6 +55,7 @@ private fun TriggerEvent.toEntity() : EventEntity =
         name = name,
         conditionOperator = conditionOperator,
         enabledOnStart = enabledOnStart,
+        cooldownMs = cooldownMs,
         priority = -1,
         type = EventType.TRIGGER_EVENT,
     )
@@ -72,7 +77,10 @@ internal fun CompleteEventEntity.toDomainImageEvent(cleanIds: Boolean = false): 
         conditionOperator = event.conditionOperator,
         priority = event.priority,
         enabledOnStart = event.enabledOnStart,
+        cooldownMs = event.cooldownMs.coerceAtLeast(0),
         keepDetecting = event.keepDetecting == true,
+        detectionMode = event.imageDetectionMode.toDomain(),
+        anchorConditionId = event.anchorConditionId?.takeIf { it != 0L }?.let { Identifier(id = it, asTemporary = cleanIds) },
         actions = actions.map { it.toDomain(cleanIds) }.sortedByPriority().toMutableList(),
         conditions = conditions.map { it.toDomain(cleanIds) as ImageCondition }.sortedByPriority().toMutableList(),
     )
@@ -85,6 +93,13 @@ internal fun CompleteEventEntity.toDomainTriggerEvent(cleanIds: Boolean = false)
         name= event.name,
         conditionOperator = event.conditionOperator,
         enabledOnStart = event.enabledOnStart,
+        cooldownMs = event.cooldownMs.coerceAtLeast(0),
         actions = actions.map { it.toDomain(cleanIds) }.sortedByPriority().toMutableList(),
         conditions = conditions.map { it.toDomain(cleanIds) as TriggerCondition }.toMutableList(),
     )
+
+private fun ImageEventDetectionMode.toEntity(): EntityImageEventDetectionMode =
+    EntityImageEventDetectionMode.valueOf(name)
+
+private fun EntityImageEventDetectionMode.toDomain(): ImageEventDetectionMode =
+    ImageEventDetectionMode.valueOf(name)

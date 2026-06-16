@@ -22,16 +22,21 @@ import com.buzbuz.smartautoclicker.core.base.identifier.DATABASE_ID_INSERTION
 import com.buzbuz.smartautoclicker.core.base.identifier.Identifier
 import com.buzbuz.smartautoclicker.core.dumb.data.database.DumbActionEntity
 import com.buzbuz.smartautoclicker.core.dumb.data.database.DumbActionType
+import com.buzbuz.smartautoclicker.core.common.actions.precision.PrecisionTextMode
 
 internal fun DumbActionEntity.toDomain(asDomain: Boolean = false): DumbAction = when (type) {
     DumbActionType.CLICK -> toDomainClick(asDomain)
     DumbActionType.SWIPE -> toDomainSwipe(asDomain)
     DumbActionType.PAUSE -> toDomainPause(asDomain)
+    DumbActionType.PRECISION_GESTURE -> toDomainPrecisionGesture(asDomain)
+    DumbActionType.PRECISION_TEXT -> toDomainPrecisionText(asDomain)
 }
 internal fun DumbAction.toEntity(scenarioDbId: Long = DATABASE_ID_INSERTION): DumbActionEntity = when (this) {
     is DumbAction.DumbClick -> toClickEntity(scenarioDbId)
     is DumbAction.DumbSwipe -> toSwipeEntity(scenarioDbId)
     is DumbAction.DumbPause -> toPauseEntity(scenarioDbId)
+    is DumbAction.DumbPrecisionGesture -> toPrecisionGestureEntity(scenarioDbId)
+    is DumbAction.DumbPrecisionText -> toPrecisionTextEntity(scenarioDbId)
 }
 
 private fun DumbActionEntity.toDomainClick(asDomain: Boolean): DumbAction.DumbClick =
@@ -68,6 +73,35 @@ private fun DumbActionEntity.toDomainPause(asDomain: Boolean): DumbAction.DumbPa
         name = name,
         priority = priority,
         pauseDurationMs = pauseDuration!!,
+    )
+
+private fun DumbActionEntity.toDomainPrecisionGesture(asDomain: Boolean): DumbAction.DumbPrecisionGesture =
+    DumbAction.DumbPrecisionGesture(
+        id = Identifier(id = id, asTemporary = asDomain),
+        scenarioId = Identifier(id = dumbScenarioId, asTemporary = asDomain),
+        name = name,
+        priority = priority,
+        repeatCount = repeatCount!!,
+        isRepeatInfinite = isRepeatInfinite!!,
+        repeatDelayMs = repeatDelay!!,
+        payloadHex = precisionGesturePayloadHex,
+        eventCount = precisionGestureEventCount,
+        durationMs = precisionGestureDurationMs,
+        helperMode = precisionGestureHelperMode,
+    )
+
+private fun DumbActionEntity.toDomainPrecisionText(asDomain: Boolean): DumbAction.DumbPrecisionText =
+    DumbAction.DumbPrecisionText(
+        id = Identifier(id = id, asTemporary = asDomain),
+        scenarioId = Identifier(id = dumbScenarioId, asTemporary = asDomain),
+        name = name,
+        priority = priority,
+        repeatCount = repeatCount!!,
+        isRepeatInfinite = isRepeatInfinite!!,
+        repeatDelayMs = repeatDelay!!,
+        text = precisionTextValue ?: "",
+        mode = precisionTextMode?.let { runCatching { PrecisionTextMode.valueOf(it) }.getOrNull() }
+            ?: PrecisionTextMode.KEY_EVENTS,
     )
 
 private fun DumbAction.DumbClick.toClickEntity(scenarioDbId: Long): DumbActionEntity {
@@ -118,5 +152,41 @@ private fun DumbAction.DumbPause.toPauseEntity(scenarioDbId: Long): DumbActionEn
         priority = priority,
         type = DumbActionType.PAUSE,
         pauseDuration = pauseDurationMs,
+    )
+}
+
+private fun DumbAction.DumbPrecisionGesture.toPrecisionGestureEntity(scenarioDbId: Long): DumbActionEntity {
+    if (!isValid()) throw IllegalStateException("Can't transform to entity, Precision Gesture is incomplete.")
+
+    return DumbActionEntity(
+        id = id.databaseId,
+        dumbScenarioId = if (scenarioDbId != DATABASE_ID_INSERTION) scenarioDbId else scenarioId.databaseId,
+        name = name,
+        priority = priority,
+        type = DumbActionType.PRECISION_GESTURE,
+        repeatCount = repeatCount,
+        isRepeatInfinite = isRepeatInfinite,
+        repeatDelay = repeatDelayMs,
+        precisionGesturePayloadHex = payloadHex,
+        precisionGestureEventCount = eventCount,
+        precisionGestureDurationMs = durationMs,
+        precisionGestureHelperMode = helperMode,
+    )
+}
+
+private fun DumbAction.DumbPrecisionText.toPrecisionTextEntity(scenarioDbId: Long): DumbActionEntity {
+    if (!isValid()) throw IllegalStateException("Can't transform to entity, Precision Text is incomplete.")
+
+    return DumbActionEntity(
+        id = id.databaseId,
+        dumbScenarioId = if (scenarioDbId != DATABASE_ID_INSERTION) scenarioDbId else scenarioId.databaseId,
+        name = name,
+        priority = priority,
+        type = DumbActionType.PRECISION_TEXT,
+        repeatCount = repeatCount,
+        isRepeatInfinite = isRepeatInfinite,
+        repeatDelay = repeatDelayMs,
+        precisionTextValue = text,
+        precisionTextMode = mode.name,
     )
 }

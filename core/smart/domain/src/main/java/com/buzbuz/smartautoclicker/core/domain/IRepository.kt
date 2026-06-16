@@ -22,6 +22,7 @@ import com.buzbuz.smartautoclicker.core.domain.model.action.Action
 import com.buzbuz.smartautoclicker.core.domain.model.condition.Condition
 import com.buzbuz.smartautoclicker.core.domain.model.event.Event
 import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEvent
+import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEventListData
 import com.buzbuz.smartautoclicker.core.domain.model.event.TriggerEvent
 import com.buzbuz.smartautoclicker.core.domain.model.scenario.Scenario
 
@@ -33,9 +34,6 @@ import kotlinx.coroutines.flow.Flow
  * the application data folder.
  */
 interface IRepository {
-
-    /** Tells if we are using the tutorial data or not. */
-    val isTutorialModeEnabled: Flow<Boolean>
 
     /** The list of scenarios. */
     val scenarios: Flow<List<Scenario>>
@@ -84,6 +82,9 @@ interface IRepository {
      * @param events the list of event for the scenario.
      */
     suspend fun updateScenario(scenario: Scenario, events: List<Event>): Boolean
+
+    /** Update the favorite state for a scenario. */
+    suspend fun updateScenarioFavorite(scenarioId: Identifier, isFavorite: Boolean)
 
     /**
      * Delete a scenario.
@@ -134,6 +135,14 @@ interface IRepository {
     suspend fun getImageEvents(scenarioId: Long): List<ImageEvent>
 
     /**
+     * Get lightweight image event details for scenario list screens.
+     *
+     * This intentionally avoids loading full actions, as precision gesture actions can contain large payloads while
+     * the list only displays action counts.
+     */
+    suspend fun getImageEventListData(scenarioId: Long): List<ImageEventListData>
+
+    /**
      * Get the list of complete image events for a given scenario.
      *
      * @param scenarioId the identifier of the scenario to ge the events from.
@@ -149,6 +158,9 @@ interface IRepository {
      */
     suspend fun getTriggerEvents(scenarioId: Long): List<TriggerEvent>
 
+    /** Get the number of trigger events in a scenario without loading complete event children. */
+    suspend fun getTriggerEventCount(scenarioId: Long): Int
+
     /**
      * Get the list of complete trigger events for a given scenario.
      *
@@ -156,12 +168,6 @@ interface IRepository {
      * @return the list of trigger events.
      */
     fun getTriggerEventsFlow(scenarioId: Long): Flow<List<TriggerEvent>>
-
-    fun startTutorialMode()
-
-    fun stopTutorialMode()
-
-    fun isTutorialModeEnabled(): Boolean
 
     suspend fun migrateLegacyImageConditions(): Boolean
 }

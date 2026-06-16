@@ -51,6 +51,8 @@ fun DumbAction.toDumbActionDetails(
         is DumbAction.DumbClick -> toClickDetails(context, withPositions, inError)
         is DumbAction.DumbSwipe -> toSwipeDetails(context, withPositions, inError)
         is DumbAction.DumbPause -> toPauseDetails(context, withPositions, inError)
+        is DumbAction.DumbPrecisionGesture -> toPrecisionGestureDetails(context, inError)
+        is DumbAction.DumbPrecisionText -> toPrecisionTextDetails(context, inError)
     }
 
 private fun DumbAction.DumbClick.toClickDetails(context: Context, withPositions: Boolean, inError: Boolean): DumbActionDetails =
@@ -109,6 +111,36 @@ private fun DumbAction.DumbPause.toPauseDetails(context: Context, withPositions:
             )
         },
         repeatCountText = null,
+        haveError = inError,
+        action = this,
+    )
+
+private fun DumbAction.DumbPrecisionGesture.toPrecisionGestureDetails(context: Context, inError: Boolean): DumbActionDetails =
+    DumbActionDetails(
+        icon = R.drawable.ic_swipe,
+        name = name,
+        detailsText = when {
+            inError -> context.getString(R.string.item_error_action_invalid_generic)
+            else -> context.getString(
+                R.string.item_desc_dumb_precision_gesture_details,
+                eventCount ?: 0,
+                formatDuration(durationMs ?: 0L),
+            )
+        },
+        repeatCountText = getRepeatDisplayText(context),
+        haveError = inError,
+        action = this,
+    )
+
+private fun DumbAction.DumbPrecisionText.toPrecisionTextDetails(context: Context, inError: Boolean): DumbActionDetails =
+    DumbActionDetails(
+        icon = R.drawable.ic_wait,
+        name = name,
+        detailsText = when {
+            inError -> context.getString(R.string.item_error_action_invalid_generic)
+            else -> context.getString(R.string.item_desc_dumb_precision_text_details, text.length, mode.name)
+        },
+        repeatCountText = getRepeatDisplayText(context),
         haveError = inError,
         action = this,
     )

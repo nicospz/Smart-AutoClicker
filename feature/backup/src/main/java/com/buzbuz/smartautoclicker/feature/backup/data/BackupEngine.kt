@@ -55,7 +55,7 @@ internal class BackupEngine(appDataDir: File, private val contentResolver: Conte
         screenSize: Point,
         progress: BackupProgress,
     ) {
-        Log.d(TAG, "Create backup: $zipFileUri for scenarios: $smartScenarios")
+        Log.d(TAG, "Create backup: $zipFileUri for dumb scenarios: ${dumbScenarios.size}, smart scenarios: ${smartScenarios.size}")
         dumbBackupDataSource.reset()
         smartBackupDataSource.reset()
 
@@ -84,16 +84,20 @@ internal class BackupEngine(appDataDir: File, private val contentResolver: Conte
                         progress.onProgressChanged(currentProgress, smartScenarios.size)
                     }
 
+                    Log.i(TAG, "Backup archive created: $zipFileUri")
                     progress.onCompleted(dumbScenarios, smartScenarios, 0, false)
                 }
             } catch (ioEx: IOException) {
-                Log.e(TAG, "Error while creating backup archive.")
+                Log.e(TAG, "Error while creating backup archive", ioEx)
                 progress.onError()
             } catch (isEx: IllegalStateException) {
-                Log.e(TAG, "Error while creating backup archive, target folder can't be written")
+                Log.e(TAG, "Error while creating backup archive, target folder can't be written", isEx)
                 progress.onError()
             } catch (secEx: SecurityException) {
-                Log.e(TAG, "Error while creating backup archive, permission is denied")
+                Log.e(TAG, "Error while creating backup archive, permission is denied", secEx)
+                progress.onError()
+            } catch (runtimeEx: RuntimeException) {
+                Log.e(TAG, "Unexpected error while creating backup archive", runtimeEx)
                 progress.onError()
             }
         }
@@ -149,7 +153,13 @@ internal class BackupEngine(appDataDir: File, private val contentResolver: Conte
                 dumbBackupDataSource.verifyExtractedScenarios(screenSize)
                 smartBackupDataSource.verifyExtractedScenarios(screenSize)
 
-                Log.i(TAG, "Backup loading completed: $zipFileUri")
+                Log.i(
+                    TAG,
+                    "Backup loading completed: $zipFileUri, " +
+                        "valid dumb scenarios=${dumbBackupDataSource.validBackups.size}, " +
+                        "valid smart scenarios=${smartBackupDataSource.validBackups.size}, " +
+                        "failures=${dumbBackupDataSource.failureCount + smartBackupDataSource.failureCount}",
+                )
                 Log.i(TAG, "Inserting extracted scenarios into database")
 
                 progress.onCompleted(
@@ -169,6 +179,9 @@ internal class BackupEngine(appDataDir: File, private val contentResolver: Conte
                 progress.onError()
             } catch (npEx: NullPointerException) {
                 Log.e(TAG, "Error while loading backup archive, file path is null", npEx)
+                progress.onError()
+            } catch (runtimeEx: RuntimeException) {
+                Log.e(TAG, "Unexpected error while loading backup archive", runtimeEx)
                 progress.onError()
             }
         }

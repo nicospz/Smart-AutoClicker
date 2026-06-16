@@ -19,6 +19,7 @@ package com.buzbuz.smartautoclicker.feature.smart.config.ui.scenario.config
 import android.content.Context
 import android.text.InputFilter
 import android.text.InputFilter.LengthFilter
+import android.text.InputType
 import android.view.LayoutInflater
 import android.view.ViewGroup
 
@@ -37,6 +38,7 @@ import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setError
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setLabel
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setOnTextChangedListener
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setText
+import com.buzbuz.smartautoclicker.core.ui.utils.MinMaxInputFilter
 import com.buzbuz.smartautoclicker.feature.smart.config.R
 import com.buzbuz.smartautoclicker.feature.smart.config.databinding.ContentScenarioConfigBinding
 import com.buzbuz.smartautoclicker.feature.smart.config.di.ScenarioConfigViewModelsEntryPoint
@@ -87,6 +89,26 @@ class ScenarioConfigContent(appContext: Context) : NavBarDialogContent(appContex
                 setOnClickListener(viewModel::toggleKeepScreenOn)
             }
 
+            fieldAutoStart.apply {
+                setTitle(context.resources.getString(R.string.field_scenario_auto_start_title))
+                setupDescriptions(
+                    listOf(
+                        context.getString(R.string.field_scenario_auto_start_disabled),
+                        context.getString(R.string.field_scenario_auto_start_enabled),
+                    )
+                )
+                setOnClickListener(viewModel::toggleAutoStart)
+            }
+
+            fieldAutoStartDelay.apply {
+                setLabel(R.string.input_field_label_auto_start_delay)
+                textField.filters = arrayOf(MinMaxInputFilter(0))
+                setOnTextChangedListener {
+                    viewModel.setAutoStartDelay(if (it.isNotEmpty()) it.toString().toLong() else 0L)
+                }
+            }
+            dialogController.hideSoftInputOnFocusLoss(fieldAutoStartDelay.textField)
+
             textSpeed.setOnClickListener { viewModel.decreaseDetectionQuality() }
             textPrecision.setOnClickListener { viewModel.increaseDetectionQuality() }
             seekbarResolution.addOnChangeListener { _, value, fromUser ->
@@ -104,6 +126,9 @@ class ScenarioConfigContent(appContext: Context) : NavBarDialogContent(appContex
                 launch { viewModel.scenarioNameError.collect(viewBinding.fieldScenarioName::setError) }
                 launch { viewModel.randomization.collect(::updateRandomization) }
                 launch { viewModel.keepScreenOn.collect(::updateKeepScreenOn) }
+                launch { viewModel.autoStart.collect(::updateAutoStart) }
+                launch { viewModel.autoStartDelay.collect(::updateAutoStartDelay) }
+                launch { viewModel.autoStartDelayError.collect(viewBinding.fieldAutoStartDelay::setError) }
                 launch { viewModel.detectionQuality.collect(::updateQuality) }
             }
         }
@@ -125,6 +150,22 @@ class ScenarioConfigContent(appContext: Context) : NavBarDialogContent(appContex
             setChecked(isEnabled)
             setDescription(if (isEnabled) 1 else 0)
         }
+    }
+
+    private fun updateAutoStart(isEnabled: Boolean) {
+        viewBinding.fieldAutoStart.apply {
+            setChecked(isEnabled)
+            setDescription(if (isEnabled) 1 else 0)
+        }
+
+        viewBinding.fieldAutoStartDelay.root.apply {
+            this.isEnabled = isEnabled
+            alpha = if (isEnabled) 1f else 0.5f
+        }
+    }
+
+    private fun updateAutoStartDelay(delayMs: String) {
+        viewBinding.fieldAutoStartDelay.setText(delayMs, InputType.TYPE_CLASS_NUMBER)
     }
 
     private fun updateQuality(quality: UiDetectionQuality) {

@@ -21,6 +21,7 @@ data class ScenarioSortConfig(
     val inverted: Boolean,
     val showSmartScenario: Boolean,
     val showDumbScenario: Boolean,
+    val showFavoritesOnly: Boolean,
 )
 
 enum class ScenarioSortType {
@@ -28,4 +29,3 @@ enum class ScenarioSortType {
     RECENT,
     MOST_USED,
 }
-

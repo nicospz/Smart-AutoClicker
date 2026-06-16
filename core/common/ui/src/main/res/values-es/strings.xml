@@ -25,7 +25,6 @@
       -->
     <string name="dialog_overlay_title_warning">Atención</string>
     <string name="dialog_overlay_title_copy_from">Copiar de</string>
-    <string name="dialog_title_tutorial">Tutorial</string>
 
     <!--
       - Text for items in a list or vertical layout.
@@ -48,9 +47,6 @@
       - Messages.
       - Views handles any length here, so no limitations.
       -->
-    <string name="message_tutorial_volume_down_stop">Si su escenario hace clic demasiado rápido, puede
-        bloquearle el uso del menú Klick\'r para detenerlo.\n\nEn ese caso, puede presionar el botón
-        botón físico \"Bajar volumen\" de su dispositivo para detener el escenario en ejecución.</string>
     <string name="message_dont_show_again">No mostrar este mensaje nuevamente</string>
 
 

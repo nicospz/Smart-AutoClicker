@@ -33,6 +33,7 @@ class EmptyScenarioHolder(
     private val viewBinding: ItemEmptyScenarioBinding,
     private val startScenarioListener: ((ScenarioListUiState.Item.ScenarioItem.Empty) -> Unit),
     private val deleteScenarioListener: ((ScenarioListUiState.Item.ScenarioItem.Empty) -> Unit),
+    private val favoriteClickedListener: ((ScenarioListUiState.Item.ScenarioItem.Empty) -> Unit),
 ): RecyclerView.ViewHolder(viewBinding.root) {
 
     fun onBind(scenarioItem: ScenarioListUiState.Item.ScenarioItem.Empty) = viewBinding.apply {
@@ -42,6 +43,10 @@ class EmptyScenarioHolder(
             else R.drawable.ic_smart
         )
 
+        buttonFavorite.apply {
+            setIconResource(scenarioItem.getFavoriteIcon())
+            setOnClickListener { favoriteClickedListener(scenarioItem) }
+        }
         buttonStart.setOnClickListener { startScenarioListener(scenarioItem) }
         buttonDelete.setOnClickListener { deleteScenarioListener(scenarioItem) }
     }
@@ -55,6 +60,7 @@ class DumbScenarioViewHolder(
     private val exportClickListener: ((ScenarioListUiState.Item.ScenarioItem.Valid) -> Unit),
     private val copyClickedListener: ((ScenarioListUiState.Item.ScenarioItem.Valid) -> Unit),
     private val deleteScenarioListener: ((ScenarioListUiState.Item.ScenarioItem.Valid) -> Unit),
+    private val favoriteClickedListener: ((ScenarioListUiState.Item.ScenarioItem.Valid) -> Unit),
 ) : RecyclerView.ViewHolder(viewBinding.root) {
 
     fun onBind(scenarioItem: ScenarioListUiState.Item.ScenarioItem.Valid.Dumb) = viewBinding.apply {
@@ -63,6 +69,7 @@ class DumbScenarioViewHolder(
         if (scenarioItem.showExportCheckbox) {
             buttonExpandCollapse.visibility = View.INVISIBLE
             buttonExpandCollapse.isEnabled = false
+            buttonFavorite.visibility = View.GONE
             buttonExport.apply {
                 visibility = View.VISIBLE
                 isChecked = scenarioItem.checkedForExport
@@ -73,6 +80,7 @@ class DumbScenarioViewHolder(
         } else {
             buttonExpandCollapse.visibility = View.VISIBLE
             buttonExpandCollapse.isEnabled = true
+            buttonFavorite.visibility = View.VISIBLE
             buttonExport.visibility = View.GONE
             topDivider.visibility = View.VISIBLE
             root.setOnClickListener { startScenarioListener(scenarioItem) }
@@ -91,6 +99,10 @@ class DumbScenarioViewHolder(
             scenarioDetails.visibility = View.GONE
         }
 
+        buttonFavorite.apply {
+            setIconResource(scenarioItem.getFavoriteIcon())
+            setOnClickListener { favoriteClickedListener(scenarioItem) }
+        }
         buttonCopy.setOnClickListener { copyClickedListener(scenarioItem) }
         buttonExpandCollapse.setOnClickListener { expandCollapseListener(scenarioItem) }
         buttonDelete.setOnClickListener { deleteScenarioListener(scenarioItem) }
@@ -107,6 +119,7 @@ class SmartScenarioViewHolder(
     private val exportClickListener: ((ScenarioListUiState.Item.ScenarioItem.Valid) -> Unit),
     private val copyClickedListener: ((ScenarioListUiState.Item.ScenarioItem.Valid) -> Unit),
     private val deleteScenarioListener: ((ScenarioListUiState.Item.ScenarioItem.Valid) -> Unit),
+    private val favoriteClickedListener: ((ScenarioListUiState.Item.ScenarioItem.Valid) -> Unit),
 ) : RecyclerView.ViewHolder(viewBinding.root) {
 
     private val eventsAdapter = ScenarioEventsAdapter(bitmapProvider)
@@ -121,6 +134,7 @@ class SmartScenarioViewHolder(
         if (scenarioItem.showExportCheckbox) {
             buttonExpandCollapse.visibility = View.INVISIBLE
             buttonExpandCollapse.isEnabled = false
+            buttonFavorite.visibility = View.GONE
             buttonExport.apply {
                 visibility = View.VISIBLE
                 isChecked = scenarioItem.checkedForExport
@@ -130,6 +144,7 @@ class SmartScenarioViewHolder(
         } else {
             buttonExpandCollapse.visibility = View.VISIBLE
             buttonExpandCollapse.isEnabled = true
+            buttonFavorite.visibility = View.VISIBLE
             buttonExport.visibility = View.GONE
             topDivider.visibility = View.VISIBLE
             root.setOnClickListener { startScenarioListener(scenarioItem) }
@@ -154,9 +169,16 @@ class SmartScenarioViewHolder(
             scenarioDetails.visibility = View.GONE
         }
 
+        buttonFavorite.apply {
+            setIconResource(scenarioItem.getFavoriteIcon())
+            setOnClickListener { favoriteClickedListener(scenarioItem) }
+        }
         buttonCopy.setOnClickListener { copyClickedListener(scenarioItem) }
         buttonExpandCollapse.setOnClickListener { expandCollapseListener(scenarioItem) }
         buttonDelete.setOnClickListener { deleteScenarioListener(scenarioItem) }
         buttonExport.setOnClickListener { exportClickListener(scenarioItem) }
     }
 }
+
+private fun ScenarioListUiState.Item.ScenarioItem.getFavoriteIcon(): Int =
+    if (isFavorite) R.drawable.ic_favorite_filled else R.drawable.ic_sort_favourites

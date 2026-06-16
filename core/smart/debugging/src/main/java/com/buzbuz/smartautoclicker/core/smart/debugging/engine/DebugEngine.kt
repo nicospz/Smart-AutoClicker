@@ -158,7 +158,7 @@ internal class DebugEngine @Inject constructor(
             @Suppress("UNCHECKED_CAST")
             when (event) {
                 is ImageEvent -> {
-                    writeImageEventToReport(event)
+                    writeImageEventToReport(event, results as List<ProcessedConditionResult.Image>)
                     imgConditionOccurrenceRecorder.reset()
                 }
 
@@ -262,6 +262,7 @@ internal class DebugEngine @Inject constructor(
                     isDetected = result.haveBeenDetected,
                     confidenceRate = result.confidenceRate,
                     detectionArea = result.getDetectionArea(),
+                    bestMatchArea = result.getBestMatchArea(),
                 )
             },
         )
@@ -281,13 +282,22 @@ internal class DebugEngine @Inject constructor(
             },
         )
 
-    private suspend fun writeImageEventToReport(event: ImageEvent) {
+    private suspend fun writeImageEventToReport(event: ImageEvent, results: List<ProcessedConditionResult.Image>) {
+        val conditionResults = results.map { result ->
+            DebugReportConditionResult.ImageCondition(
+                conditionId = result.condition.id.databaseId,
+                isFulFilled = result.isFulfilled,
+                detectionDurationMs = 0L,
+                confidenceRate = result.confidenceRate,
+            )
+        }
+
         debugReportLocalDataSource.writeEventOccurrenceToReport(
             occurrence = DebugReportEventOccurrence.ImageEvent(
                 eventId = event.id.databaseId,
                 frameNumber = overviewRecorder.frameCount,
                 relativeTimestampMs = overviewRecorder.sessionDurationMs,
-                conditionsResults = imgConditionOccurrenceRecorder.imageConditionResults.toList(),
+                conditionsResults = conditionResults,
                 counterChanges = counterValuesRecorder.eventCounterChanges.toList(),
                 eventStateChanges = eventStateRecorder.changes.toList(),
             )
@@ -312,17 +322,21 @@ internal class DebugEngine @Inject constructor(
     }
 }
 
-private fun ProcessedConditionResult.Image.getDetectionArea(): Rect? {
-    val pos = position ?: return null
-    val halfWidth = condition.area.width() / 2
-    val halfHeight = condition.area.height() / 2
+private fun ProcessedConditionResult.Image.getDetectionArea(): Rect? =
+    position?.toConditionArea(condition.area.width(), condition.area.height())
 
+private fun ProcessedConditionResult.Image.getBestMatchArea(): Rect? =
+    bestPosition?.toConditionArea(condition.area.width(), condition.area.height())
 
-    return if (pos.x == 0 && pos.y == 0) Rect()
-    else Rect(
-        pos.x - halfWidth,
-        pos.y - halfHeight,
-        pos.x + halfWidth,
-        pos.y + halfHeight,
+private fun android.graphics.Point.toConditionArea(width: Int, height: Int): Rect? {
+    if (x == 0 && y == 0) return null
+
+    val halfWidth = width / 2
+    val halfHeight = height / 2
+    return Rect(
+        x - halfWidth,
+        y - halfHeight,
+        x - halfWidth + width,
+        y - halfHeight + height,
     )
 }

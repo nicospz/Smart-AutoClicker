@@ -54,7 +54,8 @@ class TryImageConditionViewModel @Inject constructor(
 
     private val userThreshold: MutableStateFlow<Int> = MutableStateFlow(0)
 
-    private val detectionResult: Flow<ImageConditionResultUiState?> = detectionResultUseCase()
+    private val detectionResult: Flow<ImageConditionResultUiState?> =
+        detectionResultUseCase(filterNotFulfilled = false)
         .combine(isPlaying) { results, playing -> if (playing) results else null }
         .map { results ->
             if (results == null || results.conditionsResults.isEmpty()) null

@@ -4,13 +4,11 @@
     <string name="no">いいえ</string>
     <string name="dialog_overlay_title_copy_from">コピー元</string>
     <string name="dialog_overlay_title_warning">警告</string>
-    <string name="dialog_title_tutorial">チュートリアル</string>
     <string name="field_click_position_title">タップ位置</string>
     <string name="field_swipe_positions_title">スワイプ位置</string>
     <string name="item_title_try_element">%1$s を試す</string>
     <string name="item_error_action_invalid_generic">この操作は無効です</string>
     <string name="message_empty_copy">コピーできる項目がありません</string>
-    <string name="message_tutorial_volume_down_stop">シナリオのタップ間隔が短すぎると、メニューから停止できない場合があります。\n\nそのときは端末の物理キー「音量下」で実行中のシナリオを停止できます。</string>
     <string name="message_dont_show_again">今後表示しない</string>
     <string name="button_understood">了解しました</string>
     <string name="input_field_label_anti_detection">検出回避</string>

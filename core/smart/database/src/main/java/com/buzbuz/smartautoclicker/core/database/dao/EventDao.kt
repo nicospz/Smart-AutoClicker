@@ -24,8 +24,11 @@ import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
 
+import com.buzbuz.smartautoclicker.core.database.ACTION_TABLE
+import com.buzbuz.smartautoclicker.core.database.CONDITION_TABLE
 import com.buzbuz.smartautoclicker.core.database.EVENT_TABLE
 import com.buzbuz.smartautoclicker.core.database.entity.CompleteEventEntity
+import com.buzbuz.smartautoclicker.core.database.entity.EventListDataEntity
 import com.buzbuz.smartautoclicker.core.database.entity.EventEntity
 
 import kotlinx.coroutines.flow.Flow
@@ -72,6 +75,25 @@ abstract class EventDao {
     abstract suspend fun getCompleteImageEvents(scenarioId: Long): List<CompleteEventEntity>
 
     /**
+     * Get lightweight image event information for list screens.
+     *
+     * This avoids loading full actions, as some actions contain large payloads that are unnecessary when only the
+     * action count is displayed.
+     */
+    @Transaction
+    @Query("""
+        SELECT
+            e.*,
+            (SELECT COUNT(*) FROM $ACTION_TABLE a WHERE a.eventId = e.id) AS actions_count,
+            (SELECT COUNT(*) FROM $CONDITION_TABLE c WHERE c.eventId = e.id) AS conditions_count,
+            (SELECT c.id FROM $CONDITION_TABLE c WHERE c.eventId = e.id ORDER BY c.priority LIMIT 1) AS first_condition_id
+        FROM $EVENT_TABLE e
+        WHERE e.scenario_id=:scenarioId AND e.type='IMAGE_EVENT'
+        ORDER BY e.priority
+    """)
+    abstract suspend fun getImageEventListData(scenarioId: Long): List<EventListDataEntity>
+
+    /**
      * Get the list of complete events for a scenario ordered by priority.
      *
      * @param scenarioId the identifier of the scenario to get the events from.
@@ -98,6 +120,10 @@ abstract class EventDao {
     @Transaction
     @Query("SELECT * FROM $EVENT_TABLE WHERE scenario_id=:scenarioId AND type='TRIGGER_EVENT' ORDER BY name")
     abstract suspend fun getCompleteTriggerEvents(scenarioId: Long): List<CompleteEventEntity>
+
+    /** Get the number of trigger events in a scenario without loading their actions and conditions. */
+    @Query("SELECT COUNT(*) FROM $EVENT_TABLE WHERE scenario_id=:scenarioId AND type='TRIGGER_EVENT'")
+    abstract suspend fun getTriggerEventCount(scenarioId: Long): Int
 
     /**
      * Get the list of complete events for a scenario ordered by priority.

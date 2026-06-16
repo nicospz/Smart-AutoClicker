@@ -49,6 +49,18 @@ sealed class DumbActionTypeChoice(
         R.string.item_desc_dumb_swipe,
         R.drawable.ic_swipe,
     )
+    /** Precision gesture Action choice. */
+    data object PrecisionGesture : DumbActionTypeChoice(
+        R.string.item_title_dumb_precision_gesture,
+        R.string.item_desc_dumb_precision_gesture,
+        R.drawable.ic_swipe,
+    )
+    /** Precision text Action choice. */
+    data object PrecisionText : DumbActionTypeChoice(
+        R.string.item_title_dumb_precision_text,
+        R.string.item_desc_dumb_precision_text,
+        R.drawable.ic_wait,
+    )
     /** Pause Action choice. */
     data object Pause : DumbActionTypeChoice(
         R.string.item_title_dumb_pause,
@@ -61,5 +73,7 @@ fun allDumbActionChoices() = listOf(
     DumbActionTypeChoice.Copy,
     DumbActionTypeChoice.Click,
     DumbActionTypeChoice.Swipe,
+    DumbActionTypeChoice.PrecisionGesture,
+    DumbActionTypeChoice.PrecisionText,
     DumbActionTypeChoice.Pause,
 )

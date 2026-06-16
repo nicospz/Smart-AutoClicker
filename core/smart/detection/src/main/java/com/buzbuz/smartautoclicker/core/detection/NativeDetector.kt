@@ -97,6 +97,44 @@ class NativeDetector private constructor() : ImageDetector {
         return detectionResult.copy()
     }
 
+    override fun detectConditionOccurrences(
+        conditionBitmap: Bitmap,
+        conditionWidth: Int,
+        conditionHeight: Int,
+        detectionArea: Rect,
+        threshold: Int,
+        maxResults: Int,
+    ): List<DetectionResult> {
+        if (isClosed) return emptyList()
+
+        try {
+            return detectOccurrences(
+                conditionBitmap,
+                conditionWidth,
+                conditionHeight,
+                detectionArea.left,
+                detectionArea.top,
+                detectionArea.width(),
+                detectionArea.height(),
+                threshold,
+                maxResults,
+            )
+        } catch (ex: Exception) {
+            ex.throwWithKeys(
+                keys = mapOf(
+                    "screenSize" to "${screenDimensions.x}x${screenDimensions.y}",
+                    "originalConditionSize" to "${conditionBitmap.width}x${conditionBitmap.height}",
+                    "conditionSize" to "${conditionWidth}x$conditionHeight",
+                    "detectionArea" to detectionArea.toString(),
+                    "threshold" to threshold.toString(),
+                    "maxResults" to maxResults.toString(),
+                ),
+            )
+        }
+
+        return emptyList()
+    }
+
     override fun releaseScreenBitmap(screenBitmap: Bitmap) {
         if (isClosed) return
         releaseScreenImage(screenBitmap)
@@ -146,6 +184,19 @@ class NativeDetector private constructor() : ImageDetector {
         threshold: Int,
         result: DetectionResult,
     )
+
+    /** Native method for detecting all occurrences of a condition in the current screen bitmap. */
+    private external fun detectOccurrences(
+        conditionBitmap: Bitmap,
+        conditionWidth: Int,
+        conditionHeight: Int,
+        x: Int,
+        y: Int,
+        width: Int,
+        height: Int,
+        threshold: Int,
+        maxResults: Int,
+    ): List<DetectionResult>
 
     /** Native method for releasing the screen image resources set with [setScreenImage]. */
     private external fun releaseScreenImage(screenBitmap: Bitmap)
