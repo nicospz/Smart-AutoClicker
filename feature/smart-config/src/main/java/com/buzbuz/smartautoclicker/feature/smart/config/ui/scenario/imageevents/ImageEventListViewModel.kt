@@ -32,7 +32,15 @@ class ImageEventListViewModel @Inject constructor(
     ) { eventsState, groupsState, expanded, query ->
         ImageEventListItem.buildList(
             events = eventsState.value ?: emptyList(),
+            eventValidityById = eventsState.value
+                ?.zip(eventsState.itemValidity)
+                ?.associate { (event, isValid) -> event.id.databaseId to isValid }
+                ?: emptyMap(),
             groups = groupsState.value ?: emptyList(),
+            groupValidityById = groupsState.value
+                ?.zip(groupsState.itemValidity)
+                ?.associate { (group, isValid) -> group.id.databaseId to isValid }
+                ?: emptyMap(),
             expandedGroupIds = expanded,
             searchQuery = query.trim(),
         )

@@ -16,6 +16,8 @@
  */
 package com.buzbuz.smartautoclicker.feature.smart.config.domain
 
+import android.util.Log
+
 import com.buzbuz.smartautoclicker.core.base.identifier.Identifier
 import com.buzbuz.smartautoclicker.core.base.interfaces.sortedByPriority
 import com.buzbuz.smartautoclicker.core.domain.IRepository
@@ -68,16 +70,42 @@ internal class EditionState internal constructor(
             editor.editedTriggerEventGroupsListState,
         ) { scenario, imageEvents, triggerEvents, imageGroups, triggerGroups ->
 
-            if (scenario.value == null || imageEvents.value == null || triggerEvents.value == null)
+            if (scenario.value == null || imageEvents.value == null || triggerEvents.value == null) {
+                Log.i(
+                    TAG_VALIDATION,
+                    "scenarioComplete unavailable scenario=" + (scenario.value != null) +
+                        " imageEvents=" + (imageEvents.value != null) +
+                        " triggerEvents=" + (triggerEvents.value != null),
+                )
                 return@combine EditedElementState(value = null, hasChanged = false, canBeSaved = false)
+            }
+
+            val hasChanged = scenario.hasChanged || imageEvents.hasChanged || triggerEvents.hasChanged ||
+                    imageGroups.hasChanged || triggerGroups.hasChanged
+            val hasEvents = imageEvents.value.isNotEmpty() || triggerEvents.value.isNotEmpty()
+            val canBeSaved = scenario.canBeSaved && imageEvents.canBeSaved && triggerEvents.canBeSaved
+                    && imageGroups.canBeSaved && triggerGroups.canBeSaved && hasEvents
+
+            Log.i(
+                TAG_VALIDATION,
+                "scenarioComplete canBeSaved=" + canBeSaved +
+                    " hasChanged=" + hasChanged +
+                    " scenario=" + scenario.canBeSaved + ":" + scenario.value.name +
+                    " imageEvents=" + imageEvents.canBeSaved + ":" + imageEvents.value.size +
+                    ":invalid=" + imageEvents.invalidItems() +
+                    " triggerEvents=" + triggerEvents.canBeSaved + ":" + triggerEvents.value.size +
+                    ":invalid=" + triggerEvents.invalidItems() +
+                    " imageGroups=" + imageGroups.canBeSaved + ":" + (imageGroups.value?.size ?: 0) +
+                    ":invalid=" + imageGroups.invalidItems() +
+                    " triggerGroups=" + triggerGroups.canBeSaved + ":" + (triggerGroups.value?.size ?: 0) +
+                    ":invalid=" + triggerGroups.invalidItems() +
+                    " hasEvents=" + hasEvents,
+            )
 
             EditedElementState(
                 value = EditedScenarioState(scenario.value, imageEvents.value, triggerEvents.value),
-                hasChanged = scenario.hasChanged || imageEvents.hasChanged || triggerEvents.hasChanged
-                    || imageGroups.hasChanged || triggerGroups.hasChanged,
-                canBeSaved = scenario.canBeSaved && imageEvents.canBeSaved && triggerEvents.canBeSaved
-                    && imageGroups.canBeSaved && triggerGroups.canBeSaved
-                    && (imageEvents.value.isNotEmpty() || triggerEvents.value.isNotEmpty()),
+                hasChanged = hasChanged,
+                canBeSaved = canBeSaved,
             )
         }
 
@@ -86,7 +114,16 @@ internal class EditionState internal constructor(
 
     override val editedImageEventsState: Flow<EditedListState<ImageEvent>> =
         editor.editedImageEventListState.map { listState ->
-            listState.copy(value = listState.value?.sortedByPriority()?.toList() ?: emptyList())
+            val sortedEvents = listState.value?.sortedByPriority()?.toList() ?: emptyList()
+            val validityByEventId = listState.value
+                ?.zip(listState.itemValidity)
+                ?.associate { (event, isValid) -> event.id to isValid }
+                ?: emptyMap()
+
+            listState.copy(
+                value = sortedEvents,
+                itemValidity = sortedEvents.map { event -> validityByEventId[event.id] ?: false },
+            )
         }
 
     override val editedTriggerEventsState: Flow<EditedListState<TriggerEvent>> =
@@ -345,3 +382,18 @@ internal class EditionState internal constructor(
         } != null
     }
 }
+
+private fun <T> EditedListState<T>.invalidItems(): String =
+    value
+        ?.zip(itemValidity)
+        ?.filter { (_, isValid) -> !isValid }
+        ?.joinToString(prefix = "[", postfix = "]") { (item, _) ->
+            when (item) {
+                is Event -> item.id.databaseId.toString() + ":" + item.name
+                is EventGroup -> item.id.databaseId.toString() + ":" + item.name
+                else -> item.toString()
+            }
+        }
+        ?: "null"
+
+private const val TAG_VALIDATION = "SacScenarioValidation"

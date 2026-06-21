@@ -42,7 +42,9 @@ sealed class ImageEventListItem {
 
         fun buildList(
             events: List<ImageEvent>,
+            eventValidityById: Map<Long, Boolean> = emptyMap(),
             groups: List<EventGroup>,
+            groupValidityById: Map<Long, Boolean> = emptyMap(),
             expandedGroupIds: Set<Long>,
             searchQuery: String = "",
         ): List<ImageEventListItem> = buildList {
@@ -71,7 +73,9 @@ sealed class ImageEventListItem {
                     is RootListEntry.UngroupedEvent -> {
                         add(
                             EventItem(
-                                entry.event.toUiImageEvent(inError = !entry.event.isComplete()),
+                                entry.event.toUiImageEvent(
+                                    inError = !(eventValidityById[entry.event.id.databaseId] ?: entry.event.isComplete()),
+                                ),
                                 nestingDepth = 0,
                                 canReorder = !searchActive,
                             ),
@@ -80,7 +84,9 @@ sealed class ImageEventListItem {
                     is RootListEntry.RootGroup -> {
                         appendGroupAtDepth(
                             events = visibleEvents,
+                            eventValidityById = eventValidityById,
                             groups = visibleGroups,
+                            groupValidityById = groupValidityById,
                             expandedGroupIds = expandedIds,
                             group = entry.group,
                             depth = 0,
@@ -93,19 +99,30 @@ sealed class ImageEventListItem {
 
         private fun MutableList<ImageEventListItem>.appendGroupAtDepth(
             events: List<ImageEvent>,
+            eventValidityById: Map<Long, Boolean>,
             groups: List<EventGroup>,
+            groupValidityById: Map<Long, Boolean>,
             expandedGroupIds: Set<Long>,
             group: EventGroup,
             depth: Int,
             canReorder: Boolean,
         ) {
             val expanded = expandedGroupIds.contains(group.id.databaseId)
-            add(GroupHeader(group, expanded, depth, inError = !group.isComplete()))
+            add(
+                GroupHeader(
+                    group = group,
+                    expanded = expanded,
+                    depth = depth,
+                    inError = !(groupValidityById[group.id.databaseId] ?: group.isComplete()),
+                ),
+            )
             if (expanded) {
                 events.filter { it.groupId == group.id }.sortedByPriority().forEach { event ->
                     add(
                         EventItem(
-                            event.toUiImageEvent(inError = !event.isComplete()),
+                            event.toUiImageEvent(
+                                inError = !(eventValidityById[event.id.databaseId] ?: event.isComplete()),
+                            ),
                             nestingDepth = depth + 1,
                             canReorder = canReorder,
                         ),
@@ -114,7 +131,9 @@ sealed class ImageEventListItem {
                 groups.childrenOf(group.id).forEach { childGroup ->
                     appendGroupAtDepth(
                         events = events,
+                        eventValidityById = eventValidityById,
                         groups = groups,
+                        groupValidityById = groupValidityById,
                         expandedGroupIds = expandedGroupIds,
                         group = childGroup,
                         depth = depth + 1,
