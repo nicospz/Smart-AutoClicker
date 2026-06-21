@@ -26,6 +26,7 @@ import androidx.lifecycle.Lifecycle
 
 import com.buzbuz.smartautoclicker.core.base.Dumpable
 import com.buzbuz.smartautoclicker.core.base.addDumpTabulationLvl
+import com.buzbuz.smartautoclicker.core.base.extensions.preferSmoothOverlayFrameRate
 import com.buzbuz.smartautoclicker.core.common.overlays.base.BaseOverlay
 import com.buzbuz.smartautoclicker.core.display.config.DisplayConfigManager
 import com.buzbuz.smartautoclicker.core.common.overlays.base.Overlay
@@ -59,7 +60,10 @@ class OverlayManager @Inject internal constructor(
         const val OVERLAY_WINDOW_TYPE: Int = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
 
         fun AlertDialog.showAsOverlay() {
-            window?.setType(OVERLAY_WINDOW_TYPE)
+            window?.apply {
+                setType(OVERLAY_WINDOW_TYPE)
+                attributes = attributes.apply { preferSmoothOverlayFrameRate() }
+            }
             show()
         }
     }

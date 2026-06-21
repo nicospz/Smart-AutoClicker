@@ -21,10 +21,12 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 
+import android.app.Activity
 import com.buzbuz.smartautoclicker.core.base.data.AppComponentsProvider
 import com.buzbuz.smartautoclicker.core.base.di.Dispatcher
 import com.buzbuz.smartautoclicker.core.base.di.HiltCoroutineDispatchers.IO
 import com.buzbuz.smartautoclicker.core.domain.IRepository
+import com.buzbuz.smartautoclicker.core.domain.model.scenario.ScreenCaptureMode
 import com.buzbuz.smartautoclicker.core.dumb.domain.DumbRepository
 import com.buzbuz.smartautoclicker.core.common.permissions.PermissionsController
 import com.buzbuz.smartautoclicker.core.common.permissions.model.PermissionAccessibilityService
@@ -36,6 +38,7 @@ import com.buzbuz.smartautoclicker.feature.qstile.domain.QSTileRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 
@@ -67,10 +70,31 @@ class QSTileLauncherViewModel @Inject constructor(
         )
     }
 
-    fun startSmartScenario(resultCode: Int, data: Intent, scenarioId: Long) {
+    fun startSmartScenario(resultCode: Int, data: Intent?, scenarioId: Long) {
         viewModelScope.launch(ioDispatcher) {
             val scenario = smartRepository.getScenario(scenarioId) ?: return@launch
             qsTileRepository.startSmartScenario(resultCode, data, scenario)
+        }
+    }
+
+    fun startSmartScenarioOrRequestProjection(
+        scenarioId: Long,
+        onProjectionRequired: () -> Unit,
+        onStarted: () -> Unit,
+    ) {
+        viewModelScope.launch {
+            val scenario = withContext(ioDispatcher) { smartRepository.getScenario(scenarioId) } ?: run {
+                onStarted()
+                return@launch
+            }
+
+            when (scenario.screenCaptureMode) {
+                ScreenCaptureMode.MEDIA_PROJECTION -> onProjectionRequired()
+                ScreenCaptureMode.ACCESSIBILITY_SCREENSHOT -> {
+                    qsTileRepository.startSmartScenario(Activity.RESULT_OK, null, scenario)
+                    onStarted()
+                }
+            }
         }
     }
 

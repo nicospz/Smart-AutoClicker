@@ -2,10 +2,10 @@
 
 ## Always-Run Checks
 
-Run these before handing off changes that affect Smart Auto Clicker, overlays, MediaProjection, the frame broker, or Throwlet integration:
+Run these before handing off changes that affect Smart Auto Clicker, overlays, MediaProjection, the frame broker, or the integrated Throwlet helper:
 
 1. `JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ./gradlew :smartautoclicker:assembleFDroidDebug`
-2. Emulator smoke test with Smart Auto Clicker and Throwlet installed.
+2. Emulator smoke test with Smart Auto Clicker installed.
 
 Smart Auto Clicker requires Java 21 or newer for local builds.
 
@@ -25,45 +25,30 @@ JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ./gradl
 adb install -r smartautoclicker/build/outputs/apk/fDroid/debug/smartautoclicker-fDroid-debug.apk
 ```
 
-Build and install Throwlet from the sibling checkout:
-
-```sh
-cd ../throwlet
-./gradlew assembleDebug
-adb install -r app/build/outputs/apk/debug/app-debug.apk
-```
-
-Enable SAC accessibility and overlays:
-
-```sh
-adb shell settings put secure enabled_accessibility_services com.buzbuz.smartautoclicker.debug/com.buzbuz.smartautoclicker.SmartAutoClickerService
-adb shell settings put secure accessibility_enabled 1
-adb shell appops set com.buzbuz.smartautoclicker.debug SYSTEM_ALERT_WINDOW allow
-adb shell appops set dev.nicospz.throwlet SYSTEM_ALERT_WINDOW allow
-```
+Enable SAC accessibility and overlay permission manually in Android Settings. Do not use `adb shell settings put secure enabled_accessibility_services ...`; it overwrites the device-wide accessibility service list and can disable accessibility access for other apps.
 
 ## Localhost Port Map
 
-SAC and Throwlet both install Shizuku gesture helpers. Keep these ports and binaries separate:
+SAC owns both the precision gesture helper and the integrated Throwlet helper. Keep these ports and binaries separate:
 
 | Service | App | Port | Remote binary |
 | --- | --- | --- | --- |
 | Precision gesture helper | SAC | `49323` | `/data/local/tmp/sac-gesture-helper` |
 | Frame broker | SAC | `49322` | in-process (`ScreenFrameBroker`) |
-| Gesture helper | Throwlet | `49321` | `/data/local/tmp/throwlet-gesture-helper` |
+| Integrated Throwlet helper | SAC | `49321` | `/data/local/tmp/throwlet-gesture-helper` |
 
-If SAC precision gesture recording returns `unknown command` while settings show the helper running, Throwlet's helper is likely bound to the old shared port/binary. Restart the SAC helper from Settings after updating both apps.
+If SAC precision gesture recording returns `unknown command` while settings show the helper running, a stale helper process may still be bound to the old shared port/binary. Restart the SAC helper from Settings after updating SAC.
 
-## Throwlet Integration Smoke Test
+## Integrated Throwlet Smoke Test
 
-Throwlet talks to SAC through the localhost frame broker:
+The integrated Throwlet helper uses SAC's localhost frame broker:
 
 - Host: `127.0.0.1`
 - Port: `49322`
 - Token: `throwlet-frame-v1`
 - Commands: `STATUS`, `FRAME`, `CROP_PICK token=throwlet-frame-v1 left=<l> top=<t> right=<r> bottom=<b>`
 
-For SAC changes touching MediaProjection, scenarios, overlays, display capture, or the Throwlet crop picker:
+For SAC changes touching MediaProjection, scenarios, overlays, display capture, or the integrated Throwlet crop picker:
 
 1. Start SAC on the emulator.
 2. Start a smart scenario so SAC requests MediaProjection.
@@ -88,22 +73,21 @@ For SAC changes touching MediaProjection, scenarios, overlays, display capture, 
 
    Expected first line starts with `OK width=<w> height=<h> format=png len=<n>`.
 
-6. Start Throwlet buddy mode through its command router:
+6. Show the integrated Throwlet overlay through SAC:
 
    ```sh
-   adb shell am start -a dev.nicospz.catchhelper.action.START_BUDDY_FULL \
-     -n dev.nicospz.throwlet/.CommandRouterActivity
+   adb shell am broadcast -a com.buzbuz.smartautoclicker.action.SHOW_THROWLET_OVERLAY
    ```
 
-7. Tap the Throwlet buddy crop button on the rail.
+7. Tap the integrated Throwlet buddy crop button on the rail.
 8. Verify SAC receives `CROP_PICK`, opens `ThrowletCropPickerMenu`, and seeds the selector with Throwlet's default rectangle.
-9. Confirm the crop in SAC. Throwlet should open `BuddyCropSaveActivity`.
-10. Save a valid Pokemon name in Throwlet, then verify logs and persistence:
+9. Confirm the crop in SAC. SAC should open the buddy crop save overlay.
+10. Save a valid Pokemon name, then verify logs and persistence in SAC:
 
    ```sh
-   adb logcat -d | rg 'CROP_PICK|ThrowletCropPicker|ScreenFrameBroker|sac-crop|buddy crop'
-   adb shell run-as dev.nicospz.throwlet ls -l files/needles/buddy
-   adb shell "run-as dev.nicospz.throwlet sh -c 'echo \"select pokemonKey,pokemonName,sourceLane,cropLeft,cropTop,cropRight,cropBottom,thresholdPercent,enabled from buddy_crops;\" | sqlite3 databases/throwlet.db'"
+   adb logcat -d | rg 'CROP_PICK|ThrowletCropPicker|ScreenFrameBroker|SacThrowletCatch|buddy crop'
+   adb shell run-as com.buzbuz.smartautoclicker.debug ls -l files/needles/buddy
+   adb shell "run-as com.buzbuz.smartautoclicker.debug sh -c 'echo \"select pokemonKey,pokemonName,sourceLane,cropLeft,cropTop,cropRight,cropBottom,thresholdPercent,enabled from buddy_crops;\" | sqlite3 databases/throwlet.db'"
    ```
 
 Required signal:
@@ -111,17 +95,17 @@ Required signal:
 - SAC log has `client command=CROP_PICK`.
 - SAC log has `ThrowletCropPickerMenu: onCreateMenu`, `onCreateOverlayView`, `onStart complete`, and `selector valid=true`.
 - SAC log has `crop served frame=<w>x<h> rect=<l>,<t>,<r>,<b> bytes=<n>`.
-- Throwlet log has `sac-crop pick success` and `buddy crop SAC success`.
-- Throwlet has a saved PNG under `files/needles/buddy`.
-- Throwlet has an enabled `buddy_crops` row for the saved Pokemon.
+- SAC Throwlet logs show the overlay/crop/save flow under `SacThrowletCatch`.
+- SAC has a saved PNG under `files/needles/buddy`.
+- SAC's integrated Throwlet database has an enabled `buddy_crops` row for the saved Pokemon.
 
 ## Debugging Rules
 
 - If `STATUS` is connection refused, SAC's broker is not running. Restart the scenario and accept MediaProjection.
-- If `STATUS` is not `OK RECORDING`, fix SAC MediaProjection/scenario startup before debugging Throwlet.
+- If `STATUS` is not `OK RECORDING`, fix SAC MediaProjection/scenario startup before debugging the integrated Throwlet helper.
 - If `FRAME` fails, inspect `ScreenFrameBroker` and the active display recorder.
 - If `CROP_PICK` returns `ERROR UNKNOWN_COMMAND`, the installed SAC build does not include Throwlet crop support.
 - If the crop picker crashes with `Resources$NotFoundException`, check that `ThrowletCropPickerMenu` uses `ScenarioConfigTheme`.
 - If the crop picker re-enters lifecycle repeatedly, check that `ThrowletCropPickerMenu.onStart()` does not call `show()`.
 - If the picker opens without the default rectangle, inspect `ThrowletCropPickerMenu` and `ConditionSelectorView.showCapture(bitmap, defaultSelection)`.
-- If SAC serves the crop but Throwlet does not save it, debug Throwlet's `SacCropSource`, `BuddyCropSaveActivity`, and `BuddyCropStorage`.
+- If SAC serves the crop but the buddy crop is not saved, debug `ThrowletHelperController`, `BuddyCropSaveOverlay`, `ThrowletRepository`, and `BuddyCropStorage`.

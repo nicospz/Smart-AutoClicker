@@ -32,6 +32,7 @@ import com.buzbuz.smartautoclicker.core.domain.model.action.SetText
 import com.buzbuz.smartautoclicker.core.domain.model.action.StopScenario
 import com.buzbuz.smartautoclicker.core.domain.model.action.Swipe
 import com.buzbuz.smartautoclicker.core.domain.model.action.SystemAction
+import com.buzbuz.smartautoclicker.core.domain.model.action.ThrowletCatch
 import com.buzbuz.smartautoclicker.core.domain.model.action.ToggleEvent
 
 
@@ -51,6 +52,7 @@ internal fun Action.toEntity(): ActionEntity {
         is StopScenario -> toStopScenarioEntity()
         is PrecisionGesture -> toPrecisionGestureEntity()
         is PrecisionText -> toPrecisionTextEntity()
+        is ThrowletCatch -> toThrowletCatchEntity()
     }
 }
 
@@ -202,4 +204,17 @@ private fun PrecisionText.toPrecisionTextEntity(): ActionEntity =
         type = ActionType.PRECISION_TEXT,
         precisionTextValue = text,
         precisionTextMode = mode.name,
+    )
+
+private fun ThrowletCatch.toThrowletCatchEntity(): ActionEntity =
+    ActionEntity(
+        id = id.databaseId,
+        eventId = eventId.databaseId,
+        priority = priority,
+        name = name!!,
+        type = ActionType.THROWLET_CATCH,
+        throwletCatchOperation = operation.toEntity(),
+        throwletCatchMode = mode.toEntity(),
+        throwletCatchLane = lane.toEntity(),
+        throwletCatchPokemonNameOverride = pokemonNameOverride?.trim()?.takeIf { it.isNotBlank() },
     )

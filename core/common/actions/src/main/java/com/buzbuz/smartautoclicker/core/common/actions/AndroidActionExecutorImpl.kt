@@ -115,12 +115,17 @@ internal class AndroidActionExecutorImpl @Inject constructor(
     }
 
     override fun sendBroadcast(intent: Intent) {
-        val service = accessibilityService ?: return
+        val service = accessibilityService ?: run {
+            Log.w(TAG, "Can't send broadcast, accessibility service is not available: $intent")
+            return
+        }
 
+        val explicitIntent = intent.setPackage(service.packageName)
         try {
-            service.sendBroadcast(intent)
+            Log.d(TAG, "sendBroadcast action=${explicitIntent.action} package=${explicitIntent.`package`}")
+            service.sendBroadcast(explicitIntent)
         } catch (iaex: IllegalArgumentException) {
-            Log.w(TAG, "Can't send broadcast, Intent is invalid: $intent", iaex)
+            Log.w(TAG, "Can't send broadcast, Intent is invalid: $explicitIntent", iaex)
         }
     }
 

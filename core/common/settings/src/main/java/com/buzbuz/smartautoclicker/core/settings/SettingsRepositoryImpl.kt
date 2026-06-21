@@ -19,6 +19,7 @@ package com.buzbuz.smartautoclicker.core.settings
 import com.buzbuz.smartautoclicker.core.base.di.Dispatcher
 import com.buzbuz.smartautoclicker.core.base.di.HiltCoroutineDispatchers.IO
 import com.buzbuz.smartautoclicker.core.settings.data.SettingsDataSource
+import com.buzbuz.smartautoclicker.core.settings.data.SettingsSyncSnapshot
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -57,11 +58,6 @@ internal class SettingsRepositoryImpl @Inject constructor(
     private val _isInputBlockWorkaroundEnabledFlow: StateFlow<Boolean> = dataSource.isInputBlockWorkaroundEnabled()
         .stateIn(coroutineScope, SharingStarted.Eagerly, false)
     override val isInputBlockWorkaroundEnabledFlow: Flow<Boolean> = _isInputBlockWorkaroundEnabledFlow
-
-    private val _splitScreenYOffsetPxFlow: StateFlow<Int> = dataSource.splitScreenYOffsetPx()
-        .stateIn(coroutineScope, SharingStarted.Eagerly, 0)
-    override val splitScreenYOffsetPxFlow: Flow<Int> = _splitScreenYOffsetPxFlow
-
 
     override fun isFilterScenarioUiEnabled(): Boolean =
         _isFilterScenarioUiEnabled.value
@@ -113,12 +109,9 @@ internal class SettingsRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun getSplitScreenYOffsetPx(): Int =
-        _splitScreenYOffsetPxFlow.value
+    override suspend fun readCloudSyncSnapshot(): SettingsSyncSnapshot =
+        dataSource.readSyncSnapshot()
 
-    override fun setSplitScreenYOffsetPx(offsetPx: Int) {
-        coroutineScope.launch {
-            dataSource.setSplitScreenYOffsetPx(offsetPx)
-        }
-    }
+    override suspend fun applyCloudSyncSnapshot(snapshot: SettingsSyncSnapshot) =
+        dataSource.applySyncSnapshot(snapshot)
 }

@@ -17,8 +17,13 @@
 package com.buzbuz.smartautoclicker.application
 
 import android.app.Application
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import com.buzbuz.smartautoclicker.ComponentConfig
 import com.buzbuz.smartautoclicker.core.base.data.AppComponentsManager
+import com.buzbuz.smartautoclicker.feature.sync.domain.SacSyncCoordinator
+import com.buzbuz.smartautoclicker.feature.sync.work.SacSyncWorker
 import com.google.android.material.color.DynamicColors
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
@@ -27,6 +32,7 @@ import javax.inject.Inject
 class SmartAutoClickerApplication : Application() {
 
     @Inject lateinit var appComponentsManager: AppComponentsManager
+    @Inject lateinit var sacSyncCoordinator: SacSyncCoordinator
 
     override fun onCreate() {
         super.onCreate()
@@ -37,6 +43,16 @@ class SmartAutoClickerApplication : Application() {
             registerSmartAutoClickerService(componentConfig.smartAutoClickerService)
             registerScenarioActivity(componentConfig.scenarioActivity)
         }
+
+        SacSyncWorker.schedule(this)
+        sacSyncCoordinator.requestFullSync()
+        ProcessLifecycleOwner.get().lifecycle.addObserver(
+            object : DefaultLifecycleObserver {
+                override fun onStart(owner: LifecycleOwner) {
+                    sacSyncCoordinator.requestFullSync()
+                }
+            },
+        )
 
         DynamicColors.applyToActivitiesIfAvailable(this)
     }

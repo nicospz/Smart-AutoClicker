@@ -52,7 +52,7 @@ internal class DropdownAdapter<T: DropdownItem>(
         // Update the view with the current dropdown item info
         itemBinding.apply {
             root.setOnClickListener { onItemSelected(item) }
-            dropdownItemText.setText(item.title)
+            dropdownItemText.text = item.titleText ?: root.context.getString(item.title)
 
             dropdownItemIcon.apply {
                 if (item.icon != null) {

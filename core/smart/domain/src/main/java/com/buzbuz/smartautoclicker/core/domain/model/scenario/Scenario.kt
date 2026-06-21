@@ -20,6 +20,14 @@ import com.buzbuz.smartautoclicker.core.base.ScenarioStats
 import com.buzbuz.smartautoclicker.core.base.interfaces.Identifiable
 import com.buzbuz.smartautoclicker.core.base.identifier.Identifier
 
+/** Source used by a smart scenario to capture screen frames for image detection. */
+enum class ScreenCaptureMode {
+    /** Existing behavior: use MediaProjection and Android's screen sharing permission. */
+    MEDIA_PROJECTION,
+    /** Use AccessibilityService screenshots, avoiding MediaProjection ownership. */
+    ACCESSIBILITY_SCREENSHOT,
+}
+
 /**
  * Scenario of events.
  *
@@ -41,4 +49,9 @@ data class Scenario(
     val isFavorite: Boolean = false,
     val autoStart: Boolean = false,
     val autoStartDelayMs: Long = 0L,
+    val category: String? = null,
+    val screenCaptureMode: ScreenCaptureMode = ScreenCaptureMode.MEDIA_PROJECTION,
+    val syncId: String = "",
+    val updatedAtMs: Long = 0L,
+    val deletedAtMs: Long? = null,
 ): Identifiable

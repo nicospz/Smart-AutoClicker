@@ -16,6 +16,7 @@
  */
 package com.buzbuz.smartautoclicker.core.settings
 
+import com.buzbuz.smartautoclicker.core.settings.data.SettingsSyncSnapshot
 import kotlinx.coroutines.flow.Flow
 
 
@@ -41,7 +42,6 @@ interface SettingsRepository {
     fun isInputBlockWorkaroundEnabled(): Boolean
     fun toggleInputBlockWorkaround()
 
-    val splitScreenYOffsetPxFlow: Flow<Int>
-    fun getSplitScreenYOffsetPx(): Int
-    fun setSplitScreenYOffsetPx(offsetPx: Int)
+    suspend fun readCloudSyncSnapshot(): SettingsSyncSnapshot
+    suspend fun applyCloudSyncSnapshot(snapshot: SettingsSyncSnapshot)
 }

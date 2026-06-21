@@ -30,11 +30,15 @@ import com.buzbuz.smartautoclicker.core.base.extensions.startForegroundMediaProj
 import com.buzbuz.smartautoclicker.core.base.notifications.NotificationIds
 import com.buzbuz.smartautoclicker.core.bitmaps.BitmapRepository
 import com.buzbuz.smartautoclicker.core.common.actions.AndroidActionExecutor
+import com.buzbuz.smartautoclicker.core.common.actions.precision.PrecisionGestureExecutor
+import com.buzbuz.smartautoclicker.core.common.actions.precision.PrecisionGestureHelperClient
+import com.buzbuz.smartautoclicker.core.common.actions.precision.PrecisionGestureHelperSetup
 import com.buzbuz.smartautoclicker.core.common.overlays.manager.OverlayManager
 import com.buzbuz.smartautoclicker.core.common.overlays.manager.OverlayServiceContext
 import com.buzbuz.smartautoclicker.core.common.quality.domain.QualityMetricsMonitor
 import com.buzbuz.smartautoclicker.core.common.quality.domain.QualityRepository
 import com.buzbuz.smartautoclicker.core.display.config.DisplayConfigManager
+import com.buzbuz.smartautoclicker.core.display.recorder.AccessibilityScreenshotProvider
 import com.buzbuz.smartautoclicker.core.domain.model.scenario.Scenario
 import com.buzbuz.smartautoclicker.core.dumb.domain.model.DumbScenario
 import com.buzbuz.smartautoclicker.core.dumb.engine.DumbEngine
@@ -45,6 +49,7 @@ import com.buzbuz.smartautoclicker.feature.qstile.domain.QSTileActionHandler
 import com.buzbuz.smartautoclicker.feature.qstile.domain.QSTileRepository
 import com.buzbuz.smartautoclicker.feature.revenue.IRevenueRepository
 import com.buzbuz.smartautoclicker.feature.review.ReviewRepository
+import com.buzbuz.smartautoclicker.feature.throwlet.ThrowletRepository
 import com.buzbuz.smartautoclicker.localservice.LocalService
 import com.buzbuz.smartautoclicker.localservice.LocalServiceProvider
 
@@ -90,11 +95,23 @@ class SmartAutoClickerService : AccessibilityService() {
     @Inject lateinit var actionExecutor: AndroidActionExecutor
     @Inject lateinit var debuggingRepository: DebuggingRepository
     @Inject lateinit var overlayServiceContext: OverlayServiceContext
+    @Inject lateinit var precisionGestureSetup: PrecisionGestureHelperSetup
+    @Inject lateinit var precisionGestureClient: PrecisionGestureHelperClient
+    @Inject lateinit var precisionGestureExecutor: PrecisionGestureExecutor
+    @Inject lateinit var throwletRepository: ThrowletRepository
+    @Inject lateinit var throwletDatabase: com.buzbuz.smartautoclicker.feature.throwlet.data.ThrowletDatabase
+    @Inject lateinit var gestureStore: com.buzbuz.smartautoclicker.feature.throwlet.data.GestureStore
+    @Inject lateinit var throwletSyncRepository: com.buzbuz.smartautoclicker.feature.throwlet.sync.SupabaseSyncRepository
+    @Inject lateinit var sacSyncCoordinator: com.buzbuz.smartautoclicker.feature.sync.domain.SacSyncCoordinator
+    @Inject lateinit var displayRecorder: com.buzbuz.smartautoclicker.core.display.recorder.DisplayRecorder
+    @Inject lateinit var accessibilityScreenshotProvider: AccessibilityScreenshotProvider
+    @Inject lateinit var throwletCropPicker: com.buzbuz.smartautoclicker.core.display.recorder.ThrowletCropPicker
 
     override fun onServiceConnected() {
         super.onServiceConnected()
 
         qualityMetricsMonitor.onServiceConnected()
+        accessibilityScreenshotProvider.attach(this)
         actionExecutor.init(this)
         overlayServiceContext.attach(this)
 
@@ -104,7 +121,7 @@ class SmartAutoClickerService : AccessibilityService() {
                 override fun startDumbScenario(dumbScenario: DumbScenario) {
                     localServiceProvider.localServiceInstance?.startDumbScenario(dumbScenario)
                 }
-                override fun startSmartScenario(resultCode: Int, data: Intent, scenario: Scenario) {
+                override fun startSmartScenario(resultCode: Int, data: Intent?, scenario: Scenario) {
                     localServiceProvider.localServiceInstance?.startSmartScenario(resultCode, data, scenario)
                 }
                 override fun stop() {
@@ -120,6 +137,14 @@ class SmartAutoClickerService : AccessibilityService() {
                 appComponentsProvider = appComponentsProvider,
                 smartProcessingRepository = smartProcessingRepository,
                 dumbEngine = dumbEngine,
+                actionExecutor = actionExecutor,
+                throwletRepository = throwletRepository,
+                throwletDatabase = throwletDatabase,
+                gestureStore = gestureStore,
+                throwletSyncRepository = throwletSyncRepository,
+                sacSyncCoordinator = sacSyncCoordinator,
+                displayRecorder = displayRecorder,
+                throwletCropPicker = throwletCropPicker,
                 revenueRepository = revenueRepository,
                 settingsRepository = settingsRepository,
                 debuggingRepository = debuggingRepository,
@@ -130,6 +155,7 @@ class SmartAutoClickerService : AccessibilityService() {
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
+        accessibilityScreenshotProvider.detach(this)
         overlayServiceContext.detach(this)
         localServiceProvider.localServiceInstance?.apply {
             stop()

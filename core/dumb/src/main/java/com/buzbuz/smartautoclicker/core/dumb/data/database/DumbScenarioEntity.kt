@@ -19,6 +19,7 @@ package com.buzbuz.smartautoclicker.core.dumb.data.database
 import androidx.room.ColumnInfo
 import androidx.room.Embedded
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Relation
 import com.buzbuz.smartautoclicker.core.base.interfaces.EntityWithId
@@ -37,7 +38,10 @@ import kotlinx.serialization.Serializable
  * @param maxDurationMin
  * @param isDurationInfinite
  */
-@Entity(tableName = "dumb_scenario_table")
+@Entity(
+    tableName = "dumb_scenario_table",
+    indices = [Index(value = ["sync_id"], unique = true)],
+)
 @Serializable
 data class DumbScenarioEntity(
     @PrimaryKey(autoGenerate = true) override val id: Long,
@@ -50,6 +54,10 @@ data class DumbScenarioEntity(
     @ColumnInfo(name = "is_favorite", defaultValue = "0") val isFavorite: Boolean = false,
     @ColumnInfo(name = "auto_start", defaultValue = "0") val autoStart: Boolean = false,
     @ColumnInfo(name = "auto_start_delay_ms", defaultValue = "0") val autoStartDelayMs: Long = 0L,
+    @ColumnInfo(name = "category") val category: String? = null,
+    @ColumnInfo(name = "sync_id", defaultValue = "") val syncId: String = "",
+    @ColumnInfo(name = "updated_at_ms", defaultValue = "0") val updatedAtMs: Long = 0L,
+    @ColumnInfo(name = "deleted_at_ms") val deletedAtMs: Long? = null,
 ) : EntityWithId
 
 /**

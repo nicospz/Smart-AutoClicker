@@ -22,7 +22,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 
-import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -33,6 +32,7 @@ import androidx.lifecycle.repeatOnLifecycle
 
 import com.buzbuz.smartautoclicker.R
 import com.buzbuz.smartautoclicker.core.display.recorder.showMediaProjectionWarning
+import com.buzbuz.smartautoclicker.core.domain.model.scenario.ScreenCaptureMode
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
@@ -107,8 +107,7 @@ class FavoriteScenarioLauncherActivity : AppCompatActivity() {
                 onMandatoryDenied = ::finish,
                 onAllGranted = {
                     viewModel.startTroubleshootingFlowIfNeeded(this@FavoriteScenarioLauncherActivity) {
-                        requestedScenario = item
-                        requestSmartScenarioProjection(item)
+                        requestSmartScenarioStart(item)
                     }
                 },
             )
@@ -122,7 +121,7 @@ class FavoriteScenarioLauncherActivity : AppCompatActivity() {
                 return@registerForActivityResult
             }
 
-            requestedScenario?.let { startSmartScenario(result, it.scenario) } ?: finish()
+            requestedScenario?.let { startSmartScenario(result.resultCode, result.data!!, it.scenario) } ?: finish()
         }
 
     private fun showFavoritesActivityDialog(scenarios: List<FavoriteScenarioItem>) {
@@ -156,7 +155,7 @@ class FavoriteScenarioLauncherActivity : AppCompatActivity() {
                 viewModel.startTroubleshootingFlowIfNeeded(this) {
                     when (item) {
                         is FavoriteScenarioItem.Dumb -> startDumbScenario(item)
-                        is FavoriteScenarioItem.Smart -> requestSmartScenarioProjection(item)
+                        is FavoriteScenarioItem.Smart -> requestSmartScenarioStart(item)
                     }
                 }
             },
@@ -168,17 +167,27 @@ class FavoriteScenarioLauncherActivity : AppCompatActivity() {
         else Toast.makeText(this, R.string.toast_denied_foreground_permission, Toast.LENGTH_SHORT).show()
     }
 
-    private fun requestSmartScenarioProjection(item: FavoriteScenarioItem.Smart) {
-        requestedScenario = item
-        projectionActivityResult.showMediaProjectionWarning(
-            context = this,
-            forceEntireScreen = viewModel.isEntireScreenCaptureForced(),
-            onError = { showUnsupportedDeviceDialog() },
-        )
+    private fun requestSmartScenarioStart(item: FavoriteScenarioItem.Smart) {
+        when (item.scenario.screenCaptureMode) {
+            ScreenCaptureMode.MEDIA_PROJECTION -> {
+                requestedScenario = item
+                projectionActivityResult.showMediaProjectionWarning(
+                    context = this,
+                    forceEntireScreen = viewModel.isEntireScreenCaptureForced(),
+                    onError = { showUnsupportedDeviceDialog() },
+                )
+            }
+            ScreenCaptureMode.ACCESSIBILITY_SCREENSHOT ->
+                startSmartScenario(RESULT_OK, null, item.scenario)
+        }
     }
 
-    private fun startSmartScenario(result: ActivityResult, scenario: com.buzbuz.smartautoclicker.core.domain.model.scenario.Scenario) {
-        if (viewModel.loadSmartScenario(result.resultCode, result.data!!, scenario)) finish()
+    private fun startSmartScenario(
+        resultCode: Int,
+        data: Intent?,
+        scenario: com.buzbuz.smartautoclicker.core.domain.model.scenario.Scenario,
+    ) {
+        if (viewModel.loadSmartScenario(resultCode, data, scenario)) finish()
         else Toast.makeText(this, R.string.toast_denied_foreground_permission, Toast.LENGTH_SHORT).show()
     }
 

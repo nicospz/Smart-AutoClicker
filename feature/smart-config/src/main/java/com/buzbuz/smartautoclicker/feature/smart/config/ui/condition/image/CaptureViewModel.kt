@@ -23,8 +23,10 @@ import android.graphics.Rect
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 
+import com.buzbuz.smartautoclicker.core.display.recorder.AccessibilityScreenshotProvider
 import com.buzbuz.smartautoclicker.core.display.recorder.DisplayRecorder
 import com.buzbuz.smartautoclicker.core.domain.model.condition.ImageCondition
+import com.buzbuz.smartautoclicker.core.domain.model.scenario.ScreenCaptureMode
 import com.buzbuz.smartautoclicker.core.ui.monitoring.MonitoredViewsManager
 import com.buzbuz.smartautoclicker.core.ui.monitoring.MonitoredViewType
 import com.buzbuz.smartautoclicker.feature.smart.config.domain.EditionRepository
@@ -33,10 +35,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 
 class CaptureViewModel @Inject constructor(
     private val displayRecorder: DisplayRecorder,
+    private val accessibilityScreenshotProvider: AccessibilityScreenshotProvider,
     private val editionRepository: EditionRepository,
     private val monitoredViewsManager: MonitoredViewsManager,
 ) : ViewModel()  {
@@ -44,14 +48,29 @@ class CaptureViewModel @Inject constructor(
     fun takeScreenshot(resultCallback: (Bitmap) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             delay(200L)
-            displayRecorder.takeScreenshot { screenshot ->
-                withContext(Dispatchers.Main) {
-                    resultCallback(screenshot)
-                    monitoredViewsManager.notifyClick(MonitoredViewType.CONDITION_CAPTURE_MENU_BUTTON_CAPTURE)
-                }
+
+            val screenshot = takeScenarioScreenshot() ?: return@launch
+
+            withContext(Dispatchers.Main) {
+                resultCallback(screenshot)
+                monitoredViewsManager.notifyClick(MonitoredViewType.CONDITION_CAPTURE_MENU_BUTTON_CAPTURE)
             }
         }
     }
+
+    private suspend fun takeScenarioScreenshot(): Bitmap? =
+        when (editionRepository.editionState.getScenario()?.screenCaptureMode) {
+            ScreenCaptureMode.ACCESSIBILITY_SCREENSHOT ->
+                accessibilityScreenshotProvider.takeScreenshot()
+
+            ScreenCaptureMode.MEDIA_PROJECTION, null -> {
+                var screenshot: Bitmap? = null
+                withTimeoutOrNull(SCREENSHOT_TIMEOUT_MS) {
+                    displayRecorder.takeScreenshot { screenshot = it }
+                }
+                screenshot
+            }
+        }
 
     /**
      * Create a new condition with the default values from configuration.
@@ -67,3 +86,5 @@ class CaptureViewModel @Inject constructor(
         }
     }
 }
+
+private const val SCREENSHOT_TIMEOUT_MS = 5_000L

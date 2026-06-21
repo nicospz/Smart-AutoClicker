@@ -21,6 +21,7 @@ import com.buzbuz.smartautoclicker.core.database.entity.CompleteScenario
 import com.buzbuz.smartautoclicker.core.domain.model.action.Action
 import com.buzbuz.smartautoclicker.core.domain.model.condition.Condition
 import com.buzbuz.smartautoclicker.core.domain.model.event.Event
+import com.buzbuz.smartautoclicker.core.domain.model.event.EventGroup
 import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEvent
 import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEventListData
 import com.buzbuz.smartautoclicker.core.domain.model.event.TriggerEvent
@@ -80,8 +81,13 @@ interface IRepository {
      *
      * @param scenario the scenario to update.
      * @param events the list of event for the scenario.
+     * @param eventGroups the list of event groups for the scenario.
      */
-    suspend fun updateScenario(scenario: Scenario, events: List<Event>): Boolean
+    suspend fun updateScenario(
+        scenario: Scenario,
+        events: List<Event>,
+        eventGroups: List<EventGroup>,
+    ): Boolean
 
     /** Update the favorite state for a scenario. */
     suspend fun updateScenarioFavorite(scenarioId: Identifier, isFavorite: Boolean)
@@ -158,6 +164,12 @@ interface IRepository {
      */
     suspend fun getTriggerEvents(scenarioId: Long): List<TriggerEvent>
 
+    /** Get image event groups for a scenario. */
+    suspend fun getImageEventGroups(scenarioId: Long): List<EventGroup>
+
+    /** Get trigger event groups for a scenario. */
+    suspend fun getTriggerEventGroups(scenarioId: Long): List<EventGroup>
+
     /** Get the number of trigger events in a scenario without loading complete event children. */
     suspend fun getTriggerEventCount(scenarioId: Long): Int
 
@@ -170,4 +182,18 @@ interface IRepository {
     fun getTriggerEventsFlow(scenarioId: Long): Flow<List<TriggerEvent>>
 
     suspend fun migrateLegacyImageConditions(): Boolean
+
+    suspend fun getCompleteScenario(scenarioId: Long): CompleteScenario?
+
+    suspend fun getCompleteScenarioBySyncId(syncId: String): CompleteScenario?
+
+    suspend fun getScenarioDatabaseIdBySyncId(syncId: String): Long?
+
+    suspend fun upsertScenarioBySyncId(
+        completeScenario: CompleteScenario,
+        syncId: String,
+        updatedAtMs: Long,
+    ): Long?
+
+    suspend fun deleteScenarioBySyncId(syncId: String): Boolean
 }

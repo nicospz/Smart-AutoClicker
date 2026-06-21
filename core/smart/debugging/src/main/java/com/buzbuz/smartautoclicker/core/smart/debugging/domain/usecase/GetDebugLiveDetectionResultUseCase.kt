@@ -28,6 +28,7 @@ import com.buzbuz.smartautoclicker.core.domain.model.action.SetText
 import com.buzbuz.smartautoclicker.core.domain.model.action.StopScenario
 import com.buzbuz.smartautoclicker.core.domain.model.action.Swipe
 import com.buzbuz.smartautoclicker.core.domain.model.action.SystemAction
+import com.buzbuz.smartautoclicker.core.domain.model.action.ThrowletCatch
 import com.buzbuz.smartautoclicker.core.domain.model.action.ToggleEvent
 import com.buzbuz.smartautoclicker.core.smart.debugging.domain.DebuggingRepository
 import com.buzbuz.smartautoclicker.core.smart.debugging.domain.model.live.DebugLiveEventOccurrence
@@ -91,6 +92,7 @@ class GetDebugLiveDetectionResultUseCase @Inject constructor(
                 is SetText,
                 is StopScenario,
                 is SystemAction,
+                is ThrowletCatch,
                 is ToggleEvent -> 0
             }
         }

@@ -10,10 +10,17 @@ import com.google.android.material.textfield.TextInputLayout
 import com.google.android.material.textview.MaterialTextView
 import androidx.lifecycle.lifecycleScope
 import com.buzbuz.smartautoclicker.core.common.actions.precision.PrecisionTextMode
+import com.buzbuz.smartautoclicker.core.common.actions.precision.isClipboardPaste
 import com.buzbuz.smartautoclicker.core.common.overlays.base.viewModels
 import com.buzbuz.smartautoclicker.core.common.overlays.dialog.OverlayDialog
 import com.buzbuz.smartautoclicker.core.domain.model.action.PrecisionText
+import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setChecked
+import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setDescription
+import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setOnClickListener
+import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setTitle
+import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setupDescriptions
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.enableEasyOverwriteOnFocus
+import com.buzbuz.smartautoclicker.core.ui.databinding.IncludeFieldSwitchBinding
 import com.buzbuz.smartautoclicker.feature.smart.config.R
 import com.buzbuz.smartautoclicker.feature.smart.config.di.ScenarioConfigViewModelsEntryPoint
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.action.OnActionConfigCompleteListener
@@ -32,6 +39,7 @@ class PrecisionTextDialog(
     private lateinit var nameField: TextInputEditText
     private lateinit var textField: TextInputEditText
     private lateinit var modeGroup: MaterialButtonToggleGroup
+    private lateinit var replaceExistingField: IncludeFieldSwitchBinding
     private lateinit var saveButton: MaterialButton
     private lateinit var statusText: MaterialTextView
 
@@ -58,8 +66,18 @@ class PrecisionTextDialog(
         statusText = root.findViewById(R.id.text_status)
         modeGroup = root.findViewById<MaterialButtonToggleGroup>(R.id.toggle_mode).apply {
             addOnButtonCheckedListener { _, checkedId, isChecked ->
-                if (isChecked) viewModel.setMode(if (checkedId == R.id.button_mode_shell) PrecisionTextMode.SHELL_INPUT else PrecisionTextMode.KEY_EVENTS)
+                if (isChecked) viewModel.setMode(checkedId.toPrecisionTextMode(replaceExistingField.toggleSwitch.isChecked))
             }
+        }
+        replaceExistingField = IncludeFieldSwitchBinding.bind(root.findViewById(R.id.field_replace_existing_text)).apply {
+            setTitle(context.getString(R.string.field_precision_text_replace_existing_title))
+            setupDescriptions(
+                listOf(
+                    context.getString(R.string.field_precision_text_replace_existing_disabled),
+                    context.getString(R.string.field_precision_text_replace_existing_enabled),
+                )
+            )
+            setOnClickListener { viewModel.setReplaceExistingText(toggleSwitch.isChecked) }
         }
         root.findViewById<MaterialButton>(R.id.button_try).setOnClickListener { tryType() }
         return root
@@ -99,12 +117,28 @@ class PrecisionTextDialog(
         if (action == null) return
         if (!nameField.hasFocus()) nameField.setText(action.name.orEmpty())
         if (!textField.hasFocus()) textField.setText(action.text)
-        modeGroup.check(if (action.mode == PrecisionTextMode.SHELL_INPUT) R.id.button_mode_shell else R.id.button_mode_keys)
+        replaceExistingField.updateReplaceExistingText(action.mode)
+        modeGroup.check(action.mode.toButtonId())
         statusText.text = context.getString(R.string.status_precision_text_ready, action.text.length, action.mode.name)
         saveButton.isEnabled = action.isComplete()
     }
 
     private fun closeWithoutDismiss() { super.back() }
     private fun View.findInputField(layoutId: Int): TextInputEditText = findViewById<TextInputLayout>(layoutId).findViewById(R.id.text_field)
+    private fun Int.toPrecisionTextMode(replaceExistingText: Boolean): PrecisionTextMode = when (this) {
+        R.id.button_mode_shell -> PrecisionTextMode.SHELL_INPUT
+        R.id.button_mode_paste -> if (replaceExistingText) PrecisionTextMode.CLIPBOARD_PASTE_REPLACE else PrecisionTextMode.CLIPBOARD_PASTE
+        else -> PrecisionTextMode.KEY_EVENTS
+    }
+    private fun PrecisionTextMode.toButtonId(): Int = when (this) {
+        PrecisionTextMode.KEY_EVENTS -> R.id.button_mode_keys
+        PrecisionTextMode.SHELL_INPUT -> R.id.button_mode_shell
+        PrecisionTextMode.CLIPBOARD_PASTE,
+        PrecisionTextMode.CLIPBOARD_PASTE_REPLACE -> R.id.button_mode_paste
+    }
+    private fun IncludeFieldSwitchBinding.updateReplaceExistingText(mode: PrecisionTextMode) {
+        root.visibility = if (mode.isClipboardPaste()) View.VISIBLE else View.GONE
+        setChecked(mode == PrecisionTextMode.CLIPBOARD_PASTE_REPLACE)
+        setDescription(if (mode == PrecisionTextMode.CLIPBOARD_PASTE_REPLACE) 1 else 0)
+    }
 }
-

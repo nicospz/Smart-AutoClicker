@@ -45,7 +45,22 @@ class DeserializerTests {
                 CompleteEventEntity(
                     event = EventEntity(1, 1, "Event", 1, 0, true, EventType.IMAGE_EVENT),
                     conditions = listOf(
-                        ConditionEntity(1, 1, "Condition", ConditionType.ON_IMAGE_DETECTED, 0, "/toto/tutu", 1, 2, 3, 4, 5, 1, true)
+                        ConditionEntity(
+                            id = 1,
+                            eventId = 1L,
+                            eventGroupId = null,
+                            name = "Condition",
+                            type = ConditionType.ON_IMAGE_DETECTED,
+                            priority = 0,
+                            path = "/toto/tutu",
+                            areaLeft = 1,
+                            areaTop = 2,
+                            areaRight = 3,
+                            areaBottom = 4,
+                            threshold = 5,
+                            detectionType = 1,
+                            shouldBeDetected = true,
+                        )
                     ),
                     actions = listOf(
                         CompleteActionEntity(
@@ -61,6 +76,85 @@ class DeserializerTests {
                             ),
                         )
                     )
+                )
+            ),
+        )
+
+        private val GROUPED_COMPLETE_SCENARIO = CompleteScenario(
+            scenario = ScenarioEntity(1, "Scenario", 600, false),
+            events = listOf(
+                CompleteEventEntity(
+                    event = EventEntity(
+                        id = 1,
+                        scenarioId = 1,
+                        name = "Grouped event",
+                        conditionOperator = 1,
+                        priority = 0,
+                        enabledOnStart = true,
+                        type = EventType.IMAGE_EVENT,
+                        groupId = 10,
+                    ),
+                    conditions = listOf(
+                        ConditionEntity(
+                            id = 1,
+                            eventId = 1,
+                            eventGroupId = null,
+                            name = "Event condition",
+                            type = ConditionType.ON_IMAGE_DETECTED,
+                            priority = 0,
+                            path = "/event",
+                            areaLeft = 1,
+                            areaTop = 2,
+                            areaRight = 3,
+                            areaBottom = 4,
+                            threshold = 5,
+                            detectionType = 1,
+                            shouldBeDetected = true,
+                        )
+                    ),
+                    actions = listOf(
+                        CompleteActionEntity(
+                            action = ActionEntity(
+                                id = 1,
+                                eventId = 1,
+                                priority = 0,
+                                name = "Stop",
+                                type = ActionType.STOP_SCENARIO,
+                            ),
+                            intentExtras = emptyList(),
+                            eventsToggle = emptyList(),
+                        )
+                    ),
+                )
+            ),
+            eventGroups = listOf(
+                CompleteEventGroupEntity(
+                    eventGroup = EventGroupEntity(
+                        id = 10,
+                        scenarioId = 1,
+                        name = "Group",
+                        eventType = EventGroupType.IMAGE,
+                        conditionOperator = 1,
+                        priority = 0,
+                    ),
+                    conditions = listOf(
+                        ConditionEntity(
+                            id = 2,
+                            eventId = null,
+                            eventGroupId = 10,
+                            name = "Group condition",
+                            type = ConditionType.ON_IMAGE_DETECTED,
+                            priority = 0,
+                            path = "/group",
+                            areaLeft = 5,
+                            areaTop = 6,
+                            areaRight = 7,
+                            areaBottom = 8,
+                            threshold = 9,
+                            detectionType = 1,
+                            shouldBeDetected = true,
+                        )
+                    ),
                 )
             ),
         )
@@ -87,5 +181,22 @@ class DeserializerTests {
 
         // Then
         assertEquals(DEFAULT_COMPLETE_SCENARIO, deserializedScenario)
+    }
+
+    @Test
+    fun deserialization_compatVersion_keepsEventGroups() {
+        // Given
+        val jsonScenario = GROUPED_COMPLETE_SCENARIO.encodeToJsonObject()
+
+        // When
+        val deserializedScenario = DeserializerFactory.create(CLICK_DATABASE_VERSION - 1)
+            ?.deserializeCompleteScenario(jsonScenario)
+
+        // Then
+        assertEquals(1, deserializedScenario?.eventGroups?.size)
+        assertEquals(10L, deserializedScenario?.eventGroups?.first()?.eventGroup?.id)
+        assertEquals("Group", deserializedScenario?.eventGroups?.first()?.eventGroup?.name)
+        assertEquals(10L, deserializedScenario?.eventGroups?.first()?.conditions?.first()?.eventGroupId)
+        assertEquals(10L, deserializedScenario?.events?.first()?.event?.groupId)
     }
 }

@@ -228,18 +228,25 @@ class MainMenu(private val onStopClicked: () -> Unit) : OverlayMenu() {
     }
 
     private fun onConfigureClicked() {
+        Log.i(TAG, "onConfigureClicked")
+        viewModel.stopDetection()
+
         if (viewModel.shouldRestartMediaProjection()) {
+            Log.i(TAG, "onConfigureClicked requires MediaProjection restart")
             showRestartMediaProjectionScreen()
             return
         }
 
         viewModel.startScenarioEdition {
+            Log.i(TAG, "onConfigureClicked opening scenario config dialog")
             showScenarioConfigDialog()
         }
     }
 
     private fun onPlayPauseClicked() {
+        Log.i(TAG, "onPlayPauseClicked")
         if (viewModel.shouldRestartMediaProjection()) {
+            Log.i(TAG, "onPlayPauseClicked requires MediaProjection restart")
             showRestartMediaProjectionScreen()
             return
         }
@@ -349,7 +356,7 @@ class MainMenu(private val onStopClicked: () -> Unit) : OverlayMenu() {
                 } else {
                     animateLayoutChanges {
                         setMenuItemVisibility(viewBinding.btnStop, false)
-                        setMenuItemVisibility(viewBinding.btnClickList, false)
+                        setMenuItemVisibility(viewBinding.btnClickList, true)
                         playPauseButtonController.toState2(true)
                     }
                 }

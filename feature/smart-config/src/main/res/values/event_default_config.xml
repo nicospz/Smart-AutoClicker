@@ -17,6 +17,7 @@
 -->
 <resources>
     <string name="default_event_name">Default event</string>
+    <string name="default_event_group_name">New group</string>
 
     <string name="default_click_name">Click</string>
     <integer name="default_click_press_duration">1</integer>

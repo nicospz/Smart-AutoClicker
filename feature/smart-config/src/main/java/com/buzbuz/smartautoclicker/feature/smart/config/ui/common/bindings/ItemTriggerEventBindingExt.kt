@@ -29,7 +29,11 @@ import com.buzbuz.smartautoclicker.feature.smart.config.utils.setIconTintColor
  * @param item the item providing the binding data.
  * @param itemClickedListener listener called when an event is clicked.
  */
-fun ItemTriggerEventBinding.bind(item: UiTriggerEvent, itemClickedListener: (TriggerEvent) -> Unit) {
+fun ItemTriggerEventBinding.bind(
+    item: UiTriggerEvent,
+    itemClickedListener: (TriggerEvent) -> Unit,
+    ignoreChangedListener: (TriggerEvent, Boolean) -> Unit = { _, _ -> },
+) {
     textName.text = item.name
     textConditionsCount.text = item.conditionsCountText
 
@@ -40,6 +44,12 @@ fun ItemTriggerEventBinding.bind(item: UiTriggerEvent, itemClickedListener: (Tri
 
     textEnabled.setText(item.enabledOnStartTextRes)
     iconEnabled.setImageResource(item.enabledOnStartIconRes)
+    toggleIgnore.setOnCheckedChangeListener(null)
+    toggleIgnore.isChecked = item.ignored
+    toggleIgnore.setOnCheckedChangeListener { _, isChecked ->
+        ignoreChangedListener(item.event, isChecked)
+    }
+    root.alpha = if (item.ignored) 0.55f else 1f
 
     root.setOnClickListener { itemClickedListener(item.event) }
 }

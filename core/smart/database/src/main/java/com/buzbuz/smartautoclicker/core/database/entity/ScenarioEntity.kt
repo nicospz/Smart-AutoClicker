@@ -19,6 +19,7 @@ package com.buzbuz.smartautoclicker.core.database.entity
 import androidx.room.ColumnInfo
 import androidx.room.Embedded
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Relation
 
@@ -41,7 +42,10 @@ import kotlinx.serialization.Serializable
  * @param keepScreenOn if true, a wakelock will be taken while the scenario is running, preventing the screen to
  *                     turn off.
  */
-@Entity(tableName = SCENARIO_TABLE)
+@Entity(
+    tableName = SCENARIO_TABLE,
+    indices = [Index(value = ["sync_id"], unique = true)],
+)
 @Serializable
 data class ScenarioEntity(
     @PrimaryKey(autoGenerate = true) override val id: Long,
@@ -52,6 +56,12 @@ data class ScenarioEntity(
     @ColumnInfo(name = "is_favorite", defaultValue="0") val isFavorite: Boolean = false,
     @ColumnInfo(name = "auto_start", defaultValue="0") val autoStart: Boolean = false,
     @ColumnInfo(name = "auto_start_delay_ms", defaultValue="0") val autoStartDelayMs: Long = 0L,
+    @ColumnInfo(name = "category") val category: String? = null,
+    @ColumnInfo(name = "screen_capture_mode", defaultValue = "'MEDIA_PROJECTION'")
+    val screenCaptureMode: ScreenCaptureMode = ScreenCaptureMode.MEDIA_PROJECTION,
+    @ColumnInfo(name = "sync_id", defaultValue = "") val syncId: String = "",
+    @ColumnInfo(name = "updated_at_ms", defaultValue = "0") val updatedAtMs: Long = 0L,
+    @ColumnInfo(name = "deleted_at_ms") val deletedAtMs: Long? = null,
 ) : EntityWithId
 
 /**
@@ -93,4 +103,10 @@ data class CompleteScenario(
         entityColumn = "scenario_id"
     )
     val events: List<CompleteEventEntity>,
+    @Relation(
+        entity = EventGroupEntity::class,
+        parentColumn = "id",
+        entityColumn = "scenario_id"
+    )
+    val eventGroups: List<CompleteEventGroupEntity> = emptyList(),
 )

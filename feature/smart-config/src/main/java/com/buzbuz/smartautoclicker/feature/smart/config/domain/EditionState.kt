@@ -29,12 +29,15 @@ import com.buzbuz.smartautoclicker.core.domain.model.condition.Condition
 import com.buzbuz.smartautoclicker.core.domain.model.condition.ImageCondition
 import com.buzbuz.smartautoclicker.core.domain.model.condition.TriggerCondition
 import com.buzbuz.smartautoclicker.core.domain.model.event.Event
+import com.buzbuz.smartautoclicker.core.domain.model.event.EventGroup
 import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEvent
 import com.buzbuz.smartautoclicker.core.domain.model.event.TriggerEvent
 import com.buzbuz.smartautoclicker.core.domain.model.scenario.Scenario
 import com.buzbuz.smartautoclicker.feature.smart.config.data.events.EventsEditor
 import com.buzbuz.smartautoclicker.feature.smart.config.data.events.ImageEventsEditor
 import com.buzbuz.smartautoclicker.feature.smart.config.data.events.TriggerEventsEditor
+import com.buzbuz.smartautoclicker.feature.smart.config.data.groups.ImageEventGroupsEditor
+import com.buzbuz.smartautoclicker.feature.smart.config.data.groups.TriggerEventGroupsEditor
 import com.buzbuz.smartautoclicker.feature.smart.config.domain.model.EditedElementState
 import com.buzbuz.smartautoclicker.feature.smart.config.domain.model.EditedListState
 import com.buzbuz.smartautoclicker.feature.smart.config.domain.model.EditedScenarioState
@@ -45,7 +48,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+
+private val emptyEditedElementState = EditedElementState<Nothing>(null, false, false)
 
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class EditionState internal constructor(
@@ -58,16 +64,20 @@ internal class EditionState internal constructor(
             editor.editedScenarioState,
             editor.editedImageEventListState,
             editor.editedTriggerEventListState,
-        ) { scenario, imageEvents, triggerEvents ->
+            editor.editedImageEventGroupsListState,
+            editor.editedTriggerEventGroupsListState,
+        ) { scenario, imageEvents, triggerEvents, imageGroups, triggerGroups ->
 
             if (scenario.value == null || imageEvents.value == null || triggerEvents.value == null)
                 return@combine EditedElementState(value = null, hasChanged = false, canBeSaved = false)
 
             EditedElementState(
                 value = EditedScenarioState(scenario.value, imageEvents.value, triggerEvents.value),
-                hasChanged = scenario.hasChanged || imageEvents.hasChanged || triggerEvents.hasChanged,
+                hasChanged = scenario.hasChanged || imageEvents.hasChanged || triggerEvents.hasChanged
+                    || imageGroups.hasChanged || triggerGroups.hasChanged,
                 canBeSaved = scenario.canBeSaved && imageEvents.canBeSaved && triggerEvents.canBeSaved
-                        && (imageEvents.value.isNotEmpty() || triggerEvents.value.isNotEmpty()),
+                    && imageGroups.canBeSaved && triggerGroups.canBeSaved
+                    && (imageEvents.value.isNotEmpty() || triggerEvents.value.isNotEmpty()),
             )
         }
 
@@ -82,18 +92,31 @@ internal class EditionState internal constructor(
     override val editedTriggerEventsState: Flow<EditedListState<TriggerEvent>> =
         editor.editedTriggerEventListState
 
+    override val editedImageEventGroupsState: Flow<EditedListState<EventGroup>> =
+        editor.editedImageEventGroupsListState
+
+    override val editedTriggerEventGroupsState: Flow<EditedListState<EventGroup>> =
+        editor.editedTriggerEventGroupsListState
+
     override val editedImageEventState: Flow<EditedElementState<ImageEvent>> =
         editor.editedImageEventState
 
     override val editedTriggerEventState: Flow<EditedElementState<TriggerEvent>> =
         editor.editedTriggerEventState
 
+    override val editedEventGroupState: Flow<EditedElementState<EventGroup>> =
+        editor.currentEventGroupEditor.flatMapLatest { groupEditor ->
+            @Suppress("UNCHECKED_CAST")
+            groupEditor?.editedItemState ?: flowOf(emptyEditedElementState as EditedElementState<EventGroup>)
+        }
+
     override val allEditedEvents : Flow<List<Event>> =
         editor.allEditedEvents
 
     override val editedEventState: Flow<EditedElementState<Event>> =
         editor.currentEventEditor.flatMapLatest { eventEditor ->
-            eventEditor?.editedItemState ?: emptyFlow()
+            @Suppress("UNCHECKED_CAST")
+            eventEditor?.editedItemState ?: flowOf(emptyEditedElementState as EditedElementState<Event>)
         }
 
     override val editedEventConditionsState: Flow<EditedListState<Condition>> =
@@ -102,43 +125,63 @@ internal class EditionState internal constructor(
         }
 
     override val editedEventImageConditionsState: Flow<EditedListState<ImageCondition>> =
-        editor.currentEventEditor.flatMapLatest { eventEditor ->
-            eventEditor ?: return@flatMapLatest emptyFlow()
-            val editor = (eventEditor as EventsEditor<*, *>)
-
-            if (editor is ImageEventsEditor)
-                editor.conditionsEditor.listState
-            else emptyFlow()
+        combine(
+            editor.currentEventEditor,
+            editor.currentEventGroupEditor,
+        ) { eventEditor, groupEditor ->
+            when {
+                groupEditor is ImageEventGroupsEditor -> groupEditor.conditionsEditor.listState
+                eventEditor is ImageEventsEditor -> eventEditor.conditionsEditor.listState
+                else -> emptyFlow()
+            }
+        }.flatMapLatest { flow ->
+            @Suppress("UNCHECKED_CAST")
+            flow as Flow<EditedListState<ImageCondition>>
         }
 
     override val editedImageConditionState: Flow<EditedElementState<ImageCondition>> =
-        editor.currentEventEditor.flatMapLatest { eventEditor ->
-            eventEditor ?: return@flatMapLatest emptyFlow()
-            val editor = (eventEditor as EventsEditor<*, *>)
-
-            if (editor is ImageEventsEditor)
-                editor.conditionsEditor.editedItemState
-            else emptyFlow()
+        combine(
+            editor.currentEventEditor,
+            editor.currentEventGroupEditor,
+        ) { eventEditor, groupEditor ->
+            when {
+                groupEditor is ImageEventGroupsEditor -> groupEditor.conditionsEditor.editedItemState
+                eventEditor is ImageEventsEditor -> eventEditor.conditionsEditor.editedItemState
+                else -> emptyFlow()
+            }
+        }.flatMapLatest { flow ->
+            @Suppress("UNCHECKED_CAST")
+            flow as Flow<EditedElementState<ImageCondition>>
         }
 
     override val editedEventTriggerConditionsState: Flow<EditedListState<TriggerCondition>> =
-        editor.currentEventEditor.flatMapLatest { eventEditor ->
-            eventEditor ?: return@flatMapLatest emptyFlow()
-            val editor = (eventEditor as EventsEditor<*, *>)
-
-            if (editor is TriggerEventsEditor)
-                editor.conditionsEditor.listState
-            else emptyFlow()
+        combine(
+            editor.currentEventEditor,
+            editor.currentEventGroupEditor,
+        ) { eventEditor, groupEditor ->
+            when {
+                groupEditor is TriggerEventGroupsEditor -> groupEditor.conditionsEditor.listState
+                eventEditor is TriggerEventsEditor -> eventEditor.conditionsEditor.listState
+                else -> emptyFlow()
+            }
+        }.flatMapLatest { flow ->
+            @Suppress("UNCHECKED_CAST")
+            flow as Flow<EditedListState<TriggerCondition>>
         }
 
     override val editedTriggerConditionState: Flow<EditedElementState<TriggerCondition>> =
-        editor.currentEventEditor.flatMapLatest { eventEditor ->
-            eventEditor ?: return@flatMapLatest emptyFlow()
-            val editor = (eventEditor as EventsEditor<*, *>)
-
-            if (editor is TriggerEventsEditor)
-                editor.conditionsEditor.editedItemState
-            else emptyFlow()
+        combine(
+            editor.currentEventEditor,
+            editor.currentEventGroupEditor,
+        ) { eventEditor, groupEditor ->
+            when {
+                groupEditor is TriggerEventGroupsEditor -> groupEditor.conditionsEditor.editedItemState
+                eventEditor is TriggerEventsEditor -> eventEditor.conditionsEditor.editedItemState
+                else -> emptyFlow()
+            }
+        }.flatMapLatest { flow ->
+            @Suppress("UNCHECKED_CAST")
+            flow as Flow<EditedElementState<TriggerCondition>>
         }
 
     override val editedEventActionsState: Flow<EditedListState<Action>> =
@@ -185,12 +228,28 @@ internal class EditionState internal constructor(
         }
 
     override val conditionsForCopy: Flow<List<Condition>> =
-        combine(editor.editedEvent, allEditedEvents, repository.allConditions) { editedEvent, allEditedEvents, dbConditions ->
-            if (editedEvent == null) return@combine emptyList<Condition>()
-            buildList {
-                val editedConditions = allEditedEvents.getEditedConditionsForCopy(editedEvent)
-                addAll(editedConditions)
-                addAll(dbConditions.filterConditionsForCopy(editedEvent, editedConditions))
+        combine(
+            editor.editedEvent,
+            editor.editedEventGroup,
+            allEditedEvents,
+            editor.allEditedEventGroups,
+            repository.allConditions,
+        ) { editedEvent, editedGroup, allEditedEvents, allEditedGroups, dbConditions ->
+            when {
+                editedEvent != null -> buildList {
+                    val editedConditions = allEditedEvents.getEditedConditionsForCopy(editedEvent)
+                    addAll(editedConditions)
+                    addAll(dbConditions.filterConditionsForCopy(editedEvent, editedConditions))
+                }
+                editedGroup != null -> buildList {
+                    val editedConditions = buildList {
+                        addAll(allEditedGroups.getEditedGroupConditionsForCopy(editedGroup))
+                        addAll(allEditedEvents.getEditedEventConditionsForGroupCopy(editedGroup))
+                    }
+                    addAll(editedConditions)
+                    addAll(dbConditions.filterConditionsForGroupCopy(editedGroup, editedConditions))
+                }
+                else -> emptyList()
             }.distinctBy { item -> item.hashCodeNoIds() }
         }
 
@@ -233,12 +292,16 @@ internal class EditionState internal constructor(
 
     @Suppress("UNCHECKED_CAST")
     override fun <T : Condition> getEditedEventConditions(): List<T>? =
-        editor.currentEventEditor.value?.conditionsEditor?.editedList?.value as List<T>?
+        editor.currentEventGroupEditor.value?.conditionsEditor?.editedList?.value as? List<T>
+            ?: editor.currentEventEditor.value?.conditionsEditor?.editedList?.value as? List<T>
+
+    override fun getEditedEventGroup(): EventGroup? =
+        editor.currentEventGroupEditor.value?.editedItem?.value
 
     @Suppress("UNCHECKED_CAST")
-
     override fun <T : Condition> getEditedCondition(): T? =
-        editor.currentEventEditor.value?.conditionsEditor?.editedItem?.value as T?
+        editor.currentEventGroupEditor.value?.conditionsEditor?.editedItem?.value as? T
+            ?: editor.currentEventEditor.value?.conditionsEditor?.editedItem?.value as? T
 
     @Suppress("UNCHECKED_CAST")
 

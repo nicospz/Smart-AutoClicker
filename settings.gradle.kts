@@ -51,6 +51,8 @@ include(":feature:quick-settings-tile")
 include(":feature:revenue")
 include(":feature:review")
 include(":feature:smart-config")
+include(":feature:throwlet")
+include(":feature:sync")
 include(":feature:smart-debugging")
 
 include(":smartautoclicker")

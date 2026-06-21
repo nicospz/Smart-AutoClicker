@@ -115,7 +115,7 @@ class FavoriteScenarioLauncherViewModel @Inject constructor(
     suspend fun getSmartScenario(scenarioId: Long): Scenario? =
         smartRepository.scenarios.first().find { it.id.databaseId == scenarioId }
 
-    fun loadSmartScenario(resultCode: Int, data: Intent, scenario: Scenario): Boolean {
+    fun loadSmartScenario(resultCode: Int, data: Intent?, scenario: Scenario): Boolean {
         if (!hasForegroundServicePermission()) return false
 
         clickerService?.startSmartScenario(resultCode, data, scenario)

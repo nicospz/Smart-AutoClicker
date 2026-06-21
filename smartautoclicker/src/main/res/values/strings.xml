@@ -37,6 +37,18 @@
     <string name="message_no_favorite_scenarios">No runnable favorite scenarios.</string>
     <string name="item_favorite_scenario_smart">%1$s - Smart</string>
     <string name="item_favorite_scenario_dumb">%1$s - Simple</string>
+
+    <string name="section_scenario_uncategorized">Uncategorized</string>
+    <string name="dialog_title_category_scenarios">%1$s scenarios</string>
+    <string name="dialog_title_category_scenarios_uncategorized">Uncategorized scenarios</string>
+    <string name="message_no_category_scenarios">No runnable scenarios in this category.</string>
+    <string name="message_scenario_not_found">Scenario not found: %1$s</string>
+
+    <plurals name="item_scenario_category_count">
+        <item quantity="one">%d scenario</item>
+        <item quantity="other">%d scenarios</item>
+    </plurals>
+
     <string name="accessibility_service_description">This application needs this service to inject the clicks you have
         created into the other applications once the conditions have been detected.\n\nNo data will be collected from
         this application. Feel free to visit our github, the code is open source !</string>
@@ -144,17 +156,23 @@
     <string name="field_input_block_workaround_title">Unblock touch screen</string>
     <string name="field_input_block_workaround_desc">On Pixel Devices With Android 15, using an auto clicker can block the touch screen.\nTo unblock it, you need to touch the screen with multiple fingers at the same time. This setting tries to simulate this every 10s.</string>
 
-    <string name="input_field_label_split_screen_y_offset">Split-screen Y offset (px)</string>
-    <string name="field_split_screen_y_offset_desc">Vertical pixel distance between the top and bottom panes when the same app runs in split-screen. Set once per device (for example 1502 or 1493).</string>
-
+    <string name="field_cloud_sync_title">Cloud sync</string>
+    <string name="field_cloud_sync_not_configured">Supabase sync is not configured in this build.</string>
+    <string name="field_cloud_sync_status_never">Not synced yet</string>
+    <string name="field_cloud_sync_status_success">Last synced: %1$s</string>
+    <string name="field_cloud_sync_status_error">Sync failed: %1$s</string>
+    <string name="field_cloud_sync_action">Sync now</string>
     <string name="field_shizuku_helper_status_title">Precision gesture helper</string>
     <string name="field_shizuku_helper_status_running">Running: %1$s</string>
-    <string name="field_shizuku_helper_status_not_started">Shizuku is ready. Tap to start the helper.</string>
-    <string name="field_shizuku_helper_status_shizuku_unavailable">Shizuku is not running. Tap to open Shizuku.</string>
-    <string name="field_shizuku_helper_status_permission_denied">Shizuku permission is required. Tap to request it again.</string>
+    <string name="field_shizuku_helper_status_not_started">Shizuku is ready. Tap Start to launch the helper.</string>
+    <string name="field_shizuku_helper_status_shizuku_unavailable">Shizuku is not running. Tap Start to open Shizuku.</string>
+    <string name="field_shizuku_helper_status_permission_denied">Shizuku permission is required. Tap Start to request it again.</string>
     <string name="field_shizuku_helper_status_unsupported">Precision gestures require an arm64-v8a device.</string>
-    <string name="field_shizuku_helper_status_failed">Failed to start: %1$s. Tap to retry.</string>
+    <string name="field_shizuku_helper_status_failed">Failed to start: %1$s</string>
+    <string name="field_shizuku_helper_status_stop_failed">Failed to stop: %1$s</string>
     <string name="field_shizuku_helper_status_checking">Checking status…</string>
+    <string name="button_gesture_helper_start">Start</string>
+    <string name="button_gesture_helper_stop">Stop</string>
 
     <string name="field_privacy">Privacy settings</string>
     <string name="field_remove_ads">Remove ads</string>

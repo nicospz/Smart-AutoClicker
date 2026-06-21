@@ -137,7 +137,7 @@ class ScenarioViewModel @Inject constructor(
      * [android.app.Activity.onActivityResult]
      * @param scenario the identifier of the scenario of clicks to be used for detection.
      */
-    fun loadSmartScenario(context: Context, resultCode: Int, data: Intent, scenario: Scenario): Boolean {
+    fun loadSmartScenario(context: Context, resultCode: Int, data: Intent?, scenario: Scenario): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             val foregroundPermission = PermissionChecker.checkSelfPermission(context, Manifest.permission.FOREGROUND_SERVICE)
             if (foregroundPermission != PermissionChecker.PERMISSION_GRANTED) return false
@@ -162,4 +162,3 @@ class ScenarioViewModel @Inject constructor(
         clickerService?.stop()
     }
 }
-

@@ -16,7 +16,6 @@
  */
 package com.buzbuz.smartautoclicker.feature.smart.config.ui.event
 
-import android.content.Intent
 import android.text.InputFilter
 import android.text.InputType
 import android.util.Log
@@ -24,6 +23,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 
+import androidx.core.view.isVisible
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -43,6 +43,8 @@ import com.buzbuz.smartautoclicker.core.ui.bindings.buttons.MultiStateButtonConf
 import com.buzbuz.smartautoclicker.core.ui.bindings.dialogs.DialogNavigationButton
 import com.buzbuz.smartautoclicker.core.ui.bindings.dialogs.setButtonEnabledState
 import com.buzbuz.smartautoclicker.core.ui.bindings.dialogs.setButtonVisibility
+import com.buzbuz.smartautoclicker.core.ui.bindings.dropdown.setItems
+import com.buzbuz.smartautoclicker.core.ui.bindings.dropdown.setSelectedItem
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.enableEasyOverwriteOnFocus
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setButtonConfig
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setChecked
@@ -130,6 +132,11 @@ class EventDialog(
         }
         hideSoftInputOnFocusLoss(fieldEventName.textField)
         fieldEventName.enableEasyOverwriteOnFocus()
+
+        fieldEventGroup.textField.apply {
+            isFocusable = false
+            isFocusableInTouchMode = false
+        }
 
         fieldIsEnabled.apply {
             setTitle(context.resources.getString(R.string.field_event_state_title))
@@ -238,11 +245,6 @@ class EventDialog(
             }
         }
 
-        fieldSplitScreenSettings.apply {
-            setTitle(context.getString(R.string.field_split_screen_detection_settings))
-            setOnClickListener { openSettings() }
-        }
-
         fieldOffsetRepeatCount.apply {
             textField.filters = arrayOf(MinMaxInputFilter(0))
             setLabel(R.string.input_field_label_offset_repeat_count)
@@ -343,6 +345,9 @@ class EventDialog(
                 launch { viewModel.eventCanBeSaved.collect(::updateSaveButton) }
                 launch { viewModel.eventName.collect(viewBinding.fieldEventName::setText) }
                 launch { viewModel.eventNameError.collect(viewBinding.fieldEventName::setError) }
+                launch { viewModel.isEventGroupDropdownVisible.collect(::updateEventGroupDropdownVisibility) }
+                launch { viewModel.eventGroupsDropdownItems.collect(::updateEventGroupDropdownItems) }
+                launch { viewModel.selectedEventGroup.collect(viewBinding.fieldEventGroup::setSelectedItem) }
                 launch { viewModel.conditionOperator.collect(::updateConditionOperator) }
                 launch { viewModel.detectionMode.collect(::updateImageDetectionMode) }
                 launch { viewModel.isOffsetRepeatDetectionMode.collect(::updateOffsetRepeatModeUi) }
@@ -447,15 +452,6 @@ class EventDialog(
             if (offsetPx <= 0) View.VISIBLE else View.GONE
     }
 
-    private fun openSettings() {
-        context.startActivity(
-            Intent().setClassName(
-                context.packageName,
-                "com.buzbuz.smartautoclicker.settings.SettingsActivity",
-            )
-        )
-    }
-
     private fun updateOffsetRepeatCount(count: String) {
         viewBinding.fieldOffsetRepeatCount.setText(count, InputType.TYPE_CLASS_NUMBER)
     }
@@ -505,6 +501,20 @@ class EventDialog(
 
     private fun updateTryFieldEnabledState(isEnabled: Boolean) {
         viewBinding.fieldTestEvent.setEnabled(isEnabled)
+    }
+
+    private fun updateEventGroupDropdownVisibility(isVisible: Boolean) {
+        viewBinding.fieldEventGroup.root.isVisible = isVisible
+    }
+
+    private fun updateEventGroupDropdownItems(items: List<EventGroupDropdownItem>) {
+        if (items.size <= 1) return
+
+        viewBinding.fieldEventGroup.setItems(
+            label = context.getString(R.string.dropdown_event_group_label),
+            items = items,
+            onItemSelected = viewModel::setEventGroup,
+        )
     }
 
     private fun onDeleteButtonClicked() {

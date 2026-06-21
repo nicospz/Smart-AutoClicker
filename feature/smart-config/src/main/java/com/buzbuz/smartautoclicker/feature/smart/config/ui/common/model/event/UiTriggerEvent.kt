@@ -29,6 +29,7 @@ data class UiTriggerEvent(
     val actionsCountText: String,
     @field:StringRes val enabledOnStartTextRes: Int,
     @field:DrawableRes val enabledOnStartIconRes: Int,
+    val ignored: Boolean,
     val haveError: Boolean,
 ) : UiEvent()
 
@@ -50,6 +51,7 @@ fun TriggerEvent.toUiTriggerEvent(inError: Boolean): UiTriggerEvent {
         actionsCountText = actions.size.toString(),
         enabledOnStartTextRes = enabledOnStartTextRes,
         enabledOnStartIconRes = enabledOnStartIconRes,
+        ignored = ignored,
         haveError = inError,
     )
 }

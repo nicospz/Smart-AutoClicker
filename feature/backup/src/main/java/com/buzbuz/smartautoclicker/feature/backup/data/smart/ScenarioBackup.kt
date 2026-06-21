@@ -31,7 +31,7 @@ import kotlinx.serialization.Serializable
  * @param scenario the scenario being exported/imported.
  */
 @Serializable
-internal data class ScenarioBackup(
+data class ScenarioBackup(
     val version: Int,
     val screenWidth: Int,
     val screenHeight: Int,

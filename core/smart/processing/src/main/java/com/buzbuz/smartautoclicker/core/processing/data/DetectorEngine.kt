@@ -18,6 +18,7 @@ package com.buzbuz.smartautoclicker.core.processing.data
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.media.Image
 import android.media.projection.MediaProjectionManager
 import android.util.Log
@@ -29,14 +30,17 @@ import com.buzbuz.smartautoclicker.core.bitmaps.BitmapRepository
 import com.buzbuz.smartautoclicker.core.common.actions.AndroidActionExecutor
 import com.buzbuz.smartautoclicker.core.common.actions.precision.PrecisionGestureExecutor
 import com.buzbuz.smartautoclicker.core.common.actions.precision.PrecisionTextExecutor
+import com.buzbuz.smartautoclicker.core.display.recorder.AccessibilityScreenshotProvider
 import com.buzbuz.smartautoclicker.core.display.recorder.DisplayRecorder
 import com.buzbuz.smartautoclicker.core.display.recorder.ScreenFrameBroker
 import com.buzbuz.smartautoclicker.core.detection.ImageDetector
 import com.buzbuz.smartautoclicker.core.detection.NativeDetector
 import com.buzbuz.smartautoclicker.core.display.config.DisplayConfigManager
+import com.buzbuz.smartautoclicker.core.domain.model.event.EventGroup
 import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEvent
 import com.buzbuz.smartautoclicker.core.domain.model.event.TriggerEvent
 import com.buzbuz.smartautoclicker.core.domain.model.scenario.Scenario
+import com.buzbuz.smartautoclicker.core.domain.model.scenario.ScreenCaptureMode
 import com.buzbuz.smartautoclicker.core.processing.data.processor.ScenarioProcessor
 import com.buzbuz.smartautoclicker.core.processing.data.scaling.ScalingManager
 import com.buzbuz.smartautoclicker.core.settings.SettingsRepository
@@ -73,6 +77,7 @@ class DetectorEngine @Inject constructor(
     private val bitmapRepository: BitmapRepository,
     private val scalingManager: ScalingManager,
     private val displayRecorder: DisplayRecorder,
+    private val accessibilityScreenshotProvider: AccessibilityScreenshotProvider,
     private val screenFrameBroker: ScreenFrameBroker,
     private val actionExecutor: AndroidActionExecutor,
     private val precisionGestureExecutor: PrecisionGestureExecutor,
@@ -93,6 +98,8 @@ class DetectorEngine @Inject constructor(
     private var processingJob: Job? = null
     /** Coroutine job for the cleaning of the detection once stopped. */
     private var processingShutdownJob: Job? = null
+
+    private var screenCaptureMode: ScreenCaptureMode = ScreenCaptureMode.MEDIA_PROJECTION
 
     private val screenOrientationListener: (Context) -> Unit = { onScreenOrientationChanged() }
 
@@ -123,6 +130,29 @@ class DetectorEngine @Inject constructor(
         data: Intent,
         onRecordingStopped: (() -> Unit)?,
     ) {
+        startScreenRecord(
+            screenCaptureMode = ScreenCaptureMode.MEDIA_PROJECTION,
+            resultCode = resultCode,
+            data = data,
+            onRecordingStopped = onRecordingStopped,
+        )
+    }
+
+    internal fun startAccessibilityScreenshotRecord() {
+        startScreenRecord(
+            screenCaptureMode = ScreenCaptureMode.ACCESSIBILITY_SCREENSHOT,
+            resultCode = null,
+            data = null,
+            onRecordingStopped = null,
+        )
+    }
+
+    private fun startScreenRecord(
+        screenCaptureMode: ScreenCaptureMode,
+        resultCode: Int?,
+        data: Intent?,
+        onRecordingStopped: (() -> Unit)?,
+    ) {
         if (_state.value != DetectorState.CREATED) {
             Log.w(TAG, "startScreenRecord: Screen record is already started")
             return
@@ -135,25 +165,35 @@ class DetectorEngine @Inject constructor(
         }
 
         _state.value = DetectorState.TRANSITIONING
+        this.screenCaptureMode = screenCaptureMode
 
-        Log.i(TAG, "startScreenRecord")
+        Log.i(TAG, "startScreenRecord mode=$screenCaptureMode")
 
         processingScope = CoroutineScope(ioDispatcher)
 
         displayConfigManager.addOrientationListener(screenOrientationListener)
 
         processingScope?.launch {
-            displayRecorder.apply {
-                startProjection(resultCode, data) {
-                    Log.w(TAG, "projection lost")
-                    this@DetectorEngine.stopScreenRecord()
-                    onRecordingStopped?.invoke()
+            if (screenCaptureMode == ScreenCaptureMode.MEDIA_PROJECTION) {
+                if (resultCode == null || data == null) {
+                    Log.e(TAG, "startScreenRecord: missing MediaProjection result")
+                    _state.emit(DetectorState.CREATED)
+                    return@launch
                 }
-                startScreenRecord(displaySize)
+
+                displayRecorder.apply {
+                    startProjection(resultCode, data) {
+                        Log.w(TAG, "projection lost")
+                        this@DetectorEngine.stopScreenRecord()
+                        onRecordingStopped?.invoke()
+                    }
+                    startScreenRecord(displaySize)
+                }
+
+                screenFrameBroker.start()
             }
 
             _state.emit(DetectorState.RECORDING)
-            screenFrameBroker.start()
         }
     }
 
@@ -170,6 +210,8 @@ class DetectorEngine @Inject constructor(
         scenario: Scenario,
         imageEvents: List<ImageEvent>,
         triggerEvents: List<TriggerEvent>,
+        imageGroups: List<EventGroup> = emptyList(),
+        triggerGroups: List<EventGroup> = emptyList(),
         liveDebugging: Boolean,
         generateReport: Boolean,
     ) {
@@ -194,13 +236,16 @@ class DetectorEngine @Inject constructor(
             bitmapRepository.clearCache()
 
 
-            // Set the display projection to the scaled size
-            displayRecorder.resizeDisplay(
-                displaySize = scalingManager.startScaling(
-                    quality = scenario.detectionQuality.toDouble(),
-                    screenEvents = imageEvents,
-                )
+            val scaledDisplaySize = scalingManager.startScaling(
+                quality = scenario.detectionQuality.toDouble(),
+                screenEvents = imageEvents,
+                imageGroups = imageGroups,
             )
+
+            // Set the display projection to the scaled size
+            if (screenCaptureMode == ScreenCaptureMode.MEDIA_PROJECTION) {
+                displayRecorder.resizeDisplay(displaySize = scaledDisplaySize)
+            }
 
             // Setup native detector
             imageDetector = detector
@@ -219,17 +264,19 @@ class DetectorEngine @Inject constructor(
             // Instantiate the processor and initialize its detection state.
             scenarioProcessor = ScenarioProcessor(
                 processingTag = appComponentsProvider.originalAppId,
+                scenarioName = scenario.name,
                 imageDetector = detector,
                 scalingManager = scalingManager,
                 randomize = scenario.randomize,
                 imageEvents = imageEvents,
                 triggerEvents = triggerEvents,
+                imageGroups = imageGroups,
+                triggerGroups = triggerGroups,
                 bitmapSupplier = bitmapRepository::getImageConditionBitmap,
                 androidExecutor = actionExecutor,
                 precisionGestureExecutor = precisionGestureExecutor,
                 precisionTextExecutor = precisionTextExecutor,
                 unblockWorkaroundEnabled = settingsRepository.isInputBlockWorkaroundEnabled(),
-                splitScreenYOffsetPx = settingsRepository.getSplitScreenYOffsetPx(),
                 onStopRequested = { stopDetection() },
                 progressListener  = if (liveDebugging || generateReport) debuggingListener else null,
             )
@@ -255,9 +302,10 @@ class DetectorEngine @Inject constructor(
             }
 
 
-            displayRecorder.resizeDisplay(
-                displaySize = scalingManager.refreshScaling(),
-            )
+            val scaledDisplaySize = scalingManager.refreshScaling()
+            if (screenCaptureMode == ScreenCaptureMode.MEDIA_PROJECTION) {
+                displayRecorder.resizeDisplay(displaySize = scaledDisplaySize)
+            }
 
             if (_state.value == DetectorState.DETECTING) {
                 processingScope?.launchProcessingJob {
@@ -323,8 +371,11 @@ class DetectorEngine @Inject constructor(
             processingShutdownJob?.join()
 
             displayConfigManager.removeOrientationListener(screenOrientationListener)
-            screenFrameBroker.stop()
-            displayRecorder.stopProjection()
+            if (screenCaptureMode == ScreenCaptureMode.MEDIA_PROJECTION) {
+                screenFrameBroker.stop()
+                displayRecorder.stopProjection()
+            }
+            screenCaptureMode = ScreenCaptureMode.MEDIA_PROJECTION
             _state.emit(DetectorState.CREATED)
 
             processingScope?.cancel()
@@ -350,7 +401,7 @@ class DetectorEngine @Inject constructor(
 
         var processingDurationNs: Long
         while (processingJob?.isActive == true) {
-            displayRecorder.acquireLatestBitmap()?.let { screenFrame ->
+            acquireLatestScreenFrame()?.let { screenFrame ->
                 processingDurationNs = measureNanoTime {
                     scenarioProcessor?.process(screenFrame)
                 }
@@ -362,6 +413,20 @@ class DetectorEngine @Inject constructor(
 
             } ?: delay(NO_IMAGE_DELAY_MS)
         }
+    }
+
+    private suspend fun acquireLatestScreenFrame(): Bitmap? =
+        when (screenCaptureMode) {
+            ScreenCaptureMode.MEDIA_PROJECTION -> displayRecorder.acquireLatestBitmap()
+            ScreenCaptureMode.ACCESSIBILITY_SCREENSHOT -> accessibilityScreenshotProvider.takeScreenshot()
+                ?.scaleForDetection()
+        }
+
+    private fun Bitmap.scaleForDetection(): Bitmap {
+        val scaledBounds = scalingManager.getScaledScreenBounds()
+        if (width == scaledBounds.width() && height == scaledBounds.height()) return this
+
+        return Bitmap.createScaledBitmap(this, scaledBounds.width(), scaledBounds.height(), false)
     }
 
     /**

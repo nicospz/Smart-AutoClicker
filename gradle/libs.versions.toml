@@ -28,6 +28,7 @@ androidxLifecycleExtension = "2.2.0"
 androidxNavigation = "2.9.8"
 androidxRecyclerView = "1.4.0"
 androidxRoom = "2.8.4"
+androidxWork = "2.10.0"
 androidxSplashScreen = "1.2.0"
 androidxVectorDrawable = "1.2.0"
 
@@ -39,6 +40,8 @@ openCv = "4.12.0"
 googleDaggerHilt = "2.59.2"
 googleProtobufRuntime = "4.34.1"
 shizuku = "13.1.5"
+okhttp = "4.12.0"
+mediapipeTasksVision = "0.10.35"
 
 # PlayStore only
 androidBillingClient = "8.3.0"
@@ -99,11 +102,13 @@ androidx-lifecycle-common-java8 = { group = "androidx.lifecycle", name = "lifecy
 androidx-lifecycle-extensions = { group = "androidx.lifecycle", name = "lifecycle-extensions", version.ref = "androidxLifecycleExtension" }
 androidx-lifecycle-livedata-ktx = { group = "androidx.lifecycle", name = "lifecycle-livedata-ktx", version.ref = "androidxLifecycle" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "androidxLifecycle" }
+androidx-lifecycle-process = { group = "androidx.lifecycle", name = "lifecycle-process", version.ref = "androidxLifecycle" }
 androidx-lifecycle-viewmodel-ktx = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "androidxLifecycle" }
 androidx-navigation-fragment-ktx = { group = "androidx.navigation", name = "navigation-fragment-ktx", version.ref = "androidxNavigation" }
 androidx-navigation-ui-ktx = { group = "androidx.navigation", name = "navigation-ui-ktx", version.ref = "androidxNavigation" }
 androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "androidxRoom" }
 androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "androidxRoom" }
+androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "androidxWork" }
 androidx-vectorDrawable = { group = "androidx.vectordrawable", name = "vectordrawable-animated", version.ref = "androidxVectorDrawable" }
 
 # Other
@@ -117,6 +122,8 @@ google-protobuf-java = { group = "com.google.protobuf", name = "protobuf-java", 
 google-protobuf-kotlin = { group = "com.google.protobuf", name = "protobuf-kotlin", version.ref = "googleProtobufRuntime" }
 shizuku-api = { group = "dev.rikka.shizuku", name = "api", version.ref = "shizuku" }
 shizuku-provider = { group = "dev.rikka.shizuku", name = "provider", version.ref = "shizuku" }
+square-okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
+google-mediapipe-tasks-vision = { group = "com.google.mediapipe", name = "tasks-vision", version.ref = "mediapipeTasksVision" }
 
 
 # PlayStore only. Might seem unused but check in files if that is the case

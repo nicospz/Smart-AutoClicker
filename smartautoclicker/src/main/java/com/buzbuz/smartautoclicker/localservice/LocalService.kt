@@ -24,7 +24,21 @@ import android.util.Log
 import android.view.KeyEvent
 
 import com.buzbuz.smartautoclicker.core.base.data.AppComponentsProvider
+import com.buzbuz.smartautoclicker.core.common.actions.AndroidActionExecutor
+import com.buzbuz.smartautoclicker.core.common.actions.ThrowletCatchController
+import com.buzbuz.smartautoclicker.core.common.actions.ThrowletCatchControllers
+import com.buzbuz.smartautoclicker.core.common.actions.ThrowletCatchLane
+import com.buzbuz.smartautoclicker.core.common.actions.ThrowletCatchMode
+import com.buzbuz.smartautoclicker.core.common.actions.ThrowletCatchOperation
+import com.buzbuz.smartautoclicker.core.common.actions.ThrowletCatchSession
 import com.buzbuz.smartautoclicker.core.common.overlays.manager.OverlayManager
+import com.buzbuz.smartautoclicker.core.display.recorder.DisplayRecorder
+import com.buzbuz.smartautoclicker.core.domain.model.scenario.ScreenCaptureMode
+import com.buzbuz.smartautoclicker.core.display.recorder.ThrowletCropPicker
+import com.buzbuz.smartautoclicker.feature.throwlet.ThrowletHelperController
+import com.buzbuz.smartautoclicker.feature.throwlet.data.GestureStore
+import com.buzbuz.smartautoclicker.feature.throwlet.data.ThrowletDatabase
+import com.buzbuz.smartautoclicker.feature.throwlet.sync.SupabaseSyncRepository
 import com.buzbuz.smartautoclicker.core.domain.model.scenario.Scenario
 import com.buzbuz.smartautoclicker.core.dumb.domain.model.DumbScenario
 import com.buzbuz.smartautoclicker.core.dumb.engine.DumbEngine
@@ -38,6 +52,8 @@ import com.buzbuz.smartautoclicker.feature.notifications.ServiceNotificationCont
 import com.buzbuz.smartautoclicker.feature.notifications.ServiceNotificationListener
 import com.buzbuz.smartautoclicker.feature.revenue.IRevenueRepository
 import com.buzbuz.smartautoclicker.feature.revenue.UserBillingState
+import com.buzbuz.smartautoclicker.feature.throwlet.ThrowletRepository
+import com.buzbuz.smartautoclicker.feature.sync.domain.SacSyncCoordinator
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -59,6 +75,14 @@ class LocalService(
     private val settingsRepository: SettingsRepository,
     private val smartProcessingRepository: SmartProcessingRepository,
     private val dumbEngine: DumbEngine,
+    private val actionExecutor: AndroidActionExecutor,
+    private val throwletRepository: ThrowletRepository,
+    private val throwletDatabase: ThrowletDatabase,
+    private val gestureStore: GestureStore,
+    private val throwletSyncRepository: SupabaseSyncRepository,
+    private val sacSyncCoordinator: SacSyncCoordinator,
+    private val displayRecorder: DisplayRecorder,
+    private val throwletCropPicker: ThrowletCropPicker,
     private val revenueRepository: IRevenueRepository,
     private val debuggingRepository: DebuggingRepository,
     private val onStart: (scenarioId: Long, isSmart: Boolean, foregroundNotification: Notification?) -> Unit,
@@ -96,7 +120,35 @@ class LocalService(
     internal val isStarted: Boolean
         get() = state.isStarted
 
+    private val throwletHelperController: ThrowletHelperController by lazy {
+        ThrowletHelperController(
+            context = context,
+            scope = serviceScope,
+            database = throwletDatabase,
+            gestureStore = gestureStore,
+            syncRepository = throwletSyncRepository,
+            actionExecutor = actionExecutor,
+            screenshotSource = ThrowletDisplayScreenshotSource(displayRecorder),
+            cropPicker = throwletCropPicker,
+            buddyCropSaver = BuddyCropSaveOverlay(
+                context = context,
+                scope = serviceScope,
+                throwletRepository = throwletRepository,
+            ),
+            isScreenRecording = { state.isSmartLoaded },
+            onThrowletSyncRequested = { sacSyncCoordinator.requestThrowletSync() },
+        )
+    }
+
     init {
+        ThrowletCatchControllers.instance = ThrowletCatchController { operation, session ->
+            Log.i(THROWLET_CATCH_TAG, "controller operation=$operation session=$session")
+            throwletHelperController.execute(operation, session)
+        }
+
+        serviceScope.launch {
+            sacSyncCoordinator.requestFullSync()
+        }
         combine(dumbEngine.isRunning, smartProcessingRepository.detectionState) { dumbIsRunning, smartState ->
             dumbIsRunning || smartState == DetectionState.DETECTING
         }.onEach { isRunning ->
@@ -146,7 +198,7 @@ class LocalService(
      * [android.app.Activity.onActivityResult]
      * @param scenario the identifier of the scenario of clicks to be used for detection.
      */
-    override fun startSmartScenario(resultCode: Int, data: Intent, scenario: Scenario) {
+    override fun startSmartScenario(resultCode: Int, data: Intent?, scenario: Scenario) {
         if (isStarted) return
         autoStartJob?.cancel()
         state = LocalServiceState(isStarted = true, isSmartLoaded = true)
@@ -183,11 +235,24 @@ class LocalService(
                     "lifecycle=${topOverlay?.lifecycle?.currentState}",
             )
 
-            Log.i(TAG, "startSmartScenario: starting screen record")
-            smartProcessingRepository.startScreenRecord(
-                resultCode = resultCode,
-                data = data,
-            )
+            Log.i(TAG, "startSmartScenario: starting screen record mode=${scenario.screenCaptureMode}")
+            when (scenario.screenCaptureMode) {
+                ScreenCaptureMode.MEDIA_PROJECTION -> {
+                    if (data == null) {
+                        Log.e(TAG, "startSmartScenario: missing MediaProjection data")
+                        stop()
+                        return@launch
+                    }
+
+                    smartProcessingRepository.startScreenRecord(
+                        resultCode = resultCode,
+                        data = data,
+                    )
+                }
+
+                ScreenCaptureMode.ACCESSIBILITY_SCREENSHOT ->
+                    smartProcessingRepository.startAccessibilityScreenshotRecord()
+            }
 
             scheduleSmartAutoStart(scenario)
         }
@@ -205,6 +270,7 @@ class LocalService(
 
             dumbEngine.release()
             overlayManager.closeAll(context)
+            throwletHelperController.hideAll()
             smartProcessingRepository.stopScreenRecord()
 
             onStop()
@@ -213,8 +279,40 @@ class LocalService(
     }
 
     override fun release() {
+        ThrowletCatchControllers.instance = null
+        throwletHelperController.hideAll()
         autoStartJob?.cancel()
         serviceScope.cancel()
+    }
+
+    override fun toggleThrowletOverlay() {
+        Log.i(THROWLET_CATCH_TAG, "toggleThrowletOverlay")
+        serviceScope.launch {
+            throwletHelperController.execute(
+                ThrowletCatchOperation.TOGGLE,
+                ThrowletCatchSession(ThrowletCatchMode.CATCH, ThrowletCatchLane.FULL),
+            )
+        }
+    }
+
+    override fun showThrowletOverlay() {
+        Log.i(THROWLET_CATCH_TAG, "showThrowletOverlay")
+        serviceScope.launch {
+            throwletHelperController.execute(
+                ThrowletCatchOperation.SHOW,
+                ThrowletCatchSession(ThrowletCatchMode.CATCH, ThrowletCatchLane.FULL),
+            )
+        }
+    }
+
+    override fun hideThrowletOverlay() {
+        Log.i(THROWLET_CATCH_TAG, "hideThrowletOverlay")
+        serviceScope.launch {
+            throwletHelperController.execute(
+                ThrowletCatchOperation.HIDE,
+                ThrowletCatchSession(ThrowletCatchMode.CATCH, ThrowletCatchLane.FULL),
+            )
+        }
     }
 
     internal fun onKeyEvent(event: KeyEvent?): Boolean {
@@ -311,3 +409,4 @@ private data class LocalServiceState(
 )
 
 private const val TAG = "LocalService"
+private const val THROWLET_CATCH_TAG = "SacThrowletCatch"

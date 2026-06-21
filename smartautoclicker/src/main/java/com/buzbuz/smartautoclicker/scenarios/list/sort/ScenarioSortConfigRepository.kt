@@ -19,6 +19,7 @@ package com.buzbuz.smartautoclicker.scenarios.list.sort
 import android.content.Context
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 
 import com.buzbuz.smartautoclicker.core.base.PreferencesDataStore
@@ -30,6 +31,7 @@ import com.buzbuz.smartautoclicker.core.base.setEnum
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 import javax.inject.Inject
@@ -55,6 +57,8 @@ class ScenarioSortConfigRepository @Inject constructor(
             booleanPreferencesKey("filterShowDumb")
         val KEY_FILTER_SHOW_FAVORITES: Preferences.Key<Boolean> =
             booleanPreferencesKey("filterShowFavorites")
+        val KEY_SYNC_UPDATED_AT_MS: Preferences.Key<Long> =
+            longPreferencesKey("sacSyncUpdatedAtMs")
     }
 
     private val dataStore: PreferencesDataStore =
@@ -79,30 +83,67 @@ class ScenarioSortConfigRepository @Inject constructor(
     internal suspend fun setSortType(type: ScenarioSortType) =
         dataStore.edit { preferences ->
             preferences.setEnum(KEY_SORT_TYPE, type)
+            preferences[KEY_SYNC_UPDATED_AT_MS] = System.currentTimeMillis()
         }
 
     internal suspend fun setSortOrder(invertSortOrder: Boolean) =
         dataStore.edit { preferences ->
             preferences[KEY_SORT_INVERTED] = invertSortOrder
+            preferences[KEY_SYNC_UPDATED_AT_MS] = System.currentTimeMillis()
         }
 
     internal suspend fun setShowDumb(show: Boolean) =
         dataStore.edit { preferences ->
             preferences[KEY_FILTER_SHOW_DUMB] = show
+            preferences[KEY_SYNC_UPDATED_AT_MS] = System.currentTimeMillis()
         }
 
     internal suspend fun setShowSmart(show: Boolean) =
         dataStore.edit { preferences ->
             preferences[KEY_FILTER_SHOW_SMART] = show
+            preferences[KEY_SYNC_UPDATED_AT_MS] = System.currentTimeMillis()
         }
 
     internal suspend fun setShowFavorites(show: Boolean) =
         dataStore.edit { preferences ->
             preferences[KEY_FILTER_SHOW_FAVORITES] = show
+            preferences[KEY_SYNC_UPDATED_AT_MS] = System.currentTimeMillis()
         }
+
+    suspend fun readSyncSnapshot(): ScenarioSortSyncSnapshot {
+        val prefs = dataStore.data.first()
+        return ScenarioSortSyncSnapshot(
+            sortType = prefs.getSortType(),
+            inverted = prefs[KEY_SORT_INVERTED] ?: false,
+            showSmartScenario = prefs[KEY_FILTER_SHOW_SMART] ?: true,
+            showDumbScenario = prefs[KEY_FILTER_SHOW_DUMB] ?: true,
+            showFavoritesOnly = prefs[KEY_FILTER_SHOW_FAVORITES] ?: false,
+            updatedAtMs = prefs[KEY_SYNC_UPDATED_AT_MS] ?: 0L,
+        )
+    }
+
+    suspend fun applySyncSnapshot(snapshot: ScenarioSortSyncSnapshot) {
+        val now = System.currentTimeMillis()
+        dataStore.edit { preferences ->
+            preferences.setEnum(KEY_SORT_TYPE, snapshot.sortType)
+            preferences[KEY_SORT_INVERTED] = snapshot.inverted
+            preferences[KEY_FILTER_SHOW_SMART] = snapshot.showSmartScenario
+            preferences[KEY_FILTER_SHOW_DUMB] = snapshot.showDumbScenario
+            preferences[KEY_FILTER_SHOW_FAVORITES] = snapshot.showFavoritesOnly
+            preferences[KEY_SYNC_UPDATED_AT_MS] = now
+        }
+    }
 
     private fun Preferences.getSortType(): ScenarioSortType =
         runCatching { getEnum<ScenarioSortType>(KEY_SORT_TYPE) }.getOrNull()
-            ?.takeIf { it != ScenarioSortType.MOST_USED }
             ?: ScenarioSortType.NAME
 }
+
+data class ScenarioSortSyncSnapshot(
+    val sortType: ScenarioSortType,
+    val inverted: Boolean,
+    val showSmartScenario: Boolean,
+    val showDumbScenario: Boolean,
+    val showFavoritesOnly: Boolean,
+    val updatedAtMs: Long,
+)

@@ -66,6 +66,38 @@ class PrecisionGestureHelperSetup @Inject constructor(
         )
     }
 
+    suspend fun stopHelper(): PrecisionGestureSetupResult = withContext(Dispatchers.IO) {
+        if (queryRunningHelperStatus() == null) {
+            return@withContext PrecisionGestureSetupResult.NotStarted()
+        }
+
+        runCatching { helperClient.stop() }
+
+        when (ensureShizukuReady(requireSupportedAbi = false, requestPermission = false)) {
+            is PrecisionGestureSetupResult.Running -> {
+                runCatching {
+                    runShizukuShell(
+                        "for pid in \$(pidof $HELPER_PROCESS_NAME 2>/dev/null); do kill \$pid; done 2>/dev/null || true",
+                        timeoutMs = 10_000,
+                    )
+                }
+            }
+            else -> Unit
+        }
+
+        repeat(10) {
+            if (queryRunningHelperStatus() == null) {
+                return@withContext PrecisionGestureSetupResult.NotStarted()
+            }
+            Thread.sleep(250)
+        }
+
+        val status = queryRunningHelperStatus()
+        PrecisionGestureSetupResult.StopFailed(
+            IllegalStateException(status?.let { "helper still running: $it" } ?: "helper still running"),
+        )
+    }
+
     suspend fun ensureShizukuReady(
         requireSupportedAbi: Boolean = false,
         requestPermission: Boolean = true,
@@ -231,4 +263,5 @@ sealed class PrecisionGestureSetupResult {
     data object PermissionDenied : PrecisionGestureSetupResult()
     data class NotStarted(val error: Throwable? = null) : PrecisionGestureSetupResult()
     data class StartFailed(val error: Throwable) : PrecisionGestureSetupResult()
+    data class StopFailed(val error: Throwable) : PrecisionGestureSetupResult()
 }

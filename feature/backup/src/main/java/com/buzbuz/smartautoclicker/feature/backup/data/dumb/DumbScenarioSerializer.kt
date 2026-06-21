@@ -169,6 +169,7 @@ internal class DumbScenarioSerializer : ScenarioBackupSerializer<DumbScenarioBac
             isFavorite = getBoolean("isFavorite") ?: false,
             autoStart = getBoolean("autoStart") ?: false,
             autoStartDelayMs = getLong("autoStartDelayMs")?.coerceAtLeast(0) ?: 0L,
+            category = getString("category")?.trim()?.takeIf { it.isNotEmpty() },
         )
     }
 

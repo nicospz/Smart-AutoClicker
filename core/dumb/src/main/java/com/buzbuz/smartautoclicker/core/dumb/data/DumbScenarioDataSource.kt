@@ -21,10 +21,13 @@ import android.util.Log
 import com.buzbuz.smartautoclicker.core.base.DatabaseListUpdater
 import com.buzbuz.smartautoclicker.core.base.extensions.mapList
 import com.buzbuz.smartautoclicker.core.base.identifier.DATABASE_ID_INSERTION
+import com.buzbuz.smartautoclicker.core.base.identifier.Identifier
 import com.buzbuz.smartautoclicker.core.dumb.data.database.DumbActionEntity
 import com.buzbuz.smartautoclicker.core.dumb.data.database.DumbDatabase
 import com.buzbuz.smartautoclicker.core.dumb.data.database.DumbScenarioDao
 import com.buzbuz.smartautoclicker.core.dumb.data.database.DumbScenarioStatsEntity
+import com.buzbuz.smartautoclicker.core.dumb.data.database.DumbScenarioEntity
+import com.buzbuz.smartautoclicker.core.dumb.data.database.DumbScenarioSyncMeta
 import com.buzbuz.smartautoclicker.core.dumb.data.database.DumbScenarioWithActions
 import com.buzbuz.smartautoclicker.core.dumb.domain.model.DumbAction
 import com.buzbuz.smartautoclicker.core.dumb.domain.model.DumbScenario
@@ -34,6 +37,7 @@ import com.buzbuz.smartautoclicker.core.dumb.domain.model.toEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.lang.Exception
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -55,6 +59,17 @@ class DumbScenarioDataSource @Inject constructor(
         dumbScenarioDao.getDumbScenariosWithAction(dbId)
             ?.toDomain()
 
+    suspend fun getDumbScenarioWithActionsBySyncId(syncId: String): DumbScenarioWithActions? =
+        dumbScenarioDao.getDumbScenarioEntityBySyncId(syncId)?.id?.let { dbId ->
+            dumbScenarioDao.getDumbScenariosWithAction(dbId)
+        }
+
+    suspend fun getAllDumbScenarioSyncMeta(): List<DumbScenarioSyncMeta> =
+        dumbScenarioDao.getAllSyncMeta()
+
+    suspend fun getDumbScenarioDatabaseIdBySyncId(syncId: String): Long? =
+        dumbScenarioDao.getDumbScenarioEntityBySyncId(syncId)?.id
+
     fun getDumbScenarioFlow(dbId: Long): Flow<DumbScenario?> =
         dumbScenarioDao.getDumbScenariosWithActionFlow(dbId)
             .map { it?.toDomain() }
@@ -65,9 +80,14 @@ class DumbScenarioDataSource @Inject constructor(
 
     suspend fun addDumbScenario(scenario: DumbScenario) {
         Log.d(TAG, "Add dumb scenario $scenario")
-
+        val now = System.currentTimeMillis()
+        val entity = scenario.toEntity().copy(
+            syncId = scenario.syncId.ifBlank { UUID.randomUUID().toString() },
+            updatedAtMs = if (scenario.updatedAtMs > 0L) scenario.updatedAtMs else now,
+            deletedAtMs = null,
+        )
         updateDumbScenarioActions(
-            scenarioDbId = dumbScenarioDao.addDumbScenario(scenario.toEntity()),
+            scenarioDbId = dumbScenarioDao.addDumbScenario(entity),
             actions = scenario.dumbActions,
         )
     }
@@ -127,14 +147,66 @@ class DumbScenarioDataSource @Inject constructor(
 
     suspend fun updateDumbScenario(scenario: DumbScenario) {
         Log.d(TAG, "Update dumb scenario $scenario")
-        val scenarioEntity = scenario.toEntity()
+        val now = System.currentTimeMillis()
+        val scenarioEntity = scenario.toEntity().copy(
+            updatedAtMs = now,
+            deletedAtMs = null,
+        )
 
         dumbScenarioDao.updateDumbScenario(scenarioEntity)
         updateDumbScenarioActions(scenarioEntity.id, scenario.dumbActions)
     }
 
+    suspend fun upsertDumbScenarioBySyncId(
+        scenarioWithActions: DumbScenarioWithActions,
+        syncId: String,
+        updatedAtMs: Long,
+    ): Long? {
+        val existing = dumbScenarioDao.getDumbScenarioEntityBySyncId(syncId)
+        val baseScenario = scenarioWithActions.toDomain(asDomain = true)
+        val dumbScenario = if (existing != null) {
+            baseScenario.copy(
+                id = Identifier(databaseId = existing.id),
+                syncId = syncId,
+                updatedAtMs = updatedAtMs,
+                deletedAtMs = null,
+            )
+        } else {
+            baseScenario.copy(
+                syncId = syncId,
+                updatedAtMs = updatedAtMs,
+                deletedAtMs = null,
+            )
+        }
+        return if (existing != null) {
+            updateDumbScenario(dumbScenario)
+            dumbScenarioDao.updateSyncTimestamps(existing.id, updatedAtMs, null)
+            existing.id
+        } else {
+            val now = System.currentTimeMillis()
+            val entity = dumbScenario.toEntity().copy(
+                syncId = syncId,
+                updatedAtMs = updatedAtMs,
+                deletedAtMs = null,
+            )
+            val scenarioId = dumbScenarioDao.addDumbScenario(entity)
+            updateDumbScenarioActions(scenarioId, dumbScenario.dumbActions)
+            scenarioId
+        }
+    }
+
+    suspend fun deleteDumbScenarioBySyncId(syncId: String): Boolean {
+        val entity = dumbScenarioDao.getDumbScenarioEntityBySyncId(syncId) ?: return false
+        dumbScenarioDao.deleteDumbScenario(entity.id)
+        return true
+    }
+
     suspend fun updateDumbScenarioFavorite(scenarioDbId: Long, isFavorite: Boolean) {
-        dumbScenarioDao.updateDumbScenarioFavorite(scenarioDbId, isFavorite)
+        dumbScenarioDao.updateDumbScenarioFavorite(
+            dumbScenarioId = scenarioDbId,
+            isFavorite = isFavorite,
+            updatedAtMs = System.currentTimeMillis(),
+        )
     }
 
     private suspend fun updateDumbScenarioActions(scenarioDbId: Long, actions: List<DumbAction>) {

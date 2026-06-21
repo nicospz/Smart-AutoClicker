@@ -38,6 +38,12 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="@dimen/margin_horizontal_small"/>
 
+        <include layout="@layout/include_field_text_input"
+            android:id="@+id/field_category"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/margin_horizontal_small"/>
+
         <include layout="@layout/include_field_text_input_with_checkbox"
             android:id="@+id/field_repeat_count"
             android:layout_width="match_parent"

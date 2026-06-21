@@ -27,8 +27,8 @@ import androidx.annotation.StringRes
 import com.buzbuz.smartautoclicker.core.ui.R
 import com.buzbuz.smartautoclicker.core.ui.databinding.IncludeFieldTextInputBinding
 import com.buzbuz.smartautoclicker.core.ui.utils.OnAfterTextChangedListener
+import com.google.android.material.R as MaterialR
 import com.google.android.material.textfield.TextInputLayout
-
 
 fun IncludeFieldTextInputBinding.setLabel(@StringRes labelResId: Int) {
     root.setHint(labelResId)
@@ -40,6 +40,7 @@ fun IncludeFieldTextInputBinding.setText(text: String?, type: Int = InputType.TY
         imeOptions = EditorInfo.IME_ACTION_DONE
         setText(text)
     }
+    root.refreshClearIconAfterTextSet(textField)
 }
 
 fun IncludeFieldTextInputBinding.setError(isError: Boolean) {
@@ -66,11 +67,13 @@ fun IncludeFieldTextInputBinding.enableEasyOverwriteOnFocus() {
 
 fun TextInputLayout.enableEasyOverwriteOnFocus() {
     val editText = editText ?: return
+
     val previousListener = editText.onFocusChangeListener
     editText.setOnFocusChangeListener { view, hasFocus ->
         previousListener?.onFocusChange(view, hasFocus)
 
         if (hasFocus) {
+            refreshClearIconVisibility(editText)
             view.post {
                 editText.selectAll()
                 refreshClearIconVisibility(editText)
@@ -81,10 +84,26 @@ fun TextInputLayout.enableEasyOverwriteOnFocus() {
     }
 
     editText.addTextChangedListener(OnAfterTextChangedListener {
-        if (editText.hasFocus()) refreshClearIconVisibility(editText)
+        refreshClearIconAfterTextSet(editText)
     })
 }
 
+private fun TextInputLayout.refreshClearIconAfterTextSet(editText: EditText) {
+    if (editText.hasFocus()) {
+        post { refreshClearIconVisibility(editText) }
+    }
+}
+
 private fun TextInputLayout.refreshClearIconVisibility(editText: EditText) {
-    isEndIconVisible = editText.hasFocus() && !editText.text.isNullOrEmpty()
+    val shouldShow = editText.hasFocus() && !editText.text.isNullOrEmpty()
+    isEndIconVisible = shouldShow
+    if (!shouldShow) return
+
+    // Material's clear-text delegate normally fades the icon in; toggling visibility alone can leave
+    // the icon fully transparent until the user edits the text.
+    findViewById<View>(MaterialR.id.text_input_end_icon)?.apply {
+        alpha = 1f
+        scaleX = 1f
+        scaleY = 1f
+    }
 }

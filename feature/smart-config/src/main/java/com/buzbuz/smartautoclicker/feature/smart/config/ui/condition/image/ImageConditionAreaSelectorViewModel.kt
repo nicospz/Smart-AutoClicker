@@ -22,7 +22,10 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 
+import com.buzbuz.smartautoclicker.core.display.recorder.AccessibilityScreenshotProvider
 import com.buzbuz.smartautoclicker.core.display.recorder.DisplayRecorder
+import com.buzbuz.smartautoclicker.core.domain.model.scenario.ScreenCaptureMode
+import com.buzbuz.smartautoclicker.feature.smart.config.domain.EditionRepository
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -34,21 +37,14 @@ import javax.inject.Inject
 
 class ImageConditionAreaSelectorViewModel @Inject constructor(
     private val displayRecorder: DisplayRecorder,
+    private val accessibilityScreenshotProvider: AccessibilityScreenshotProvider,
+    private val editionRepository: EditionRepository,
 ) : ViewModel()  {
 
     fun takeScreenshot(onSuccess: (Bitmap) -> Unit, onFailure: () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             delay(SCREENSHOT_CAPTURE_DELAY_MS)
-            val screenshot = withTimeoutOrNull(SCREENSHOT_TIMEOUT_MS) {
-                repeat(SCREENSHOT_MAX_ATTEMPTS) { attempt ->
-                    displayRecorder.acquireLatestBitmap()?.let { bitmap ->
-                        Log.i(TAG, "Screenshot acquired on attempt ${attempt + 1}")
-                        return@withTimeoutOrNull bitmap
-                    }
-                    delay(SCREENSHOT_RETRY_DELAY_MS)
-                }
-                null
-            }
+            val screenshot = takeScenarioScreenshot()
 
             withContext(Dispatchers.Main) {
                 if (screenshot != null) onSuccess(screenshot)
@@ -59,6 +55,23 @@ class ImageConditionAreaSelectorViewModel @Inject constructor(
             }
         }
     }
+
+    private suspend fun takeScenarioScreenshot(): Bitmap? =
+        when (editionRepository.editionState.getScenario()?.screenCaptureMode) {
+            ScreenCaptureMode.ACCESSIBILITY_SCREENSHOT ->
+                accessibilityScreenshotProvider.takeScreenshot()
+
+            ScreenCaptureMode.MEDIA_PROJECTION, null -> withTimeoutOrNull(SCREENSHOT_TIMEOUT_MS) {
+                repeat(SCREENSHOT_MAX_ATTEMPTS) { attempt ->
+                    displayRecorder.acquireLatestBitmap()?.let { bitmap ->
+                        Log.i(TAG, "Screenshot acquired on attempt ${attempt + 1}")
+                        return@withTimeoutOrNull bitmap
+                    }
+                    delay(SCREENSHOT_RETRY_DELAY_MS)
+                }
+                null
+            }
+        }
 }
 
 private const val TAG = "ImageConditionAreaSelector"

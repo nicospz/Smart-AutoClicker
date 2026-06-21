@@ -82,4 +82,23 @@ class DumbRepository @Inject constructor(
     override suspend fun markAsUsed(scenarioId: Identifier) {
         dumbScenarioDataSource.markAsUsed(scenarioId.databaseId)
     }
+
+    override suspend fun getDumbScenarioWithActionsBySyncId(syncId: String): DumbScenarioWithActions? =
+        dumbScenarioDataSource.getDumbScenarioWithActionsBySyncId(syncId)
+
+    override suspend fun getDumbScenarioDatabaseIdBySyncId(syncId: String): Long? =
+        dumbScenarioDataSource.getDumbScenarioDatabaseIdBySyncId(syncId)
+
+    override suspend fun upsertDumbScenarioBySyncId(
+        scenarioWithActions: DumbScenarioWithActions,
+        syncId: String,
+        updatedAtMs: Long,
+    ): Long? = dumbScenarioDataSource.upsertDumbScenarioBySyncId(
+        scenarioWithActions = scenarioWithActions,
+        syncId = syncId,
+        updatedAtMs = updatedAtMs,
+    )
+
+    override suspend fun deleteDumbScenarioBySyncId(syncId: String): Boolean =
+        dumbScenarioDataSource.deleteDumbScenarioBySyncId(syncId)
 }

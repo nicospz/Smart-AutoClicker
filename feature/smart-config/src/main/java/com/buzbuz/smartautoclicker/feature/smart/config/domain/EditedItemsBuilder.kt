@@ -40,11 +40,14 @@ import com.buzbuz.smartautoclicker.core.domain.model.action.SetText
 import com.buzbuz.smartautoclicker.core.domain.model.action.StopScenario
 import com.buzbuz.smartautoclicker.core.domain.model.action.Swipe
 import com.buzbuz.smartautoclicker.core.domain.model.action.SystemAction
+import com.buzbuz.smartautoclicker.core.domain.model.action.ThrowletCatch
 import com.buzbuz.smartautoclicker.core.domain.model.action.ToggleEvent
 import com.buzbuz.smartautoclicker.core.domain.model.action.toggleevent.EventToggle
 import com.buzbuz.smartautoclicker.core.domain.model.action.intent.IntentExtra
 import com.buzbuz.smartautoclicker.core.domain.model.condition.ImageCondition
 import com.buzbuz.smartautoclicker.core.domain.model.condition.TriggerCondition
+import com.buzbuz.smartautoclicker.core.domain.model.event.EventGroup
+import com.buzbuz.smartautoclicker.core.domain.model.event.GroupEventType
 import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEvent
 import com.buzbuz.smartautoclicker.core.domain.model.event.TriggerEvent
 import com.buzbuz.smartautoclicker.feature.smart.config.data.ScenarioEditor
@@ -62,6 +65,7 @@ class EditedItemsBuilder internal constructor(
     private val intentExtrasIdCreator = IdentifierCreator()
     private val eventTogglesIdCreator = IdentifierCreator()
     private val endConditionsIdCreator = IdentifierCreator()
+    private val eventGroupsIdCreator = IdentifierCreator()
 
     /**
      * Map of original condition list ids to copy condition ids.
@@ -79,6 +83,7 @@ class EditedItemsBuilder internal constructor(
         actionsIdCreator.resetIdCount()
         intentExtrasIdCreator.resetIdCount()
         endConditionsIdCreator.resetIdCount()
+        eventGroupsIdCreator.resetIdCount()
         eventCopyConditionIdMap.clear()
         _newImageConditionsPaths.clear()
     }
@@ -89,7 +94,7 @@ class EditedItemsBuilder internal constructor(
             scenarioId = getEditedScenarioIdOrThrow(),
             name = defaultValues.eventName(context),
             conditionOperator = defaultValues.eventConditionOperator(),
-            priority = getEditedImageEventsCountOrThrow(),
+            priority = getEditedImageRootListCountOrThrow(),
             conditions = mutableListOf(),
             actions = mutableListOf(),
             keepDetecting = false,
@@ -101,9 +106,38 @@ class EditedItemsBuilder internal constructor(
             scenarioId = getEditedScenarioIdOrThrow(),
             name = defaultValues.eventName(context),
             conditionOperator = defaultValues.eventConditionOperator(),
+            priority = getEditedTriggerRootListCountOrThrow(),
             conditions = mutableListOf(),
             actions = mutableListOf(),
         )
+
+    fun createNewImageEventGroup(context: Context): EventGroup =
+        createNewEventGroup(context, GroupEventType.IMAGE)
+
+    fun createNewTriggerEventGroup(context: Context): EventGroup =
+        createNewEventGroup(context, GroupEventType.TRIGGER)
+
+    private fun createNewEventGroup(context: Context, eventType: GroupEventType): EventGroup {
+        val groupId = eventGroupsIdCreator.generateNewIdentifier()
+        return EventGroup(
+            id = groupId,
+            scenarioId = getEditedScenarioIdOrThrow(),
+            name = defaultValues.eventGroupName(context),
+            eventType = eventType,
+            conditionOperator = defaultValues.eventConditionOperator(),
+            priority = getEditedRootListCount(eventType),
+            conditions = emptyList(),
+        )
+    }
+
+    private fun getEditedRootListCount(eventType: GroupEventType): Int = when (eventType) {
+        GroupEventType.IMAGE -> editor.getEditedImageRootListCount()
+        GroupEventType.TRIGGER -> editor.getEditedTriggerRootListCount()
+    }
+
+    private fun getEditedImageRootListCountOrThrow(): Int = editor.getEditedImageRootListCount()
+
+    private fun getEditedTriggerRootListCountOrThrow(): Int = editor.getEditedTriggerRootListCount()
 
     fun createNewImageEventFrom(from: ImageEvent, scenarioId: Identifier = getEditedScenarioIdOrThrow()): ImageEvent {
         val eventId = eventsIdCreator.generateNewIdentifier()
@@ -147,7 +181,7 @@ class EditedItemsBuilder internal constructor(
 
         return ImageCondition(
             id = id,
-            eventId = getEditedEventIdOrThrow(),
+            eventId = getEditedConditionOwnerIdOrThrow(),
             name = defaultValues.conditionName(context),
             area = area,
             threshold = defaultValues.conditionThreshold(context),
@@ -158,7 +192,7 @@ class EditedItemsBuilder internal constructor(
         )
     }
 
-    fun createNewImageConditionFrom(condition: ImageCondition, eventId: Identifier = getEditedEventIdOrThrow()): ImageCondition =
+    fun createNewImageConditionFrom(condition: ImageCondition, eventId: Identifier = getEditedConditionOwnerIdOrThrow()): ImageCondition =
         condition.copy(
             id = conditionsIdCreator.generateNewIdentifier(),
             eventId = eventId,
@@ -169,7 +203,7 @@ class EditedItemsBuilder internal constructor(
     fun createNewOnBroadcastReceived(context: Context): TriggerCondition.OnBroadcastReceived =
         TriggerCondition.OnBroadcastReceived(
             id = conditionsIdCreator.generateNewIdentifier(),
-            eventId = getEditedEventIdOrThrow(),
+            eventId = getEditedConditionOwnerIdOrThrow(),
             name = defaultValues.conditionName(context),
             intentAction = "",
         )
@@ -177,7 +211,7 @@ class EditedItemsBuilder internal constructor(
     fun createNewOnCounterReached(context: Context): TriggerCondition.OnCounterCountReached =
         TriggerCondition.OnCounterCountReached(
             id = conditionsIdCreator.generateNewIdentifier(),
-            eventId = getEditedEventIdOrThrow(),
+            eventId = getEditedConditionOwnerIdOrThrow(),
             name = defaultValues.conditionName(context),
             counterName = "",
             comparisonOperation = defaultValues.counterComparisonOperation(),
@@ -187,13 +221,13 @@ class EditedItemsBuilder internal constructor(
     fun createNewOnTimerReached(context: Context): TriggerCondition.OnTimerReached =
         TriggerCondition.OnTimerReached(
             id = conditionsIdCreator.generateNewIdentifier(),
-            eventId = getEditedEventIdOrThrow(),
+            eventId = getEditedConditionOwnerIdOrThrow(),
             name = defaultValues.conditionName(context),
             durationMs = 0,
             restartWhenReached = false,
         )
 
-    fun createNewTriggerConditionFrom(condition: TriggerCondition, eventId: Identifier = getEditedEventIdOrThrow()): TriggerCondition =
+    fun createNewTriggerConditionFrom(condition: TriggerCondition, eventId: Identifier = getEditedConditionOwnerIdOrThrow()): TriggerCondition =
         when (condition) {
             is TriggerCondition.OnBroadcastReceived -> createNewOnBroadcastReceivedFrom(condition, eventId)
             is TriggerCondition.OnCounterCountReached -> createNewOnCounterReachedFrom(condition, eventId)
@@ -360,6 +394,15 @@ class EditedItemsBuilder internal constructor(
             priority = 0,
         )
 
+    fun createNewThrowletCatch(context: Context): ThrowletCatch =
+        ThrowletCatch(
+            id = actionsIdCreator.generateNewIdentifier(),
+            eventId = getEditedEventIdOrThrow(),
+            name = defaultValues.throwletCatchName(context),
+            operation = ThrowletCatch.Operation.TOGGLE,
+            priority = 0,
+        )
+
     fun createNewActionFrom(from: Action, eventId: Identifier = getEditedEventIdOrThrow()): Action = when (from) {
         is Click -> createNewClickFrom(from, eventId)
         is Swipe -> createNewSwipeFrom(from, eventId)
@@ -373,6 +416,7 @@ class EditedItemsBuilder internal constructor(
         is SystemAction -> createNewSystemActionFrom(from, eventId)
         is SetText -> createNewSetTextFrom(from, eventId)
         is StopScenario -> createNewStopScenarioFrom(from, eventId)
+        is ThrowletCatch -> createNewThrowletCatchFrom(from, eventId)
     }
 
     private fun createNewClickFrom(from: Click, eventId: Identifier): Click {
@@ -517,6 +561,14 @@ class EditedItemsBuilder internal constructor(
             name = "" + from.name,
         )
 
+    private fun createNewThrowletCatchFrom(from: ThrowletCatch, eventId: Identifier): ThrowletCatch =
+        from.copy(
+            id = actionsIdCreator.generateNewIdentifier(),
+            eventId = eventId,
+            name = "" + from.name,
+            operation = from.operation,
+        )
+
     private fun isEventIdValidInEditedScenario(eventId: Identifier): Boolean =
         editor.getAllEditedEvents().find { eventId == it.id } != null
 
@@ -528,9 +580,11 @@ class EditedItemsBuilder internal constructor(
         editor.currentEventEditor.value?.editedItem?.value?.id
             ?: throw IllegalStateException("Can't create items without an edited event")
 
+    private fun getEditedConditionOwnerIdOrThrow(): Identifier =
+        editor.currentEventGroupEditor.value?.editedItem?.value?.id
+            ?: getEditedEventIdOrThrow()
+
     private fun getEditedActionIdOrThrow(): Identifier =
         editor.currentEventEditor.value?.actionsEditor?.editedItem?.value?.id
             ?: throw IllegalStateException("Can't create items without an edited action")
-
-    private fun getEditedImageEventsCountOrThrow(): Int = editor.getEditedImageEventsCount()
 }

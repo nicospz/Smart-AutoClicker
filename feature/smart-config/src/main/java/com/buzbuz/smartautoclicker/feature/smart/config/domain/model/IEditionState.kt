@@ -24,6 +24,7 @@ import com.buzbuz.smartautoclicker.core.domain.model.condition.Condition
 import com.buzbuz.smartautoclicker.core.domain.model.condition.ImageCondition
 import com.buzbuz.smartautoclicker.core.domain.model.condition.TriggerCondition
 import com.buzbuz.smartautoclicker.core.domain.model.event.Event
+import com.buzbuz.smartautoclicker.core.domain.model.event.EventGroup
 import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEvent
 import com.buzbuz.smartautoclicker.core.domain.model.event.TriggerEvent
 import com.buzbuz.smartautoclicker.core.domain.model.scenario.Scenario
@@ -40,11 +41,14 @@ interface IEditionState {
     val allEditedEvents: Flow<List<Event>>
     val editedImageEventsState: Flow<EditedListState<ImageEvent>>
     val editedTriggerEventsState: Flow<EditedListState<TriggerEvent>>
+    val editedImageEventGroupsState: Flow<EditedListState<EventGroup>>
+    val editedTriggerEventGroupsState: Flow<EditedListState<EventGroup>>
 
     // Edited Event
     val editedEventState: Flow<EditedElementState<Event>>
     val editedImageEventState: Flow<EditedElementState<ImageEvent>>
     val editedTriggerEventState: Flow<EditedElementState<TriggerEvent>>
+    val editedEventGroupState: Flow<EditedElementState<EventGroup>>
 
     // Edited Event child conditions
     val editedEventConditionsState: Flow<EditedListState<Condition>>
@@ -78,6 +82,7 @@ interface IEditionState {
     fun getScenario(): Scenario?
     fun getAllEditedEvents(): List<Event>
     fun <T : Event> getEditedEvent(): T?
+    fun getEditedEventGroup(): EventGroup?
     fun <T : Action> getEditedEventActions(): List<T>?
     fun <T : Condition> getEditedEventConditions(): List<T>?
     fun <T : Condition> getEditedCondition(): T?

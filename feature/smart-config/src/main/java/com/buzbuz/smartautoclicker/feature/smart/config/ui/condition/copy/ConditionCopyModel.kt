@@ -55,14 +55,15 @@ class ConditionCopyModel @Inject constructor(
     private val allCopyItems: Flow<List<ConditionCopyItem>> =
         combine(
             editionRepository.editionState.editedEventState,
+            editionRepository.editionState.editedEventGroupState,
             editionRepository.editionState.conditionsForCopy,
-        ) { editedEventState, conditions ->
+        ) { editedEventState, editedGroupState, conditions ->
 
-            val editedEvent = editedEventState.value ?: return@combine emptyList()
+            val ownerId = editedEventState.value?.id ?: editedGroupState.value?.id ?: return@combine emptyList()
             val editedConditions = mutableListOf<Condition>()
             val otherConditions = mutableListOf<Condition>()
             conditions.forEach { condition ->
-                if (editedEvent.id == condition.eventId) editedConditions.add(condition)
+                if (ownerId == condition.eventId) editedConditions.add(condition)
                 else otherConditions.add(condition)
             }
 

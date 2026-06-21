@@ -153,17 +153,25 @@ internal class SmartProcessingRepositoryImpl @Inject constructor(
         }
     }
 
+    override fun startAccessibilityScreenshotRecord() {
+        detectorEngine.startAccessibilityScreenshotRecord()
+    }
+
     override suspend fun startDetection(context: Context, liveDebugging: Boolean, generateReport: Boolean, autoStopDuration: Duration?) {
         val id = scenarioId.value?.databaseId ?: return
         val scenario = scenarioRepository.getScenario(id) ?: return
         val events = scenarioRepository.getImageEvents(id)
         val triggerEvents = scenarioRepository.getTriggerEvents(id)
+        val imageGroups = scenarioRepository.getImageEventGroups(id)
+        val triggerGroups = scenarioRepository.getTriggerEventGroups(id)
 
         detectorEngine.startDetection(
             context = context,
             scenario = scenario,
             imageEvents = events,
             triggerEvents = triggerEvents,
+            imageGroups = imageGroups,
+            triggerGroups = triggerGroups,
             liveDebugging = liveDebugging,
             generateReport = generateReport,
         )

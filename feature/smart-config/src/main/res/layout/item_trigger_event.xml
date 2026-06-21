@@ -31,11 +31,22 @@
         android:layout_marginHorizontal="@dimen/margin_horizontal_default"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/toggle_ignore"
         android:textSize="@dimen/text_size_list_item_text_big"
         android:textStyle="bold"
         android:singleLine="true"
         tools:text="@string/default_event_name"/>
+
+    <com.google.android.material.materialswitch.MaterialSwitch
+        android:id="@+id/toggle_ignore"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="@dimen/margin_horizontal_small"
+        android:contentDescription="@string/content_desc_ignore_event"
+        android:text="@string/item_event_ignore_toggle"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"/>
 
     <LinearLayout
         android:id="@+id/layout_enabled"
@@ -97,7 +108,7 @@
         app:layout_constraintStart_toEndOf="@id/layout_actions"
         app:layout_constraintTop_toTopOf="@id/layout_actions"
         app:layout_constraintBottom_toBottomOf="@id/layout_actions"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/toggle_ignore"
         android:orientation="horizontal">
 
         <ImageView

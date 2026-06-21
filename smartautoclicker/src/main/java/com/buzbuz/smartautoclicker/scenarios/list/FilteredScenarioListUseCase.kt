@@ -19,6 +19,7 @@ package com.buzbuz.smartautoclicker.scenarios.list
 import android.content.Context
 import com.buzbuz.smartautoclicker.R
 import com.buzbuz.smartautoclicker.core.domain.IRepository
+import com.buzbuz.smartautoclicker.core.base.normalizeScenarioCategory
 import com.buzbuz.smartautoclicker.core.domain.model.scenario.Scenario
 import com.buzbuz.smartautoclicker.core.dumb.domain.IDumbRepository
 import com.buzbuz.smartautoclicker.core.dumb.domain.model.DumbAction
@@ -82,10 +83,10 @@ class FilteredScenarioListUseCase @Inject constructor(
 
                     buildList {
                         if (scenarios.isNotEmpty()) add(sortItem)
-                        addAll(filteredAndSortedItems)
+                        addAll(filteredAndSortedItems.groupByCategory(context))
                     }
                 } else {
-                    scenarios
+                    scenarios.groupByCategory(context)
                 }
             } else {
                 scenarios.filterByName(searchQuery)
@@ -189,4 +190,39 @@ private fun Collection<ScenarioListUiState.Item.ScenarioItem>.sortAndFilter(
             if (sortConfig.inverted) filteredList.sortedByDescending { it.displayName }
             else filteredList.sortedBy { it.displayName }
     }
+}
+
+private fun ScenarioListUiState.Item.ScenarioItem.getCategoryKey(): String? =
+    when (val scenario = scenario) {
+        is Scenario -> scenario.category.normalizeScenarioCategory()
+        is DumbScenario -> scenario.category.normalizeScenarioCategory()
+        else -> null
+    }
+
+private fun Collection<ScenarioListUiState.Item.ScenarioItem>.groupByCategory(
+    context: Context,
+): List<ScenarioListUiState.Item> {
+    if (isEmpty()) return emptyList()
+
+    val uncategorizedLabel = context.getString(R.string.section_scenario_uncategorized)
+
+    return groupBy { it.getCategoryKey() }
+        .toList()
+        .sortedWith(
+            compareBy<Pair<String?, List<ScenarioListUiState.Item.ScenarioItem>>> { (category, _) ->
+                category == null
+            }.thenBy { (category, _) -> category?.lowercase() ?: "" },
+        )
+        .flatMap { (category, items) ->
+            buildList {
+                add(
+                    ScenarioListUiState.Item.CategoryHeaderItem(
+                        categoryName = category ?: uncategorizedLabel,
+                        categoryKey = category,
+                        scenarioCount = items.size,
+                    ),
+                )
+                addAll(items)
+            }
+        }
 }

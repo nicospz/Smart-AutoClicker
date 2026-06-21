@@ -23,7 +23,6 @@ import android.view.View
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 
-import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -35,6 +34,7 @@ import com.buzbuz.smartautoclicker.scenarios.list.model.ScenarioListUiState
 import com.buzbuz.smartautoclicker.core.base.extensions.delayDrawUntil
 import com.buzbuz.smartautoclicker.core.display.recorder.showMediaProjectionWarning
 import com.buzbuz.smartautoclicker.core.domain.model.scenario.Scenario
+import com.buzbuz.smartautoclicker.core.domain.model.scenario.ScreenCaptureMode
 import com.buzbuz.smartautoclicker.core.dumb.domain.model.DumbScenario
 import com.buzbuz.smartautoclicker.feature.revenue.UserConsentState
 import com.buzbuz.smartautoclicker.scenarios.viewmodel.ScenarioViewModel
@@ -72,7 +72,7 @@ class ScenarioActivity : AppCompatActivity(), ScenarioListFragment.Listener {
                 Toast.makeText(this, R.string.toast_denied_screen_sharing_permission, Toast.LENGTH_SHORT).show()
             } else {
                 (requestedItem?.scenario as? Scenario)?.let { scenario ->
-                    startSmartScenario(result, scenario)
+                    startSmartScenario(result.resultCode, result.data!!, scenario)
                 }
             }
         }
@@ -101,11 +101,15 @@ class ScenarioActivity : AppCompatActivity(), ScenarioListFragment.Listener {
         scenarioViewModel.startTroubleshootingFlowIfNeeded(this) {
             when (val scenario = requestedItem?.scenario) {
                 is DumbScenario -> startDumbScenario(scenario)
-                is Scenario -> projectionActivityResult.showMediaProjectionWarning(
-                    context = this,
-                    forceEntireScreen = scenarioViewModel.isEntireScreenCaptureForced(),
-                    onError = { showUnsupportedDeviceDialog() },
-                )
+                is Scenario -> when (scenario.screenCaptureMode) {
+                    ScreenCaptureMode.MEDIA_PROJECTION -> projectionActivityResult.showMediaProjectionWarning(
+                        context = this,
+                        forceEntireScreen = scenarioViewModel.isEntireScreenCaptureForced(),
+                        onError = { showUnsupportedDeviceDialog() },
+                    )
+                    ScreenCaptureMode.ACCESSIBILITY_SCREENSHOT ->
+                        startSmartScenario(RESULT_OK, null, scenario)
+                }
             }
         }
     }
@@ -133,11 +137,11 @@ class ScenarioActivity : AppCompatActivity(), ScenarioListFragment.Listener {
         ))
     }
 
-    private fun startSmartScenario(result: ActivityResult, scenario: Scenario) {
+    private fun startSmartScenario(resultCode: Int, data: Intent?, scenario: Scenario) {
         handleScenarioStartResult(scenarioViewModel.loadSmartScenario(
             context = this,
-            resultCode = result.resultCode,
-            data = result.data!!,
+            resultCode = resultCode,
+            data = data,
             scenario = scenario,
         ))
     }

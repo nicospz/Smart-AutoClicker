@@ -31,6 +31,7 @@ import com.buzbuz.smartautoclicker.core.domain.model.action.SetText
 import com.buzbuz.smartautoclicker.core.domain.model.action.StopScenario
 import com.buzbuz.smartautoclicker.core.domain.model.action.Swipe
 import com.buzbuz.smartautoclicker.core.domain.model.action.SystemAction
+import com.buzbuz.smartautoclicker.core.domain.model.action.ThrowletCatch
 import com.buzbuz.smartautoclicker.core.domain.model.action.ToggleEvent
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.action.OnActionConfigCompleteListener
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.action.changecounter.ChangeCounterDialog
@@ -46,6 +47,7 @@ import com.buzbuz.smartautoclicker.feature.smart.config.ui.action.selection.Acti
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.action.settext.SetTextDialog
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.action.swipe.SwipeDialog
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.action.system.SystemActionDialog
+import com.buzbuz.smartautoclicker.feature.smart.config.ui.action.throwletcatch.ThrowletCatchDialog
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.action.toggleevent.ToggleEventDialog
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.common.starters.newNotificationPermissionStarterOverlay
 
@@ -115,6 +117,7 @@ internal fun BaseOverlay.showActionConfigDialog(configurator: ActionConfigurator
         is Pause -> PauseDialog(actionConfigDialogListener)
         is Intent -> IntentDialog(actionConfigDialogListener)
         is SystemAction -> SystemActionDialog(actionConfigDialogListener)
+        is ThrowletCatch -> ThrowletCatchDialog(actionConfigDialogListener)
         is ToggleEvent -> ToggleEventDialog(actionConfigDialogListener)
         is ChangeCounter -> ChangeCounterDialog(actionConfigDialogListener)
         is SetText -> SetTextDialog(actionConfigDialogListener)

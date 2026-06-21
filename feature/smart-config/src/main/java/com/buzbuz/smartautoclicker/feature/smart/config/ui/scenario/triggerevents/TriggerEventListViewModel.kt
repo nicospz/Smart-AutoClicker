@@ -18,49 +18,90 @@ package com.buzbuz.smartautoclicker.feature.smart.config.ui.scenario.triggereven
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
-
+import com.buzbuz.smartautoclicker.core.domain.model.event.EventGroup
 import com.buzbuz.smartautoclicker.core.domain.model.event.TriggerEvent
 import com.buzbuz.smartautoclicker.feature.smart.config.domain.EditionRepository
-import com.buzbuz.smartautoclicker.feature.smart.config.ui.common.model.event.toUiTriggerEvent
-
+import com.buzbuz.smartautoclicker.feature.smart.config.ui.scenario.GroupedEventListOrderApplier
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import javax.inject.Inject
-
 
 class TriggerEventListViewModel @Inject constructor(
     private val editionRepository: EditionRepository,
 ) : ViewModel() {
 
-    /** Currently configured events. */
-    val triggerEvents = editionRepository.editionState.editedTriggerEventsState
-        .mapNotNull { triggerEventsState ->
-            triggerEventsState.value?.map { triggerEvent ->
-                triggerEvent.toUiTriggerEvent(inError = !triggerEvent.isComplete())
-            }
-        }
+    private val expandedGroupIds = MutableStateFlow<Set<Long>>(emptySet())
+    private val searchQuery = MutableStateFlow("")
 
-    /** Tells if the copy button should be visible or not. */
+    val listItems = combine(
+        editionRepository.editionState.editedTriggerEventsState,
+        editionRepository.editionState.editedTriggerEventGroupsState,
+        expandedGroupIds,
+        searchQuery,
+    ) { eventsState, groupsState, expanded, query ->
+        TriggerEventListItem.buildList(
+            events = eventsState.value ?: emptyList(),
+            groups = groupsState.value ?: emptyList(),
+            expandedGroupIds = expanded,
+            searchQuery = query.trim(),
+        )
+    }
+
     val copyButtonIsVisible: Flow<Boolean> = editionRepository.editionState.canCopyTriggerEvents
 
-    /**
-     * Creates a new event item.
-     * @param context the Android context.
-     * @return the new event item.
-     */
-    fun createNewEvent(context: Context, event: TriggerEvent? = null): TriggerEvent = with(editionRepository.editedItemsBuilder) {
-        if (event == null) createNewTriggerEvent(context)
-        else createNewTriggerEventFrom(from = event)
+    fun createNewEvent(context: Context, event: TriggerEvent? = null): TriggerEvent =
+        with(editionRepository.editedItemsBuilder) {
+            if (event == null) createNewTriggerEvent(context)
+            else createNewTriggerEventFrom(from = event)
+        }
+
+    fun createNewGroup(context: Context): EventGroup =
+        editionRepository.editedItemsBuilder.createNewTriggerEventGroup(context).also { group ->
+            editionRepository.upsertNewEventGroup(group)
+        }
+
+    fun toggleGroupExpanded(group: EventGroup) {
+        val id = group.id.databaseId
+        expandedGroupIds.value = expandedGroupIds.value.let { current ->
+            if (current.contains(id)) current - id else current + id
+        }
     }
 
     fun startEventEdition(event: TriggerEvent) = editionRepository.startEventEdition(event)
 
-    /** Add or update an event. If the event id is unset, it will be added. If not, updated. */
+    fun updateSearchQuery(query: String) {
+        searchQuery.value = query
+    }
+
+    fun setEventIgnored(event: TriggerEvent, ignored: Boolean) {
+        val updatedEvents = editionRepository.getEditedTriggerEvents().map { editedEvent ->
+            if (editedEvent.id == event.id) editedEvent.copy(ignored = ignored) else editedEvent
+        }
+        editionRepository.updateTriggerEventsAndGroupsOrder(
+            events = updatedEvents,
+            groups = editionRepository.getEditedTriggerEventGroups(),
+        )
+    }
+
+    fun startGroupEdition(group: EventGroup) = editionRepository.startEventGroupEdition(group)
+
     fun saveEventEdition() = editionRepository.upsertEditedEvent()
 
-    /** Delete an event. */
+    fun saveGroupEdition() = editionRepository.upsertEditedEventGroup()
+
     fun deleteEditedEvent() = editionRepository.deleteEditedEvent()
 
-    /** Drop all changes made to the currently edited event. */
+    fun deleteEditedGroup() = editionRepository.deleteEditedEventGroup()
+
     fun dismissEditedEvent() = editionRepository.stopEventEdition()
+
+    fun dismissEditedGroup() = editionRepository.stopEventGroupEdition()
+
+    fun updateListOrder(items: List<TriggerEventListItem>) {
+        val events = editionRepository.getEditedTriggerEvents()
+        val groups = editionRepository.getEditedTriggerEventGroups()
+        val (updatedEvents, updatedGroups) = GroupedEventListOrderApplier.applyTriggerListOrder(items, events, groups)
+        editionRepository.updateTriggerEventsAndGroupsOrder(updatedEvents, updatedGroups)
+    }
 }

@@ -22,7 +22,10 @@ import com.buzbuz.smartautoclicker.core.dumb.domain.model.DumbScenario
 
 interface ILocalService {
     fun startDumbScenario(dumbScenario: DumbScenario)
-    fun startSmartScenario(resultCode: Int, data: Intent, scenario: Scenario)
+    fun startSmartScenario(resultCode: Int, data: Intent?, scenario: Scenario)
+    fun toggleThrowletOverlay()
+    fun showThrowletOverlay()
+    fun hideThrowletOverlay()
     fun stop()
     fun release()
 }

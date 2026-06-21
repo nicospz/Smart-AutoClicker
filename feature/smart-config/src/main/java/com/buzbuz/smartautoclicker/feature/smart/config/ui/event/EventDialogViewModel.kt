@@ -28,15 +28,21 @@ import com.buzbuz.smartautoclicker.core.domain.model.action.Action
 import com.buzbuz.smartautoclicker.core.domain.model.condition.ImageCondition
 import com.buzbuz.smartautoclicker.core.domain.model.condition.TriggerCondition
 import com.buzbuz.smartautoclicker.core.domain.model.event.Event
+import com.buzbuz.smartautoclicker.core.domain.model.event.EventGroup
 import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEventDetectionMode
 import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEventDetectionMode.OFFSET_REPEAT
 import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEventDetectionMode.SPLIT_SCREEN
 import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEvent
+import com.buzbuz.smartautoclicker.core.domain.model.event.TriggerEvent
 import com.buzbuz.smartautoclicker.core.domain.model.event.OffsetRepeatMatchMode
 import com.buzbuz.smartautoclicker.core.domain.model.scenario.Scenario
 import com.buzbuz.smartautoclicker.core.settings.SettingsRepository
 import com.buzbuz.smartautoclicker.core.ui.monitoring.MonitoredViewsManager
 import com.buzbuz.smartautoclicker.core.ui.monitoring.MonitoredViewType
+import com.buzbuz.smartautoclicker.core.domain.model.event.hierarchicalName
+import com.buzbuz.smartautoclicker.core.domain.model.event.visitInListOrder
+import com.buzbuz.smartautoclicker.core.processing.data.processor.SPLIT_SCREEN_Y_OFFSET_PX
+import com.buzbuz.smartautoclicker.feature.smart.config.R
 import com.buzbuz.smartautoclicker.feature.smart.config.domain.EditionRepository
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.common.model.action.getIconRes
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.common.model.condition.UiImageCondition
@@ -56,6 +62,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.stateIn
@@ -65,7 +72,7 @@ import javax.inject.Inject
 
 @OptIn(FlowPreview::class)
 class EventDialogViewModel @Inject constructor(
-    @ApplicationContext context: Context,
+    @param:ApplicationContext private val context: Context,
     private val bitmapRepository: BitmapRepository,
     private val editionRepository: EditionRepository,
     private val monitoredViewsManager: MonitoredViewsManager,
@@ -149,7 +156,7 @@ class EventDialogViewModel @Inject constructor(
     val isSplitScreenDetectionMode: Flow<Boolean> = detectionMode
         .map { it == SPLIT_SCREEN }
 
-    val splitScreenDeviceYOffset: Flow<Int> = settingsRepository.splitScreenYOffsetPxFlow
+    val splitScreenDeviceYOffset: Flow<Int> = flowOf(SPLIT_SCREEN_Y_OFFSET_PX)
 
     val offsetRepeatCount: Flow<String> = configuredEvent
         .filterIsInstance<ImageEvent>()
@@ -173,6 +180,27 @@ class EventDialogViewModel @Inject constructor(
     val canTryEvent: Flow<Boolean> = configuredEvent
         .filterIsInstance<ImageEvent>()
         .map { it.isComplete() }
+
+    val eventGroupsDropdownItems: Flow<List<EventGroupDropdownItem>> = combine(
+        configuredEvent,
+        editionRepository.editionState.editedImageEventGroupsState,
+        editionRepository.editionState.editedTriggerEventGroupsState,
+    ) { event, imageGroupsState, triggerGroupsState ->
+        val groups = when (event) {
+            is ImageEvent -> imageGroupsState.value ?: emptyList()
+            is TriggerEvent -> triggerGroupsState.value ?: emptyList()
+        }
+        buildEventGroupDropdownItems(groups)
+    }
+
+    val isEventGroupDropdownVisible: Flow<Boolean> = eventGroupsDropdownItems.map { it.size > 1 }
+
+    val selectedEventGroup: Flow<EventGroupDropdownItem> = combine(
+        configuredEvent,
+        eventGroupsDropdownItems,
+    ) { event, items ->
+        items.find { it.groupId == event.groupId } ?: items.first()
+    }.distinctUntilChanged()
 
 
     fun isConfiguringScreenEvent(): Boolean =
@@ -260,6 +288,12 @@ class EventDialogViewModel @Inject constructor(
         }
     }
 
+    fun setEventGroup(item: EventGroupDropdownItem) {
+        updateEditedEvent { oldValue ->
+            oldValue.copyBase(groupId = item.groupId)
+        }
+    }
+
     fun toggleKeepDetectingState() {
         updateEditedEvent { oldValue ->
             if (oldValue is ImageEvent) oldValue.copy(keepDetecting = !oldValue.keepDetecting)
@@ -311,4 +345,22 @@ class EventDialogViewModel @Inject constructor(
             isInError = !action.isComplete(),
         )
     }
+
+    private fun buildEventGroupDropdownItems(groups: List<EventGroup>): List<EventGroupDropdownItem> =
+        buildList {
+            add(
+                EventGroupDropdownItem(
+                    groupId = null,
+                    label = context.getString(R.string.dropdown_event_group_none),
+                )
+            )
+            groups.visitInListOrder { group ->
+                add(
+                    EventGroupDropdownItem(
+                        groupId = group.id,
+                        label = groups.hierarchicalName(group.id),
+                    ),
+                )
+            }
+        }
 }

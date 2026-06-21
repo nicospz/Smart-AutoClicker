@@ -113,10 +113,14 @@ class ImageConditionAreaSelectorMenu(
     private fun onAreaSelectorReady(enableConfirm: Boolean = false) {
         setOverlayViewVisibility(true)
         setMenuVisibility(View.VISIBLE)
-        if (enableConfirm) {
-            setMenuItemViewEnabled(viewBinding.btnConfirm, true, true)
-        }
+        syncConfirmButtonState(forceEnable = enableConfirm)
         ensureMenuInteractive()
+    }
+
+    /** Sync confirm button with selector validity (handles missed callbacks during setup). */
+    private fun syncConfirmButtonState(forceEnable: Boolean = false) {
+        val isEnabled = forceEnable || selectorView.hasValidSelection()
+        setMenuItemViewEnabled(viewBinding.btnConfirm, isEnabled, isEnabled)
     }
 
     /** hideAll() skips the automatic resume; menu clicks require the RESUMED state. */

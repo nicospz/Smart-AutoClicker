@@ -31,6 +31,7 @@ import com.buzbuz.smartautoclicker.core.processing.domain.SmartProcessingReposit
 import com.buzbuz.smartautoclicker.feature.qstile.R
 import com.buzbuz.smartautoclicker.feature.qstile.data.QSTileScenarioInfo
 import com.buzbuz.smartautoclicker.feature.qstile.data.QsTileConfigDataSource
+import com.buzbuz.smartautoclicker.feature.qstile.data.QsTileSyncSnapshot
 import com.buzbuz.smartautoclicker.feature.qstile.ui.QSTileService
 
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -108,8 +109,30 @@ class QSTileRepository @Inject constructor(
 
     fun setTileScenario(scenarioId: Long, isSmart: Boolean) {
         coroutineScopeIo.launch {
-            qsTileConfigDataSource.putQSTileScenarioInfo(QSTileScenarioInfo(scenarioId, isSmart))
+            val syncId = if (isSmart) {
+                smartRepository.getScenario(scenarioId)?.syncId
+            } else {
+                dumbRepository.getDumbScenario(scenarioId)?.syncId
+            }
+            qsTileConfigDataSource.putQSTileScenarioInfo(
+                QSTileScenarioInfo(scenarioId, isSmart, syncId),
+            )
         }
+    }
+
+    suspend fun readCloudSyncSnapshot(): QsTileSyncSnapshot =
+        qsTileConfigDataSource.readSyncSnapshot()
+
+    suspend fun applyCloudSyncSnapshot(snapshot: QsTileSyncSnapshot) =
+        qsTileConfigDataSource.applySyncSnapshot(snapshot)
+
+    suspend fun remapScenarioDbIdFromSyncId(syncId: String, isSmart: Boolean) {
+        val dbId = if (isSmart) {
+            smartRepository.getScenarioDatabaseIdBySyncId(syncId)
+        } else {
+            dumbRepository.getDumbScenarioDatabaseIdBySyncId(syncId)
+        }
+        qsTileConfigDataSource.updateScenarioDbId(dbId)
     }
 
     fun setTileActionHandler(actionHandler: QSTileActionHandler) {
@@ -125,7 +148,7 @@ class QSTileRepository @Inject constructor(
     internal fun startDumbScenario(scenario: DumbScenario) =
         qsTileActionHandler?.startDumbScenario(scenario)
 
-    internal fun startSmartScenario(resultCode: Int, data: Intent, scenario: Scenario) =
+    internal fun startSmartScenario(resultCode: Int, data: Intent?, scenario: Scenario) =
         qsTileActionHandler?.startSmartScenario(resultCode, data, scenario)
 
     internal fun stopScenarios() =
@@ -156,4 +179,3 @@ class QSTileRepository @Inject constructor(
         )
     }
 }
-

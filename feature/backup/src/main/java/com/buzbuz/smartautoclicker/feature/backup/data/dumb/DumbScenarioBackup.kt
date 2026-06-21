@@ -30,7 +30,7 @@ import kotlinx.serialization.Serializable
  * @param dumbScenario the dumb scenario being exported/imported.
  */
 @Serializable
-internal data class DumbScenarioBackup(
+data class DumbScenarioBackup(
     val version: Int,
     val screenWidth: Int,
     val screenHeight: Int,

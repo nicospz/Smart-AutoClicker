@@ -113,6 +113,14 @@ data class ScenarioListUiState(
             val changeOrderChecked: Boolean,
         ): Item()
 
+        data class CategoryHeaderItem(
+            /** Display name shown in the list. */
+            val categoryName: String,
+            /** Raw category value. Null when uncategorized. */
+            val categoryKey: String?,
+            val scenarioCount: Int,
+        ): Item()
+
         sealed class ScenarioItem(val displayName: String, val scenarioTypeIcon: Int): Item() {
 
             abstract val scenario: Any

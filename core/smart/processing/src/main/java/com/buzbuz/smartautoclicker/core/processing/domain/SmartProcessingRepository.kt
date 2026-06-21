@@ -78,6 +78,14 @@ interface SmartProcessingRepository : Dumpable {
     fun startScreenRecord(resultCode: Int, data: Intent)
 
     /**
+     * Start screen capture using AccessibilityService screenshots.
+     *
+     * This does not request or own MediaProjection and is intended for scenarios that must run alongside another
+     * app already using screen sharing.
+     */
+    fun startAccessibilityScreenshotRecord()
+
+    /**
      * Start the processing for the current [Scenario].
      * Ignored if the state is different from [DetectionState.RECORDING].
      *

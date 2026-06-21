@@ -17,67 +17,92 @@
 package com.buzbuz.smartautoclicker.feature.smart.config.ui.scenario.triggerevents
 
 import android.content.Context
+import android.text.InputType
 import android.view.LayoutInflater
 import android.view.ViewGroup
-
+import android.widget.LinearLayout
+import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.DividerItemDecoration
-
+import androidx.recyclerview.widget.ItemTouchHelper
 import com.buzbuz.smartautoclicker.core.common.overlays.dialog.implementation.navbar.NavBarDialogContent
 import com.buzbuz.smartautoclicker.core.common.overlays.dialog.implementation.navbar.viewModels
+import com.buzbuz.smartautoclicker.core.domain.model.event.EventGroup
+import com.buzbuz.smartautoclicker.core.domain.model.event.TriggerEvent
 import com.buzbuz.smartautoclicker.core.ui.bindings.lists.setEmptyText
 import com.buzbuz.smartautoclicker.core.ui.bindings.lists.updateState
 import com.buzbuz.smartautoclicker.core.ui.databinding.IncludeLoadableListBinding
-import com.buzbuz.smartautoclicker.core.domain.model.event.TriggerEvent
 import com.buzbuz.smartautoclicker.feature.smart.config.R
 import com.buzbuz.smartautoclicker.feature.smart.config.di.ScenarioConfigViewModelsEntryPoint
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.event.EventDialog
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.event.copy.EventCopyDialog
-import com.buzbuz.smartautoclicker.feature.smart.config.ui.common.model.event.UiTriggerEvent
-
+import com.buzbuz.smartautoclicker.feature.smart.config.ui.eventgroup.EventGroupDialog
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.launch
 
 class TriggerEventListContent(appContext: Context) : NavBarDialogContent(appContext) {
 
-    /** View model for this content. */
     private val viewModel: TriggerEventListViewModel by viewModels(
         entryPoint = ScenarioConfigViewModelsEntryPoint::class.java,
         creator = { triggerEventListViewModel() },
     )
 
-    /** View binding for all views in this content. */
     private lateinit var viewBinding: IncludeLoadableListBinding
-    /** Adapter for the list of events. */
-    private lateinit var eventAdapter: TriggerEventListAdapter
+    private lateinit var listAdapter: TriggerEventGroupedListAdapter
+    private val itemTouchHelper = ItemTouchHelper(
+        TriggerEventGroupedReorderTouchHelper { listAdapter },
+    )
 
     override fun floatingActionButtonsAreAvailable(): Boolean = true
 
     override fun onCreateView(container: ViewGroup): ViewGroup {
-        eventAdapter = TriggerEventListAdapter(
-            itemClickedListener = ::onTriggerEventItemClicked,
+        listAdapter = TriggerEventGroupedListAdapter(
+            onEventClicked = ::onTriggerEventItemClicked,
+            onEventIgnoreChanged = viewModel::setEventIgnored,
+            onGroupClicked = ::onGroupItemClicked,
+            onGroupExpandClicked = viewModel::toggleGroupExpanded,
+            onAddGroupClicked = ::onAddGroupClicked,
+            onReorderFinished = viewModel::updateListOrder,
         )
 
-        viewBinding = IncludeLoadableListBinding.inflate(LayoutInflater.from(context), container, false).apply {
+        val rootLayout = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
+            )
+        }
+        rootLayout.addView(createSearchField())
+
+        viewBinding = IncludeLoadableListBinding.inflate(LayoutInflater.from(context), rootLayout, false).apply {
+            root.layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                0,
+                1f,
+            )
             setEmptyText(
                 id = R.string.message_empty_trigger_event_list_title,
                 secondaryId = R.string.message_empty_trigger_event_list_desc,
             )
             list.apply {
                 addItemDecoration(DividerItemDecoration(context, DividerItemDecoration.VERTICAL))
-                adapter = eventAdapter
+                itemTouchHelper.attachToRecyclerView(this)
+                adapter = listAdapter
             }
         }
+        rootLayout.addView(viewBinding.root)
 
-        return viewBinding.root
+        return rootLayout
     }
 
     override fun onViewCreated() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch { viewModel.copyButtonIsVisible.collect(::updateCopyButtonVisibility) }
-                launch { viewModel.triggerEvents.collect(::updateTriggerEventList) }
+                launch { viewModel.listItems.collect(::updateTriggerEventList) }
             }
         }
     }
@@ -100,9 +125,53 @@ class TriggerEventListContent(appContext: Context) : NavBarDialogContent(appCont
         }
     }
 
-    private fun updateTriggerEventList(newItems: List<UiTriggerEvent>?) {
+    private fun onGroupItemClicked(group: EventGroup) {
+        debounceUserInteraction {
+            showGroupConfigDialog(group)
+        }
+    }
+
+    private fun onAddGroupClicked() {
+        debounceUserInteraction {
+            showGroupConfigDialog(viewModel.createNewGroup(context))
+        }
+    }
+
+    private fun createSearchField(): TextInputLayout {
+        val horizontalMargin = context.resources.getDimensionPixelSize(
+            com.buzbuz.smartautoclicker.core.ui.R.dimen.margin_horizontal_default,
+        )
+        val verticalMargin = context.resources.getDimensionPixelSize(
+            com.buzbuz.smartautoclicker.core.ui.R.dimen.margin_vertical_small,
+        )
+
+        return TextInputLayout(context).apply {
+            hint = context.getString(R.string.search_view_hint_event_copy)
+            endIconMode = TextInputLayout.END_ICON_CLEAR_TEXT
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            ).apply {
+                setMargins(horizontalMargin, verticalMargin, horizontalMargin, verticalMargin)
+            }
+
+            addView(
+                TextInputEditText(context).apply {
+                    inputType = InputType.TYPE_CLASS_TEXT
+                    setSingleLine(true)
+                    doAfterTextChanged { viewModel.updateSearchQuery(it?.toString().orEmpty()) }
+                },
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                ),
+            )
+        }
+    }
+
+    private fun updateTriggerEventList(newItems: List<TriggerEventListItem>?) {
         viewBinding.updateState(newItems)
-        eventAdapter.submitList(newItems)
+        listAdapter.submitList(newItems)
     }
 
     private fun updateCopyButtonVisibility(isVisible: Boolean) {
@@ -111,7 +180,6 @@ class TriggerEventListContent(appContext: Context) : NavBarDialogContent(appCont
         }
     }
 
-    /** Opens the dialog allowing the user to copy an event. */
     private fun showTriggerEventCopyDialog() {
         dialogController.overlayManager.navigateTo(
             context = context,
@@ -124,7 +192,6 @@ class TriggerEventListContent(appContext: Context) : NavBarDialogContent(appCont
         )
     }
 
-    /** Opens the dialog allowing the user to add a new event. */
     private fun showTriggerEventConfigDialog(item: TriggerEvent) {
         viewModel.startEventEdition(item)
 
@@ -134,6 +201,20 @@ class TriggerEventListContent(appContext: Context) : NavBarDialogContent(appCont
                 onConfigComplete = viewModel::saveEventEdition,
                 onDelete = viewModel::deleteEditedEvent,
                 onDismiss = viewModel::dismissEditedEvent,
+            ),
+            hideCurrent = true,
+        )
+    }
+
+    private fun showGroupConfigDialog(group: EventGroup) {
+        viewModel.startGroupEdition(group)
+
+        dialogController.overlayManager.navigateTo(
+            context = context,
+            newOverlay = EventGroupDialog(
+                onConfigComplete = viewModel::saveGroupEdition,
+                onDelete = viewModel::deleteEditedGroup,
+                onDismiss = viewModel::dismissEditedGroup,
             ),
             hideCurrent = true,
         )

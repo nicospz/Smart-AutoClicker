@@ -34,6 +34,7 @@ import com.buzbuz.smartautoclicker.core.domain.model.action.SetText
 import com.buzbuz.smartautoclicker.core.domain.model.action.StopScenario
 import com.buzbuz.smartautoclicker.core.domain.model.action.Swipe
 import com.buzbuz.smartautoclicker.core.domain.model.action.SystemAction
+import com.buzbuz.smartautoclicker.core.domain.model.action.ThrowletCatch
 import com.buzbuz.smartautoclicker.core.domain.model.action.ToggleEvent
 import com.buzbuz.smartautoclicker.core.domain.model.condition.Condition
 import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEvent
@@ -195,6 +196,7 @@ class DebugReportTimelineViewModel @Inject constructor(
             is PrecisionText -> R.drawable.ic_action_set_text
             is StopScenario -> R.drawable.ic_stop
             is SystemAction -> R.drawable.ic_action_system
+            is ThrowletCatch -> R.drawable.ic_intent
             is PrecisionGesture -> R.drawable.ic_swipe
         }
 }

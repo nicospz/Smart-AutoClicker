@@ -63,6 +63,8 @@
     <string name="input_field_label_name">Name</string>
     <string name="input_field_label_pause_duration">Pause duration</string>
     <string name="input_field_label_scenario_name">Scenario name</string>
+    <string name="input_field_label_scenario_category">Category</string>
+    <string name="input_field_helper_scenario_category">Optional. Group scenarios in the main list and launch them by category.</string>
     <string name="input_field_label_swipe_duration">Swipe duration (ms)</string>
     <string name="input_field_error_required">Required</string>
 

@@ -12,6 +12,7 @@ open class DropdownItem(
     @field:StringRes val title: Int,
     @field:StringRes val helperText: Int? = null,
     @field:DrawableRes val icon: Int? = null,
+    val titleText: String? = null,
 )
 
 sealed class TimeUnitDropDownItem(@StringRes title: Int) : DropdownItem(title) {

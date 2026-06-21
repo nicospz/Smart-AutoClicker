@@ -57,7 +57,21 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/button_precision_text_mode_shell" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/button_mode_paste"
+                    style="@style/AppTheme.Widget.TextButtonOutlined"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/button_precision_text_mode_paste" />
             </com.google.android.material.button.MaterialButtonToggleGroup>
+
+            <include
+                android:id="@+id/field_replace_existing_text"
+                layout="@layout/include_field_switch"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/margin_vertical_large" />
 
             <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/text_status"

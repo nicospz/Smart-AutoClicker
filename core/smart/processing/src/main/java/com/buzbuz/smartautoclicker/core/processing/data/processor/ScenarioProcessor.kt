@@ -26,8 +26,12 @@ import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEventDetectionMo
 import com.buzbuz.smartautoclicker.core.common.actions.precision.PrecisionGestureExecutor
 import com.buzbuz.smartautoclicker.core.common.actions.precision.PrecisionTextExecutor
 import com.buzbuz.smartautoclicker.core.detection.ImageDetector
+import com.buzbuz.smartautoclicker.core.domain.model.event.EventGroup
 import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEvent
 import com.buzbuz.smartautoclicker.core.domain.model.event.TriggerEvent
+import com.buzbuz.smartautoclicker.core.domain.model.event.RootListEntry
+import com.buzbuz.smartautoclicker.core.domain.model.event.childrenOf
+import com.buzbuz.smartautoclicker.core.domain.model.event.rootListEntries
 import com.buzbuz.smartautoclicker.core.processing.data.processor.state.ProcessingState
 import com.buzbuz.smartautoclicker.core.processing.data.scaling.ScalingManager
 import com.buzbuz.smartautoclicker.core.processing.domain.EventType
@@ -48,25 +52,31 @@ import kotlinx.coroutines.yield
  */
 internal class ScenarioProcessor(
     private val processingTag: String,
+    private val scenarioName: String,
     private val imageDetector: ImageDetector,
     scalingManager: ScalingManager,
     randomize: Boolean,
     imageEvents: List<ImageEvent>,
     triggerEvents: List<TriggerEvent>,
+    private val imageGroups: List<EventGroup> = emptyList(),
+    private val triggerGroups: List<EventGroup> = emptyList(),
     private val bitmapSupplier: suspend (String, Int, Int) -> Bitmap?,
     androidExecutor: AndroidActionExecutor,
     precisionGestureExecutor: PrecisionGestureExecutor? = null,
     precisionTextExecutor: PrecisionTextExecutor? = null,
     unblockWorkaroundEnabled: Boolean = false,
-    private val splitScreenYOffsetPx: Int = 0,
     private val onStopRequested: () -> Unit,
     private val progressListener: SmartProcessingListener?,
 ) {
 
     /** Handle the processing state of the scenario. */
     @VisibleForTesting internal val processingState: ProcessingState = ProcessingState(
+        catalogImageEvents = imageEvents,
+        catalogTriggerEvents = triggerEvents,
         imageEvents = imageEvents,
         triggerEvents = triggerEvents,
+        imageGroups = imageGroups,
+        triggerGroups = triggerGroups,
         progressListener = progressListener,
     )
     /** Check conditions and tell if they are fulfilled. */
@@ -90,6 +100,11 @@ internal class ScenarioProcessor(
 
     fun onScenarioStart(context: Context) {
         processingState.onProcessingStarted(context)
+        ConditionProcessingLog.logScenarioCatalog(
+            scenarioName = scenarioName,
+            triggerEvents = processingState.getCatalogTriggerEvents(),
+            imageEvents = processingState.getCatalogImageEvents(),
+        )
     }
 
     fun onScenarioEnd() {
@@ -113,7 +128,8 @@ internal class ScenarioProcessor(
         // Handle all trigger events enabled during previous processing
         if (!processingState.areAllTriggerEventsDisabled()) {
             progressListener?.onEventsListProcessingStarted(EventType.Trigger)
-            processTriggerEvents(processingState.getEnabledTriggerEvents())
+            processingState.beginTriggerPhase()
+            processTriggerEventsInListOrder()
             progressListener?.onEventsProcessingCompleted(EventType.Trigger)
         }
 
@@ -124,7 +140,8 @@ internal class ScenarioProcessor(
         // Handle the image detection
         if (!processingState.areAllImageEventsDisabled()) {
             progressListener?.onEventsListProcessingStarted(EventType.Image)
-            processImageEvents(screenFrame, processingState.getEnabledImageEvents())
+            processingState.beginImagePhase()
+            processImageEventsInListOrder(screenFrame)
             progressListener?.onEventsProcessingCompleted(EventType.Image)
         }
 
@@ -134,89 +151,157 @@ internal class ScenarioProcessor(
         return
     }
 
-    private suspend fun processTriggerEvents(events: Collection<TriggerEvent>) {
-        for (triggerEvent in events) {
-            // Enabled state of the event might have changed during the loop
-            if (!processingState.isEventEnabled(triggerEvent.id.databaseId)) continue
-            if (processingState.isEventOnCooldown(triggerEvent.id.databaseId)) continue
+    private suspend fun evaluateGroupGate(group: EventGroup) {
+        if (group.conditions.isEmpty()) {
+            processingState.setGroupGateResult(group.id.databaseId, true)
+            return
+        }
 
-            // No conditions ? This should not happen, skip this event
-            if (triggerEvent.conditions.isEmpty()) continue
+        val results = conditionsVerifier.verifyConditions(
+            operator = group.conditionOperator,
+            conditions = group.conditions,
+            eventContext = "group:${group.name}(id=${group.id.databaseId})",
+        )
+        processingState.setGroupGateResult(group.id.databaseId, results.fulfilled == true)
+    }
 
-            progressListener?.onEventProcessingStarted(triggerEvent)
-            val results = conditionsVerifier.verifyConditions(
-                operator = triggerEvent.conditionOperator,
-                conditions = triggerEvent.conditions,
-            )
+    private suspend fun processTriggerEventsInListOrder() {
+        val catalogOrder = processingState.getCatalogTriggerEvents()
+        val ungrouped = catalogOrder.filter { it.groupId == null }.sortedBy { it.priority }
 
-            progressListener?.onEventProcessingCompleted(triggerEvent, results.fulfilled == true, results.getAllTriggerConditionsResults())
-            if (results.fulfilled  == true) {
-                actionExecutor.executeActions(triggerEvent, results)
-                processingState.startEventCooldown(triggerEvent)
-                progressListener?.onEventActionsExecuted(triggerEvent, results.getAllTriggerConditionsResults())
+        for (entry in rootListEntries(ungrouped, triggerGroups, eventPriority = { it.priority })) {
+            when (entry) {
+                is RootListEntry.UngroupedEvent -> processTriggerEvent(entry.event)
+                is RootListEntry.RootGroup -> processTriggerGroupNode(entry.group, catalogOrder)
             }
         }
     }
 
-    private suspend fun processImageEvents(screenFrame: Bitmap, events: Collection<ImageEvent>) {
-        // Set the current screen image
+    private suspend fun processTriggerGroupNode(group: EventGroup, catalogOrder: List<TriggerEvent>) {
+        evaluateGroupGate(group)
+        if (!processingState.isGroupActive(group.id)) return
+
+        for (triggerEvent in catalogOrder.filter { it.groupId == group.id }.sortedBy { it.priority }) {
+            processTriggerEvent(triggerEvent)
+        }
+
+        for (childGroup in triggerGroups.childrenOf(group.id)) {
+            processTriggerGroupNode(childGroup, catalogOrder)
+        }
+    }
+
+    private suspend fun processTriggerEvent(triggerEvent: TriggerEvent) {
+        if (!processingState.isGroupActive(triggerEvent.groupId)) return
+        // Enabled state of the event might have changed during the loop
+        if (!processingState.isEventEnabled(triggerEvent.id.databaseId)) return
+        if (processingState.isEventOnCooldown(triggerEvent.id.databaseId)) return
+
+        // No conditions ? This should not happen, skip this event
+        if (triggerEvent.conditions.isEmpty()) return
+
+        progressListener?.onEventProcessingStarted(triggerEvent)
+        val results = conditionsVerifier.verifyConditions(
+            operator = triggerEvent.conditionOperator,
+            conditions = triggerEvent.conditions,
+            eventContext = "trigger:${triggerEvent.name}(id=${triggerEvent.id.databaseId})",
+        )
+
+        progressListener?.onEventProcessingCompleted(triggerEvent, results.fulfilled == true, results.getAllTriggerConditionsResults())
+        if (results.fulfilled == true) {
+            actionExecutor.executeActions(triggerEvent, results)
+            processingState.startEventCooldown(triggerEvent)
+            progressListener?.onEventActionsExecuted(triggerEvent, results.getAllTriggerConditionsResults())
+        }
+    }
+
+    private suspend fun processImageEventsInListOrder(screenFrame: Bitmap) {
         imageDetector.setScreenBitmap(screenFrame, processingTag)
 
         try {
-            // Check all events
-            for (imageEvent in events) {
-                if (processingState.isEventOnCooldown(imageEvent.id.databaseId)) continue
+            val catalogOrder = processingState.getCatalogImageEvents()
+            val ungrouped = catalogOrder.filter { it.groupId == null }.sortedBy { it.priority }
 
-                // No conditions ? This should not happen, skip this event
-                if (imageEvent.conditions.isEmpty()) continue
-
-                progressListener?.onEventProcessingStarted(imageEvent)
-                val results = when (imageEvent.detectionMode) {
-                    OFFSET_REPEAT -> conditionsVerifier.verifyOffsetRepeatImageEvent(imageEvent)
-                    SPLIT_SCREEN -> verifySplitScreenImageEvent(imageEvent)
-                    else -> conditionsVerifier.verifyConditions(
-                        operator = imageEvent.conditionOperator,
-                        conditions = imageEvent.conditions,
-                    )
+            for (entry in rootListEntries(ungrouped, imageGroups, eventPriority = { it.priority })) {
+                when (entry) {
+                    is RootListEntry.UngroupedEvent -> if (!processImageEvent(entry.event)) return
+                    is RootListEntry.RootGroup -> if (!processImageGroupNode(entry.group, catalogOrder)) return
                 }
-
-                progressListener?.onEventProcessingCompleted(imageEvent, results.fulfilled == true, results.getAllImageConditionsResults())
-                if (results.fulfilled == true) {
-                    if (imageEvent.detectionMode == OFFSET_REPEAT || imageEvent.detectionMode == SPLIT_SCREEN) {
-                        results.offsetRepeatMatches.forEach { match ->
-                            actionExecutor.executeActions(
-                                imageEvent,
-                                results.forOffsetRepeatMatch(match),
-                            )
-                        }
-                    } else {
-                        actionExecutor.executeActions(imageEvent, results)
-                    }
-                    processingState.startEventCooldown(imageEvent)
-                    progressListener?.onEventActionsExecuted(imageEvent, results.getAllImageConditionsResults())
-
-                    if (!imageEvent.keepDetecting) break
-                }
-
-                // Stop processing if requested
-                yield()
             }
         } finally {
-            // We are done processing this frame, release it
             imageDetector.releaseScreenBitmap(screenFrame)
         }
     }
 
-    private suspend fun verifySplitScreenImageEvent(event: ImageEvent): ConditionsResults {
-        if (splitScreenYOffsetPx <= 0) {
+    /** @return false if image event processing should stop for this frame. */
+    private suspend fun processImageGroupNode(group: EventGroup, catalogOrder: List<ImageEvent>): Boolean {
+        evaluateGroupGate(group)
+        if (!processingState.isGroupActive(group.id)) return true
+
+        for (imageEvent in catalogOrder.filter { it.groupId == group.id }.sortedBy { it.priority }) {
+            if (!processImageEvent(imageEvent)) return false
+        }
+
+        for (childGroup in imageGroups.childrenOf(group.id)) {
+            if (!processImageGroupNode(childGroup, catalogOrder)) return false
+        }
+
+        return true
+    }
+
+    /** @return false if image event processing should stop for this frame. */
+    private suspend fun processImageEvent(imageEvent: ImageEvent): Boolean {
+        if (!processingState.isGroupActive(imageEvent.groupId)) return true
+        if (!processingState.isEventEnabled(imageEvent.id.databaseId)) return true
+        if (processingState.isEventOnCooldown(imageEvent.id.databaseId)) return true
+
+        // No conditions ? This should not happen, skip this event
+        if (imageEvent.conditions.isEmpty()) return true
+
+        progressListener?.onEventProcessingStarted(imageEvent)
+        val eventContext = "image:${imageEvent.name}(id=${imageEvent.id.databaseId})"
+        val results = when (imageEvent.detectionMode) {
+            OFFSET_REPEAT -> conditionsVerifier.verifyOffsetRepeatImageEvent(imageEvent, eventContext)
+            SPLIT_SCREEN -> verifySplitScreenImageEvent(imageEvent, eventContext)
+            else -> conditionsVerifier.verifyConditions(
+                operator = imageEvent.conditionOperator,
+                conditions = imageEvent.conditions,
+                eventContext = eventContext,
+            )
+        }
+
+        progressListener?.onEventProcessingCompleted(imageEvent, results.fulfilled == true, results.getAllImageConditionsResults())
+        if (results.fulfilled == true) {
+            if (imageEvent.detectionMode == OFFSET_REPEAT || imageEvent.detectionMode == SPLIT_SCREEN) {
+                results.offsetRepeatMatches.forEach { match ->
+                    actionExecutor.executeActions(
+                        imageEvent,
+                        results.forOffsetRepeatMatch(match),
+                    )
+                }
+            } else {
+                actionExecutor.executeActions(imageEvent, results)
+            }
+            processingState.startEventCooldown(imageEvent)
+            progressListener?.onEventActionsExecuted(imageEvent, results.getAllImageConditionsResults())
+
+            if (!imageEvent.keepDetecting) return false
+        }
+
+        yield()
+        return true
+    }
+
+    private suspend fun verifySplitScreenImageEvent(event: ImageEvent, eventContext: String): ConditionsResults {
+        if (SPLIT_SCREEN_Y_OFFSET_PX <= 0) {
             return conditionsVerifier.verifyConditions(
                 operator = event.conditionOperator,
                 conditions = event.conditions,
+                eventContext = eventContext,
             )
         }
         return conditionsVerifier.verifyOffsetRepeatImageEvent(
-            event.toSplitScreenOffsetRepeat(splitScreenYOffsetPx),
+            event.toSplitScreenOffsetRepeat(SPLIT_SCREEN_Y_OFFSET_PX),
+            eventContext = "$eventContext splitScreenYOffsetPx=$SPLIT_SCREEN_Y_OFFSET_PX",
         )
     }
 }
-

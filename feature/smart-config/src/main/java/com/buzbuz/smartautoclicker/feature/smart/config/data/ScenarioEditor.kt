@@ -19,13 +19,18 @@ package com.buzbuz.smartautoclicker.feature.smart.config.data
 import com.buzbuz.smartautoclicker.core.domain.model.action.Action
 import com.buzbuz.smartautoclicker.core.domain.model.condition.Condition
 import com.buzbuz.smartautoclicker.core.domain.model.condition.ImageCondition
+import com.buzbuz.smartautoclicker.core.domain.model.condition.TriggerCondition
 import com.buzbuz.smartautoclicker.core.domain.model.event.Event
+import com.buzbuz.smartautoclicker.core.domain.model.event.EventGroup
 import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEvent
 import com.buzbuz.smartautoclicker.core.domain.model.event.TriggerEvent
 import com.buzbuz.smartautoclicker.core.domain.model.scenario.Scenario
 import com.buzbuz.smartautoclicker.feature.smart.config.data.events.EventsEditor
 import com.buzbuz.smartautoclicker.feature.smart.config.data.events.ImageEventsEditor
 import com.buzbuz.smartautoclicker.feature.smart.config.data.events.TriggerEventsEditor
+import com.buzbuz.smartautoclicker.feature.smart.config.data.groups.EventGroupsEditor
+import com.buzbuz.smartautoclicker.feature.smart.config.data.groups.ImageEventGroupsEditor
+import com.buzbuz.smartautoclicker.feature.smart.config.data.groups.TriggerEventGroupsEditor
 import com.buzbuz.smartautoclicker.feature.smart.config.domain.model.EditedElementState
 import com.buzbuz.smartautoclicker.feature.smart.config.domain.model.EditedListState
 
@@ -34,8 +39,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class ScenarioEditor {
@@ -43,6 +48,7 @@ internal class ScenarioEditor {
     private val referenceScenario: MutableStateFlow<Scenario?> = MutableStateFlow(null)
     private val _editedScenario: MutableStateFlow<Scenario?> = MutableStateFlow(null)
     private val _currentEventEditor: MutableStateFlow<EventsEditor<Event, Condition>?> = MutableStateFlow(null)
+    private val _currentEventGroupEditor: MutableStateFlow<EventGroupsEditor<out Condition>?> = MutableStateFlow(null)
 
     val editedScenario: StateFlow<Scenario?> = _editedScenario
     val editedScenarioState: Flow<EditedElementState<Scenario>> = combine(referenceScenario, _editedScenario) { ref, edit ->
@@ -57,8 +63,11 @@ internal class ScenarioEditor {
 
     private val imageEventsEditor = ImageEventsEditor(::deleteAllReferencesToEvent, editedScenario)
     private val triggerEventsEditor = TriggerEventsEditor(::deleteAllReferencesToEvent, editedScenario)
+    private val imageEventGroupsEditor = ImageEventGroupsEditor(editedScenario)
+    private val triggerEventGroupsEditor = TriggerEventGroupsEditor(editedScenario)
 
     val currentEventEditor: StateFlow<EventsEditor<Event, Condition>?> = _currentEventEditor
+    val currentEventGroupEditor: StateFlow<EventGroupsEditor<out Condition>?> = _currentEventGroupEditor
 
     val allEditedEvents: Flow<List<Event>> =
         combine(imageEventsEditor.allEditedItems, triggerEventsEditor.allEditedItems) { imageEvent, triggerEvents ->
@@ -68,8 +77,20 @@ internal class ScenarioEditor {
             }
         }
 
+    val allEditedEventGroups: Flow<List<EventGroup>> =
+        combine(imageEventGroupsEditor.allEditedItems, triggerEventGroupsEditor.allEditedItems) { imageGroups, triggerGroups ->
+            buildList {
+                addAll(imageGroups)
+                addAll(triggerGroups)
+            }
+        }
+
     val editedEvent: Flow<Event?> = currentEventEditor.flatMapLatest { eventsEditor ->
-        eventsEditor?.editedItem ?: emptyFlow()
+        eventsEditor?.editedItem ?: flowOf(null)
+    }
+
+    val editedEventGroup: Flow<EventGroup?> = currentEventGroupEditor.flatMapLatest { groupEditor ->
+        groupEditor?.editedItem ?: flowOf(null)
     }
 
     val editedImageEventListState: Flow<EditedListState<ImageEvent>> = imageEventsEditor.listState
@@ -78,16 +99,30 @@ internal class ScenarioEditor {
     val editedTriggerEventListState: Flow<EditedListState<TriggerEvent>> = triggerEventsEditor.listState
     val editedTriggerEventState: Flow<EditedElementState<TriggerEvent>> = triggerEventsEditor.editedItemState
 
-    fun startEdition(scenario: Scenario, imageEvents: List<ImageEvent>, triggerEvents: List<TriggerEvent>) {
+    val editedImageEventGroupsListState: Flow<EditedListState<EventGroup>> = imageEventGroupsEditor.listState
+    val editedTriggerEventGroupsListState: Flow<EditedListState<EventGroup>> = triggerEventGroupsEditor.listState
+    val editedImageEventGroupState: Flow<EditedElementState<EventGroup>> = imageEventGroupsEditor.editedItemState
+    val editedTriggerEventGroupState: Flow<EditedElementState<EventGroup>> = triggerEventGroupsEditor.editedItemState
+
+    fun startEdition(
+        scenario: Scenario,
+        imageEvents: List<ImageEvent>,
+        triggerEvents: List<TriggerEvent>,
+        imageEventGroups: List<EventGroup>,
+        triggerEventGroups: List<EventGroup>,
+    ) {
         referenceScenario.value = scenario
         _editedScenario.value = scenario
 
         imageEventsEditor.startEdition(imageEvents)
         triggerEventsEditor.startEdition(triggerEvents)
+        imageEventGroupsEditor.startEdition(imageEventGroups)
+        triggerEventGroupsEditor.startEdition(triggerEventGroups)
     }
 
     @Suppress("UNCHECKED_CAST")
     fun startEventEdition(event: Event) {
+        stopEventGroupEdition()
         _currentEventEditor.value = when (event) {
             is ImageEvent -> imageEventsEditor
             is TriggerEvent -> triggerEventsEditor
@@ -116,9 +151,113 @@ internal class ScenarioEditor {
         _currentEventEditor.value = null
     }
 
+    fun startEventGroupEdition(group: EventGroup) {
+        stopEventEdition()
+        val editor = when (group.eventType) {
+            com.buzbuz.smartautoclicker.core.domain.model.event.GroupEventType.IMAGE -> imageEventGroupsEditor
+            com.buzbuz.smartautoclicker.core.domain.model.event.GroupEventType.TRIGGER -> triggerEventGroupsEditor
+        }
+        _currentEventGroupEditor.value = editor
+        val groupToEdit = editor.editedList.value?.find { it.id == group.id } ?: group
+        editor.startItemEdition(groupToEdit)
+    }
+
+    fun updateEditedEventGroup(group: EventGroup) =
+        currentEventGroupEditor.value?.updateEditedItem(group)
+
+    fun upsertEditedEventGroup() =
+        currentEventGroupEditor.value?.upsertEditedItem()
+
+    fun deleteEditedEventGroup() {
+        val group = currentEventGroupEditor.value?.editedItem?.value ?: return
+        unassignEventsFromGroup(group.id)
+        promoteChildGroups(group)
+        currentEventGroupEditor.value?.deleteEditedItem()
+    }
+
+    private fun promoteChildGroups(deletedGroup: EventGroup) {
+        val editor = currentEventGroupEditor.value ?: return
+        val groups = editor.editedList.value ?: return
+        editor.updateList(
+            groups.map { group ->
+                if (group.parentGroupId == deletedGroup.id) {
+                    group.copy(parentGroupId = deletedGroup.parentGroupId)
+                } else {
+                    group
+                }
+            },
+        )
+    }
+
+    fun stopEventGroupEdition() {
+        currentEventGroupEditor.value?.stopItemEdition()
+        _currentEventGroupEditor.value = null
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    fun startGroupConditionEdition(condition: Condition) {
+        when (val editor = currentEventGroupEditor.value) {
+            is ImageEventGroupsEditor ->
+                editor.conditionsEditor.startItemEdition(condition as ImageCondition)
+            is TriggerEventGroupsEditor ->
+                editor.conditionsEditor.startItemEdition(condition as TriggerCondition)
+        }
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    fun updateEditedGroupCondition(condition: Condition) {
+        when (val editor = currentEventGroupEditor.value) {
+            is ImageEventGroupsEditor -> editor.conditionsEditor.updateEditedItem(condition as ImageCondition)
+            is TriggerEventGroupsEditor -> editor.conditionsEditor.updateEditedItem(condition as TriggerCondition)
+        }
+    }
+
+    fun upsertEditedGroupCondition() =
+        currentEventGroupEditor.value?.conditionsEditor?.upsertEditedItem()
+
+    fun deleteEditedGroupCondition() =
+        currentEventGroupEditor.value?.conditionsEditor?.deleteEditedItem()
+
+    fun stopGroupConditionEdition() =
+        currentEventGroupEditor.value?.conditionsEditor?.stopItemEdition()
+
+    fun updateImageGroupConditionsOrder(conditions: List<ImageCondition>) =
+        (currentEventGroupEditor.value as? ImageEventGroupsEditor)?.conditionsEditor?.updateList(conditions)
+
+    fun updateTriggerGroupConditionsOrder(conditions: List<TriggerCondition>) =
+        (currentEventGroupEditor.value as? TriggerEventGroupsEditor)?.conditionsEditor?.updateList(conditions)
+
+    fun updateImageEventGroupsOrder(newGroups: List<EventGroup>) {
+        imageEventGroupsEditor.updateList(newGroups)
+    }
+
+    fun updateTriggerEventGroupsOrder(newGroups: List<EventGroup>) {
+        triggerEventGroupsEditor.updateList(newGroups)
+    }
+
+    fun getAllEditedEventGroups(): List<EventGroup> = buildList {
+        addAll(imageEventGroupsEditor.getAllEditedItems())
+        addAll(triggerEventGroupsEditor.getAllEditedItems())
+    }
+
+    private fun unassignEventsFromGroup(groupId: com.buzbuz.smartautoclicker.core.base.identifier.Identifier) {
+        imageEventsEditor.editedList.value?.let { events ->
+            imageEventsEditor.updateList(events.map { event ->
+                if (event.groupId == groupId) event.copy(groupId = null) else event
+            })
+        }
+        triggerEventsEditor.editedList.value?.let { events ->
+            triggerEventsEditor.updateList(events.map { event ->
+                if (event.groupId == groupId) event.copy(groupId = null) else event
+            })
+        }
+    }
+
     fun stopEdition() {
         imageEventsEditor.stopEdition()
         triggerEventsEditor.stopEdition()
+        imageEventGroupsEditor.stopEdition()
+        triggerEventGroupsEditor.stopEdition()
 
         referenceScenario.value = null
         _editedScenario.value = null
@@ -132,6 +271,40 @@ internal class ScenarioEditor {
     fun updateImageEventsOrder(newEvents: List<ImageEvent>) {
         imageEventsEditor.updateList(newEvents)
     }
+
+    fun updateTriggerEventsOrder(newEvents: List<TriggerEvent>) {
+        triggerEventsEditor.updateList(newEvents)
+    }
+
+    fun updateImageEventsAndGroupsOrder(events: List<ImageEvent>, groups: List<EventGroup>) {
+        imageEventsEditor.updateList(events)
+        imageEventGroupsEditor.updateList(groups)
+    }
+
+    fun updateTriggerEventsAndGroupsOrder(events: List<TriggerEvent>, groups: List<EventGroup>) {
+        triggerEventsEditor.updateList(events)
+        triggerEventGroupsEditor.updateList(groups)
+    }
+
+    fun getEditedImageEvents(): List<ImageEvent> =
+        imageEventsEditor.editedList.value ?: emptyList()
+
+    fun getEditedImageEventGroups(): List<EventGroup> =
+        imageEventGroupsEditor.editedList.value ?: emptyList()
+
+    fun getEditedTriggerEvents(): List<TriggerEvent> =
+        triggerEventsEditor.editedList.value ?: emptyList()
+
+    fun getEditedTriggerEventGroups(): List<EventGroup> =
+        triggerEventGroupsEditor.editedList.value ?: emptyList()
+
+    fun getEditedImageRootListCount(): Int =
+        getEditedImageEvents().count { it.groupId == null } +
+            getEditedImageEventGroups().count { it.parentGroupId == null }
+
+    fun getEditedTriggerRootListCount(): Int =
+        getEditedTriggerEvents().count { it.groupId == null } +
+            getEditedTriggerEventGroups().count { it.parentGroupId == null }
 
     fun getAllEditedEvents(): List<Event> = buildList {
         imageEventsEditor.editedList.value?.let { addAll(it) }

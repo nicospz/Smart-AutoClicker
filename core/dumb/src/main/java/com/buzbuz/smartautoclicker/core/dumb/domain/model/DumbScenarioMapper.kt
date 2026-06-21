@@ -34,6 +34,10 @@ internal fun DumbScenarioWithActions.toDomain(asDomain: Boolean = false): DumbSc
         isFavorite = scenario.isFavorite,
         autoStart = scenario.autoStart,
         autoStartDelayMs = scenario.autoStartDelayMs,
+        category = scenario.category,
+        syncId = scenario.syncId,
+        updatedAtMs = scenario.updatedAtMs,
+        deletedAtMs = scenario.deletedAtMs,
         dumbActions = dumbActions
             .sortedBy { it.priority }
             .map { dumbAction -> dumbAction.toDomain(asDomain) },
@@ -52,6 +56,10 @@ internal fun DumbScenario.toEntity(): DumbScenarioEntity =
         isFavorite = isFavorite,
         autoStart = autoStart,
         autoStartDelayMs = autoStartDelayMs,
+        category = category,
+        syncId = syncId,
+        updatedAtMs = updatedAtMs,
+        deletedAtMs = deletedAtMs,
     )
 
 

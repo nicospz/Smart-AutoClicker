@@ -80,6 +80,7 @@ class ProcessingTests {
     private fun createScenarioProcessor(testScenario: TestScenario) =
         ScenarioProcessor(
             processingTag = "tests",
+            scenarioName = testScenario.scenario.name,
             scalingManager = mockScalingManager,
             randomize = testScenario.scenario.randomize,
             imageEvents = testScenario.imageEvents,

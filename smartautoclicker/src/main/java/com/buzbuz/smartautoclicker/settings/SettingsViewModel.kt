@@ -30,6 +30,10 @@ import com.buzbuz.smartautoclicker.core.common.quality.domain.QualityRepository
 import com.buzbuz.smartautoclicker.core.settings.SettingsRepository
 import com.buzbuz.smartautoclicker.feature.revenue.IRevenueRepository
 import com.buzbuz.smartautoclicker.feature.revenue.UserBillingState
+import com.buzbuz.smartautoclicker.feature.sync.data.SacSyncPreferences
+import com.buzbuz.smartautoclicker.feature.sync.data.SacSyncStatus
+import com.buzbuz.smartautoclicker.feature.sync.domain.SacSyncCoordinator
+import com.buzbuz.smartautoclicker.feature.sync.domain.SacSyncEngine
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
@@ -49,7 +53,13 @@ class SettingsViewModel @Inject constructor(
     private val revenueRepository: IRevenueRepository,
     private val settingsRepository: SettingsRepository,
     private val precisionGestureHelperSetup: PrecisionGestureHelperSetup,
+    private val sacSyncEngine: SacSyncEngine,
+    private val sacSyncCoordinator: SacSyncCoordinator,
+    private val sacSyncPreferences: SacSyncPreferences,
 ) : ViewModel() {
+
+    val sacSyncStatus: Flow<SacSyncStatus> = sacSyncPreferences.statusFlow
+    val isSacSyncConfigured: Boolean get() = sacSyncEngine.isConfigured
 
     private val _precisionGestureHelperStatus = MutableStateFlow<PrecisionGestureSetupResult?>(null)
     val precisionGestureHelperStatus: StateFlow<PrecisionGestureSetupResult?> = _precisionGestureHelperStatus.asStateFlow()
@@ -83,11 +93,6 @@ class SettingsViewModel @Inject constructor(
     val shouldShowInputBlockWorkaround: Flow<Boolean> =
         flowOf(isImpactedByInputBlock())
 
-    val splitScreenYOffsetPx: Flow<String> =
-        settingsRepository.splitScreenYOffsetPxFlow
-            .map { offset -> offset.toString() }
-
-
     fun refreshPrecisionGestureHelperStatus() {
         viewModelScope.launch {
             _precisionGestureHelperStatus.value = precisionGestureHelperSetup.getStatus()
@@ -104,28 +109,39 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun stopPrecisionGestureHelper() {
+        viewModelScope.launch {
+            _precisionGestureHelperStatus.value = precisionGestureHelperSetup.stopHelper()
+        }
+    }
+
     fun toggleScenarioFiltersUi() {
         settingsRepository.toggleFilterScenarioUi()
+        sacSyncCoordinator.scheduleSettingsPush()
     }
 
     fun toggleLegacyActionUi() {
         settingsRepository.toggleLegacyActionUi()
+        sacSyncCoordinator.scheduleSettingsPush()
     }
 
     fun toggleLegacyNotificationUi() {
         settingsRepository.toggleLegacyNotificationUi()
+        sacSyncCoordinator.scheduleSettingsPush()
     }
 
     fun toggleForceEntireScreenCapture() {
         settingsRepository.toggleForceEntireScreenCapture()
+        sacSyncCoordinator.scheduleSettingsPush()
     }
 
     fun toggleInputBlockWorkaround() {
         settingsRepository.toggleInputBlockWorkaround()
+        sacSyncCoordinator.scheduleSettingsPush()
     }
 
-    fun setSplitScreenYOffsetPx(offsetPx: Int) {
-        settingsRepository.setSplitScreenYOffsetPx(offsetPx)
+    fun syncNow() {
+        sacSyncCoordinator.requestFullSync()
     }
 
     fun showPrivacySettings(activity: Activity) {

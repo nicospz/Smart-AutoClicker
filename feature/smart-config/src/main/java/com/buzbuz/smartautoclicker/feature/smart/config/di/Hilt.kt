@@ -36,6 +36,7 @@ import com.buzbuz.smartautoclicker.feature.smart.config.ui.action.precision.Prec
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.action.settext.SetTextViewModel
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.action.swipe.SwipeViewModel
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.action.system.SystemActionViewModel
+import com.buzbuz.smartautoclicker.feature.smart.config.ui.action.throwletcatch.ThrowletCatchViewModel
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.action.toggleevent.EventTogglesViewModel
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.action.toggleevent.ToggleEventViewModel
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.common.dialogs.counter.CounterNameSelectionViewModel
@@ -50,6 +51,7 @@ import com.buzbuz.smartautoclicker.feature.smart.config.ui.condition.trigger.bro
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.condition.trigger.counter.CounterReachedConditionViewModel
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.condition.trigger.timer.TimerReachedConditionViewModel
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.event.EventDialogViewModel
+import com.buzbuz.smartautoclicker.feature.smart.config.ui.eventgroup.EventGroupDialogViewModel
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.event.copy.EventCopyModel
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.mainmenu.debugging.LiveDebuggingViewModel
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.scenario.ScenarioDialogViewModel
@@ -79,6 +81,7 @@ interface ScenarioConfigViewModelsEntryPoint {
     fun counterReachedConditionViewModel(): CounterReachedConditionViewModel
     fun eventCopyModel(): EventCopyModel
     fun eventDialogViewModel(): EventDialogViewModel
+    fun eventGroupDialogViewModel(): EventGroupDialogViewModel
     fun eventTogglesViewModel(): EventTogglesViewModel
     fun extraConfigViewModel(): ExtraConfigModel
     fun flagsSelectionViewModel(): FlagsSelectionViewModel
@@ -99,6 +102,7 @@ interface ScenarioConfigViewModelsEntryPoint {
     fun scenarioDialogViewModel(): ScenarioDialogViewModel
     fun setTextViewModel(): SetTextViewModel
     fun systemActionViewModel(): SystemActionViewModel
+    fun throwletCatchViewModel(): ThrowletCatchViewModel
     fun smartActionsBriefViewModel(): SmartActionsBriefViewModel
     fun swipeViewModel(): SwipeViewModel
     fun timerReachedConditionViewModel(): TimerReachedConditionViewModel

@@ -17,6 +17,7 @@
 package com.buzbuz.smartautoclicker.settings
 
 import android.os.Bundle
+import android.text.format.DateFormat
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -30,12 +31,10 @@ import com.buzbuz.smartautoclicker.R
 import com.buzbuz.smartautoclicker.core.common.actions.precision.PrecisionGestureSetupResult
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setChecked
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setDescription
+import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setEnabled
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setOnClickListener
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setTitle
-import android.text.InputType
-import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setLabel
-import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setOnTextChangedListener
-import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setText
+import com.buzbuz.smartautoclicker.feature.sync.data.SacSyncStatus
 
 import com.buzbuz.smartautoclicker.databinding.FragmentSettingsBinding
 
@@ -86,19 +85,23 @@ class SettingsFragment : Fragment() {
             setOnClickListener(viewModel::toggleInputBlockWorkaround)
         }
 
-        viewBinding.fieldSplitScreenYOffset.apply {
-            setLabel(R.string.input_field_label_split_screen_y_offset)
-            textField.contentDescription = getString(R.string.field_split_screen_y_offset_desc)
-            setOnTextChangedListener { editable ->
-                val value = editable.toString().toIntOrNull() ?: 0
-                viewModel.setSplitScreenYOffsetPx(value)
-            }
+        viewBinding.fieldCloudSync.apply {
+            setTitle(requireContext().getString(R.string.field_cloud_sync_title))
+            setDescription(requireContext().getString(R.string.field_cloud_sync_status_never))
+            setOnClickListener { viewModel.syncNow() }
         }
 
         viewBinding.fieldShizukuHelperStatus.apply {
             setTitle(requireContext().getString(R.string.field_shizuku_helper_status_title))
             setDescription(requireContext().getString(R.string.field_shizuku_helper_status_checking))
-            setOnClickListener { viewModel.startPrecisionGestureHelper(requireActivity()) }
+            chevron.visibility = View.GONE
+        }
+
+        viewBinding.buttonGestureHelperStart.setOnClickListener {
+            viewModel.startPrecisionGestureHelper(requireActivity())
+        }
+        viewBinding.buttonGestureHelperStop.setOnClickListener {
+            viewModel.stopPrecisionGestureHelper()
         }
 
         viewBinding.fieldPrivacySettings.apply {
@@ -123,12 +126,12 @@ class SettingsFragment : Fragment() {
                 launch { viewModel.isLegacyNotificationUiEnabled.collect(viewBinding.fieldLegacyNotificationUi::setChecked) }
                 launch { viewModel.isEntireScreenCaptureForced.collect(viewBinding.fieldForceEntireScreen::setChecked) }
                 launch { viewModel.isInputWorkaroundEnabled.collect(viewBinding.fieldInputBlockWorkaround::setChecked) }
-                launch { viewModel.splitScreenYOffsetPx.collect(::updateSplitScreenYOffset) }
                 launch { viewModel.shouldShowInputBlockWorkaround.collect(::updateInputBlockWorkaroundVisibility) }
                 launch { viewModel.shouldShowEntireScreenCapture.collect(::updateForceEntireScreenVisibility) }
                 launch { viewModel.shouldShowPrivacySettings.collect(::updatePrivacySettingsVisibility) }
                 launch { viewModel.shouldShowPurchase.collect(::updateRemoveAdsVisibility) }
                 launch { viewModel.precisionGestureHelperStatus.collect(::updatePrecisionGestureHelperStatus) }
+                launch { viewModel.sacSyncStatus.collect(::updateCloudSyncStatus) }
             }
         }
     }
@@ -160,14 +163,20 @@ class SettingsFragment : Fragment() {
                     R.string.field_shizuku_helper_status_failed,
                     status.error.message ?: status.error.javaClass.simpleName,
                 )
+                is PrecisionGestureSetupResult.StopFailed -> getString(
+                    R.string.field_shizuku_helper_status_stop_failed,
+                    status.error.message ?: status.error.javaClass.simpleName,
+                )
             }
         )
-    }
-
-    private fun updateSplitScreenYOffset(offsetPx: String) {
-        if (viewBinding.fieldSplitScreenYOffset.textField.text?.toString() != offsetPx) {
-            viewBinding.fieldSplitScreenYOffset.setText(offsetPx, InputType.TYPE_CLASS_NUMBER)
-        }
+        val isRunning = status is PrecisionGestureSetupResult.Running ||
+            status is PrecisionGestureSetupResult.StopFailed
+        val canStart = status != null &&
+            status !is PrecisionGestureSetupResult.Running &&
+            status !is PrecisionGestureSetupResult.StopFailed &&
+            status !is PrecisionGestureSetupResult.UnsupportedAbi
+        viewBinding.buttonGestureHelperStart.isEnabled = canStart
+        viewBinding.buttonGestureHelperStop.isEnabled = isRunning
     }
 
     private fun updateForceEntireScreenVisibility(shouldBeVisible: Boolean) {
@@ -208,5 +217,27 @@ class SettingsFragment : Fragment() {
             viewBinding.dividerRemoveAds.visibility = View.GONE
             viewBinding.fieldRemoveAds.root.visibility = View.GONE
         }
+    }
+
+    private fun updateCloudSyncStatus(status: SacSyncStatus) {
+        if (!viewModel.isSacSyncConfigured) {
+            viewBinding.fieldCloudSync.setDescription(getString(R.string.field_cloud_sync_not_configured))
+            viewBinding.fieldCloudSync.setEnabled(false)
+            return
+        }
+        viewBinding.fieldCloudSync.setEnabled(true)
+        viewBinding.fieldCloudSync.setDescription(
+            when {
+                !status.lastError.isNullOrBlank() ->
+                    getString(R.string.field_cloud_sync_status_error, status.lastError)
+                status.lastSuccessAtMs > 0L -> {
+                    val formatted = DateFormat.getMediumDateFormat(requireContext())
+                        .format(status.lastSuccessAtMs) + " " +
+                        DateFormat.getTimeFormat(requireContext()).format(status.lastSuccessAtMs)
+                    getString(R.string.field_cloud_sync_status_success, formatted)
+                }
+                else -> getString(R.string.field_cloud_sync_status_never)
+            },
+        )
     }
 }

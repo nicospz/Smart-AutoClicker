@@ -31,6 +31,15 @@ import com.buzbuz.smartautoclicker.core.database.migrations.Migration22to23
 import com.buzbuz.smartautoclicker.core.database.migrations.Migration23to24
 import com.buzbuz.smartautoclicker.core.database.migrations.Migration24to25
 import com.buzbuz.smartautoclicker.core.database.migrations.Migration25to26
+import com.buzbuz.smartautoclicker.core.database.migrations.Migration26to27
+import com.buzbuz.smartautoclicker.core.database.migrations.Migration27to28
+import com.buzbuz.smartautoclicker.core.database.migrations.Migration28to29
+import com.buzbuz.smartautoclicker.core.database.migrations.Migration29to30
+import com.buzbuz.smartautoclicker.core.database.migrations.Migration30to31
+import com.buzbuz.smartautoclicker.core.database.migrations.Migration31to32
+import com.buzbuz.smartautoclicker.core.database.migrations.Migration32to33
+import com.buzbuz.smartautoclicker.core.database.migrations.Migration33to34
+import com.buzbuz.smartautoclicker.core.database.migrations.Migration34to35
 import com.buzbuz.smartautoclicker.core.database.migrations.Migration2to3
 import com.buzbuz.smartautoclicker.core.database.migrations.Migration3to4
 import com.buzbuz.smartautoclicker.core.database.migrations.Migration4to5
@@ -75,5 +84,14 @@ internal object SmartDatabaseModule {
             Migration23to24,
             Migration24to25,
             Migration25to26,
+            Migration26to27,
+            Migration27to28,
+            Migration28to29,
+            Migration29to30,
+            Migration30to31,
+            Migration31to32,
+            Migration32to33,
+            Migration33to34,
+            Migration34to35,
         ).build()
 }

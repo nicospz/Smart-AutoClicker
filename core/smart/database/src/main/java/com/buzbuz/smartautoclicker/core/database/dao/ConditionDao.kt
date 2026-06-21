@@ -50,6 +50,9 @@ abstract class ConditionDao {
     @Query("SELECT * FROM $CONDITION_TABLE WHERE eventId=:eventId ORDER BY priority")
     abstract suspend fun getConditions(eventId: Long): List<ConditionEntity>
 
+    @Query("SELECT * FROM $CONDITION_TABLE WHERE event_group_id=:eventGroupId ORDER BY priority")
+    abstract suspend fun getGroupConditions(eventGroupId: Long): List<ConditionEntity>
+
     /**
      * Get the list of image conditions that uses the legacy image format
      * @return the list of legacy conditions.
@@ -72,6 +75,9 @@ abstract class ConditionDao {
      */
     @Query("SELECT path FROM $CONDITION_TABLE WHERE eventId=:eventId AND type='ON_IMAGE_DETECTED'")
     abstract suspend fun getConditionsPaths(eventId: Long): List<String>
+
+    @Query("SELECT path FROM $CONDITION_TABLE WHERE event_group_id=:eventGroupId AND type='ON_IMAGE_DETECTED'")
+    abstract suspend fun getGroupConditionsPaths(eventGroupId: Long): List<String>
 
     /**
      * Get the number of times this path is used in the condition table.

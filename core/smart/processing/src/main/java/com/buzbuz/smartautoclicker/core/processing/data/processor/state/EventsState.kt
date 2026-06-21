@@ -16,10 +16,11 @@
  */
 package com.buzbuz.smartautoclicker.core.processing.data.processor.state
 
-import com.buzbuz.smartautoclicker.core.base.interfaces.sortedByPriority
 import com.buzbuz.smartautoclicker.core.domain.model.event.Event
+import com.buzbuz.smartautoclicker.core.domain.model.event.EventGroup
 import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEvent
 import com.buzbuz.smartautoclicker.core.domain.model.event.TriggerEvent
+import com.buzbuz.smartautoclicker.core.domain.model.event.sortedForGroupListProcessing
 
 interface IEventsState {
 
@@ -61,12 +62,22 @@ interface EventStateListener {
 internal class EventsState(
     imageEvents: List<ImageEvent>,
     triggerEvents: List<TriggerEvent>,
+    imageGroups: List<EventGroup> = emptyList(),
+    triggerGroups: List<EventGroup> = emptyList(),
 ) : IEventsState {
 
+    private val runnableImageEvents = imageEvents.filterNot { it.ignored }
+    private val runnableTriggerEvents = triggerEvents.filterNot { it.ignored }
+
+    private val imageEventsProcessingOrder: List<ImageEvent> =
+        runnableImageEvents.sortedForGroupListProcessing(imageGroups)
+    private val triggerEventsProcessingOrder: List<TriggerEvent> =
+        runnableTriggerEvents.sortedForGroupListProcessing(triggerGroups)
+
     /** Monitor the state of all image events. */
-    private val imageEventList: EventList<ImageEvent> = EventList(imageEvents)
+    private val imageEventList: EventList<ImageEvent> = EventList(runnableImageEvents)
     /** Monitor the state of all trigger events. */
-    private val triggerEventList: EventList<TriggerEvent> = EventList(triggerEvents)
+    private val triggerEventList: EventList<TriggerEvent> = EventList(runnableTriggerEvents)
 
     override fun setEventStateListener(listener: EventStateListener) {
         triggerEventList.eventEnabledListener = listener
@@ -90,14 +101,18 @@ internal class EventsState(
     override fun areAllImageEventsDisabled(): Boolean =
         imageEventList.areAllEventsDisabled()
 
-    override fun getEnabledImageEvents(): Collection<ImageEvent> =
-        imageEventList.getEnabledEvents().sortedByPriority()
+    override fun getEnabledImageEvents(): Collection<ImageEvent> {
+        val enabled = imageEventList.getEnabledEvents().associateBy { it.getValidId() }
+        return imageEventsProcessingOrder.mapNotNull { enabled[it.getValidId()] }
+    }
 
     override fun areAllTriggerEventsDisabled(): Boolean =
         triggerEventList.areAllEventsDisabled()
 
-    override fun getEnabledTriggerEvents(): Collection<TriggerEvent> =
-        triggerEventList.getEnabledEvents().toList()
+    override fun getEnabledTriggerEvents(): Collection<TriggerEvent> {
+        val enabled = triggerEventList.getEnabledEvents().associateBy { it.getValidId() }
+        return triggerEventsProcessingOrder.mapNotNull { enabled[it.getValidId()] }
+    }
 
     override fun enableEvent(eventId: Long) {
         imageEventList.enableEvent(eventId)

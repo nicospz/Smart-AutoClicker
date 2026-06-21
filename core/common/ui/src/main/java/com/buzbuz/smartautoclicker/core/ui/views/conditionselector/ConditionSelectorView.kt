@@ -140,6 +140,7 @@ class ConditionSelectorView(
             if (value) {
                 customMinimalArea = null
                 lockedSelectionInBitmapCoords = null
+                isSelectorValid = false
                 capture.onReset()
                 selector.onReset()
                 hintsIcons.onReset()
@@ -169,8 +170,9 @@ class ConditionSelectorView(
         val isBiggerThanMinimumSize = selectorValidityTempValue.width() >= minimumWidth
                 && selectorValidityTempValue.height() >= minimumHeight
 
-        if ((isSelectorOverCapture && isBiggerThanMinimumSize) != isSelectorValid) {
-            isSelectorValid = !isSelectorValid
+        val isValid = isSelectorOverCapture && isBiggerThanMinimumSize
+        if (isValid != isSelectorValid) {
+            isSelectorValid = isValid
             onSelectorValidityChanged(isSelectorValid)
         }
     }
@@ -186,17 +188,17 @@ class ConditionSelectorView(
         minimalSelection: Rect? = null,
     ) {
         capture.screenCapture = BitmapDrawable(resources, bitmap)
+        when {
+            defaultSelection != null && minimalSelection != null ->
+                setSelection(defaultSelection, minimalSelection)
+            defaultSelection != null ->
+                setSelection(defaultSelection)
+        }
         hintsIcons.showAll()
         animations.startShowSelectorAnimation(
             onAnimationCompleted = {
-                when {
-                    defaultSelection != null && minimalSelection != null ->
-                        setSelection(defaultSelection, minimalSelection)
-                    defaultSelection != null ->
-                        setSelection(defaultSelection)
-                }
                 animations.startHideHintsAnimation()
-            }
+            },
         )
     }
 
@@ -222,6 +224,9 @@ class ConditionSelectorView(
         hintsIcons.showAll()
         animations.startHideHintsAnimation()
     }
+
+    /** @return true if the current selector position is valid. */
+    fun hasValidSelection(): Boolean = isSelectorValid
 
     /** @return the selected area in capture bitmap coordinates. */
     fun getSelectedArea(): Rect =

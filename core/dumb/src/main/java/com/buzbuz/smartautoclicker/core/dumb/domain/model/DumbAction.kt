@@ -22,6 +22,7 @@ import com.buzbuz.smartautoclicker.core.base.identifier.Identifier
 import com.buzbuz.smartautoclicker.core.common.actions.precision.PRECISION_GESTURE_HELPER_MODE
 import com.buzbuz.smartautoclicker.core.common.actions.precision.PrecisionGesturePayload
 import com.buzbuz.smartautoclicker.core.common.actions.precision.PrecisionTextMode
+import com.buzbuz.smartautoclicker.core.common.actions.precision.isClipboardPaste
 
 sealed class DumbAction : Identifiable {
 
@@ -118,6 +119,7 @@ sealed class DumbAction : Identifiable {
     ) : DumbAction(), RepeatableWithDelay {
 
         override fun isValid(): Boolean =
-            name.isNotEmpty() && text.isNotEmpty() && isRepeatCountValid() && isRepeatDelayValid()
+            name.isNotEmpty() && (text.isNotEmpty() || mode.isClipboardPaste()) &&
+                isRepeatCountValid() && isRepeatDelayValid()
     }
 }

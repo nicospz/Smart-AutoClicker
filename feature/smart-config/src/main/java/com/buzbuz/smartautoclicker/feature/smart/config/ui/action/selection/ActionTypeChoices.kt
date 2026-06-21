@@ -28,6 +28,7 @@ import com.buzbuz.smartautoclicker.feature.smart.config.ui.common.model.action.g
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.common.model.action.getStopScenarioIconRes
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.common.model.action.getSwipeIconRes
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.common.model.action.getSystemActionIconRes
+import com.buzbuz.smartautoclicker.feature.smart.config.ui.common.model.action.getThrowletCatchIconRes
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.common.model.action.getToggleEventIconRes
 
 
@@ -125,5 +126,12 @@ sealed class ActionTypeChoice(
         R.string.item_stop_scenario_title,
         R.string.item_stop_scenario_desc,
         getStopScenarioIconRes(),
+    )
+
+    /** Throwlet Catch overlay control. */
+    data object ThrowletCatch : ActionTypeChoice(
+        R.string.item_throwlet_catch_title,
+        R.string.item_throwlet_catch_desc,
+        getThrowletCatchIconRes(),
     )
 }

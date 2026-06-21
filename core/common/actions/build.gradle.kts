@@ -24,6 +24,19 @@ android {
     namespace = "com.buzbuz.smartautoclicker.core.common.actions"
 }
 
+val buildGestureHelper = tasks.register<Exec>("buildGestureHelper") {
+    group = "build"
+    description = "Cross-compile gesture-helper.cpp into assets/helper/arm64-v8a/"
+    workingDir = projectDir
+    commandLine("bash", "scripts/build-gesture-helper.sh")
+    inputs.file("src/main/cpp/gesture-helper.cpp")
+    outputs.file("src/main/assets/helper/arm64-v8a/gesture-helper")
+}
+
+tasks.named("preBuild") {
+    dependsOn(buildGestureHelper)
+}
+
 dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.androidx.core.ktx)

@@ -82,8 +82,11 @@ interface DumbScenarioDao {
     suspend fun updateDumbScenario(dumbScenario: DumbScenarioEntity)
 
     /** Update favorite state for a dumb scenario. */
-    @Query("UPDATE dumb_scenario_table SET is_favorite = :isFavorite WHERE id = :dumbScenarioId")
-    suspend fun updateDumbScenarioFavorite(dumbScenarioId: Long, isFavorite: Boolean)
+    @Query(
+        "UPDATE dumb_scenario_table SET is_favorite = :isFavorite, updated_at_ms = :updatedAtMs " +
+            "WHERE id = :dumbScenarioId",
+    )
+    suspend fun updateDumbScenarioFavorite(dumbScenarioId: Long, isFavorite: Boolean, updatedAtMs: Long)
 
     /**
      * Delete the provided click scenario from the database.
@@ -140,4 +143,15 @@ interface DumbScenarioDao {
      */
     @Update
     suspend fun updateScenarioStats(stats: DumbScenarioStatsEntity)
+
+    @Query("SELECT id, sync_id, updated_at_ms, deleted_at_ms FROM dumb_scenario_table")
+    suspend fun getAllSyncMeta(): List<DumbScenarioSyncMeta>
+
+    @Query("SELECT * FROM dumb_scenario_table WHERE sync_id = :syncId LIMIT 1")
+    suspend fun getDumbScenarioEntityBySyncId(syncId: String): DumbScenarioEntity?
+
+    @Query(
+        "UPDATE dumb_scenario_table SET updated_at_ms = :updatedAtMs, deleted_at_ms = :deletedAtMs WHERE id = :scenarioId",
+    )
+    suspend fun updateSyncTimestamps(scenarioId: Long, updatedAtMs: Long, deletedAtMs: Long?)
 }

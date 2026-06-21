@@ -152,8 +152,12 @@ class PrefixItemViewHolder(
     fun onBind(item: EventTogglesListItem.PrefixItem) {
         boundPrefixToggleId = item.prefixToggleId
 
+        val isEditingPrefix = viewBinding.inputPrefix.hasFocus()
+        val selectionStart = viewBinding.inputPrefix.selectionStart
+        val selectionEnd = viewBinding.inputPrefix.selectionEnd
+
         viewBinding.inputPrefix.removeTextChangedListener(textWatcher)
-        if (viewBinding.inputPrefix.text?.toString() != item.prefix) {
+        if (!isEditingPrefix && viewBinding.inputPrefix.text?.toString() != item.prefix) {
             viewBinding.inputPrefix.setText(item.prefix)
         }
 
@@ -173,6 +177,14 @@ class PrefixItemViewHolder(
 
         viewBinding.buttonRemove.setOnClickListener {
             onRemovePrefixToggleClicked(item.prefixToggleId)
+        }
+
+        if (isEditingPrefix && selectionStart >= 0 && selectionEnd >= 0) {
+            val textLength = viewBinding.inputPrefix.text?.length ?: 0
+            viewBinding.inputPrefix.setSelection(
+                selectionStart.coerceIn(0, textLength),
+                selectionEnd.coerceIn(0, textLength),
+            )
         }
     }
 

@@ -26,6 +26,7 @@ import androidx.room.PrimaryKey
 import androidx.room.Relation
 
 import com.buzbuz.smartautoclicker.core.base.interfaces.EntityWithId
+import com.buzbuz.smartautoclicker.core.database.EVENT_GROUP_TABLE
 import com.buzbuz.smartautoclicker.core.database.EVENT_TABLE
 
 import kotlinx.serialization.Serializable
@@ -57,13 +58,21 @@ import kotlinx.serialization.Serializable
  */
 @Entity(
     tableName = EVENT_TABLE,
-    indices = [Index("scenario_id")],
-    foreignKeys = [ForeignKey(
-        entity = ScenarioEntity::class,
-        parentColumns = ["id"],
-        childColumns = ["scenario_id"],
-        onDelete = ForeignKey.CASCADE
-    )]
+    indices = [Index("scenario_id"), Index("group_id")],
+    foreignKeys = [
+        ForeignKey(
+            entity = ScenarioEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["scenario_id"],
+            onDelete = ForeignKey.CASCADE
+        ),
+        ForeignKey(
+            entity = EventGroupEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["group_id"],
+            onDelete = ForeignKey.SET_NULL,
+        ),
+    ]
 )
 @Serializable
 data class EventEntity(
@@ -78,12 +87,14 @@ data class EventEntity(
     @ColumnInfo(name = "image_detection_mode", defaultValue = "'STANDARD'")
     val imageDetectionMode: ImageEventDetectionMode = ImageEventDetectionMode.STANDARD,
     @ColumnInfo(name = "anchor_condition_id") val anchorConditionId: Long? = null,
+    @ColumnInfo(name = "group_id") var groupId: Long? = null,
     @ColumnInfo(name = "cooldown_ms", defaultValue = "0") val cooldownMs: Long = 0,
     @ColumnInfo(name = "offset_repeat_count", defaultValue = "0") val offsetRepeatCount: Int = 0,
     @ColumnInfo(name = "offset_repeat_x", defaultValue = "0") val offsetRepeatX: Int = 0,
     @ColumnInfo(name = "offset_repeat_y", defaultValue = "0") val offsetRepeatY: Int = 0,
     @ColumnInfo(name = "offset_repeat_match_mode", defaultValue = "'FIRST_MATCH'")
     val offsetRepeatMatchMode: OffsetRepeatMatchMode = OffsetRepeatMatchMode.FIRST_MATCH,
+    @ColumnInfo(name = "ignored", defaultValue = "0") val ignored: Boolean = false,
 ) : EntityWithId
 
 /**

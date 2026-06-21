@@ -58,6 +58,7 @@ internal object ProcessingTestData {
     private var conditionIdIndex: Long = 0L
     private var actionIdIndex: Long = 0L
     private var eventToggleIdIndex: Long = 0L
+    private var eventGroupIdIndex: Long = 0L
 
     fun reset() {
         scenarioIdIndex = 0L
@@ -65,6 +66,7 @@ internal object ProcessingTestData {
         conditionIdIndex = 0L
         actionIdIndex = 0L
         eventToggleIdIndex = 0L
+        eventGroupIdIndex = 0L
     }
 
     fun newMockedScreenBitmap(size: Size = TEST_DATA_SCREEN_SIZE): Bitmap {
@@ -84,6 +86,11 @@ internal object ProcessingTestData {
     fun newEventId(): Identifier {
         eventIdIndex++
         return Identifier(databaseId = eventIdIndex)
+    }
+
+    fun newEventGroupId(): Identifier {
+        eventGroupIdIndex++
+        return Identifier(databaseId = eventGroupIdIndex)
     }
 
     private fun newConditionId(): Identifier {
@@ -128,6 +135,7 @@ internal object ProcessingTestData {
         scenarioId: Identifier,
         enabledOnStart: Boolean = true,
         keepDetecting: Boolean = false,
+        groupId: Identifier? = null,
         @ConditionOperator conditionOperator: Int = AND,
         conditions: List<TestImageCondition>,
         actions: List<Action>,
@@ -137,6 +145,7 @@ internal object ProcessingTestData {
         scenarioId = scenarioId,
         enabledOnStart = enabledOnStart,
         keepDetecting = keepDetecting,
+        groupId = groupId,
         conditionOperator = conditionOperator,
         conditions = conditions.map { it.imageCondition },
         actions = actions,

@@ -30,6 +30,7 @@
 
     <string name="item_event_desc_enabled_children">Enabled</string>
     <string name="item_event_desc_disabled_children">Disabled</string>
+    <string name="item_event_ignore_toggle">Ignore</string>
 
     <string name="item_image_condition_desc_threshold">%1$d%%</string>
     <string name="item_image_condition_desc_complete_threshold">Difference: %1$d%%</string>
@@ -112,7 +113,7 @@
     <string name="item_set_text_title">Write text</string>
     <string name="item_set_text_desc">Write a text in the currently focused view</string>
     <string name="item_precision_text_title">Precision text</string>
-    <string name="item_precision_text_desc">Send text with Shizuku key events or shell input</string>
+    <string name="item_precision_text_desc">Send text with Shizuku key events, shell input, or clipboard paste</string>
     <string name="item_set_text_details_text">%1$s</string>
     <string name="item_set_text_details_text_empty">Clear text</string>
     <string name="item_precision_text_details_text">%1$d chars, %2$s</string>
@@ -120,6 +121,10 @@
     <string name="input_field_label_precision_text">Text</string>
     <string name="button_precision_text_mode_keys">Key events</string>
     <string name="button_precision_text_mode_shell">Shell input</string>
+    <string name="button_precision_text_mode_paste">Paste</string>
+    <string name="field_precision_text_replace_existing_title">Replace existing text</string>
+    <string name="field_precision_text_replace_existing_disabled">Paste at the current cursor position.</string>
+    <string name="field_precision_text_replace_existing_enabled">Select all text before pasting.</string>
     <string name="button_precision_text_try">Try</string>
     <string name="status_precision_text_ready">%1$d chars, %2$s</string>
     <string name="status_precision_text_typing">Sending precision text</string>
@@ -151,6 +156,15 @@
 
     <string name="message_empty_screen_event_title">No screen events !</string>
     <string name="message_empty_screen_event_desc">A screen event contains a set of actions executed when a specific condition is detected on the screen.\nYou need at least one screen or trigger event in your scenario to execute it.</string>
+    <string name="button_add_event_group">Add event group</string>
+    <string name="label_event_group_gate">Group gate condition</string>
+    <string name="content_desc_expand_group">Expand or collapse group</string>
+    <string name="dialog_title_event_group">Event group</string>
+    <string name="dropdown_event_group_label">Event group</string>
+    <string name="dropdown_event_group_none">None</string>
+    <string name="dropdown_parent_group_label">Parent group</string>
+    <string name="dropdown_parent_group_none">None (top level)</string>
+    <string name="warning_dialog_message_event_group_delete">Deleting this group will unassign its events. Are you sure?</string>
     <string name="message_empty_trigger_event_list_title">No trigger events !</string>
     <string name="message_empty_trigger_event_list_desc">A trigger event contains a set of actions executed when a set of custom conditions are met.\nYou need at least one screen or trigger event in your scenario to execute it.</string>
 
@@ -161,6 +175,10 @@
     <string name="field_scenario_keep_screen_on_title">Keep screen on</string>
     <string name="field_scenario_keep_screen_on_enabled">Keep the device screen on while detecting.</string>
     <string name="field_scenario_keep_screen_on_disabled">Use the normal device screen behaviour.</string>
+
+    <string name="field_scenario_accessibility_screenshot_title">Accessibility screenshots</string>
+    <string name="field_scenario_accessibility_screenshot_enabled">Capture with accessibility screenshots. This avoids screen sharing but may be slower.</string>
+    <string name="field_scenario_accessibility_screenshot_disabled">Capture with Android screen sharing.</string>
 
     <string name="field_scenario_auto_start_title">Auto start</string>
     <string name="field_scenario_auto_start_enabled">Start this scenario automatically.</string>
@@ -182,6 +200,7 @@
     <string name="field_show_debug_report_desc_not_available">No debug report available</string>
 
     <string name="default_stop_scenario_name">Stop scenario</string>
+    <string name="default_throwlet_catch_name">Throwlet Catch</string>
     <string name="default_precision_gesture_name">Precision gesture</string>
 
 
@@ -434,6 +453,24 @@
     <string name="field_dropdown_system_action_type_home">Home</string>
     <string name="field_dropdown_system_action_type_recent_apps">Recent apps</string>
 
+    <string name="item_throwlet_catch_title">Throwlet Catch</string>
+    <string name="item_throwlet_catch_desc">Start or stop the Throwlet catch/buddy helper overlay</string>
+    <string name="item_throwlet_catch_details_text">%1$s · %2$s · %3$s</string>
+    <string name="item_throwlet_catch_details_with_override_text">%1$s · %2$s</string>
+    <string name="dialog_title_throwlet_catch">Throwlet Catch</string>
+    <string name="field_dropdown_throwlet_catch_operation_title">Operation</string>
+    <string name="field_dropdown_throwlet_catch_operation_toggle">Toggle</string>
+    <string name="field_dropdown_throwlet_catch_operation_hide">Hide</string>
+    <string name="field_dropdown_throwlet_catch_operation_show">Show</string>
+    <string name="field_dropdown_throwlet_catch_mode_title">Mode</string>
+    <string name="field_dropdown_throwlet_catch_mode_catch">Catch</string>
+    <string name="field_dropdown_throwlet_catch_mode_buddy">Buddy</string>
+    <string name="field_dropdown_throwlet_catch_lane_title">Lane</string>
+    <string name="field_dropdown_throwlet_catch_lane_full">Full screen</string>
+    <string name="field_dropdown_throwlet_catch_lane_top">Split top</string>
+    <string name="field_dropdown_throwlet_catch_lane_bottom">Split bottom</string>
+    <string name="field_throwlet_catch_pokemon_override">Pokémon override</string>
+
 
     <!-- Dialogs Action WriteText ================================================================================== -->
 
@@ -467,6 +504,7 @@
     <string name="content_desc_event_state">The state of the event</string>
     <string name="content_desc_conditions_count">The number of conditions in this event</string>
     <string name="content_desc_actions_count">The number of actions in this event</string>
+    <string name="content_desc_ignore_event">Ignore event during runs</string>
     <string name="content_desc_image_condition">The image to be detected</string>
     <string name="content_desc_open_event_list">Open the event list</string>
     <string name="content_desc_touch_probe">Preview taps without clicking</string>
@@ -483,7 +521,6 @@
     <string name="field_split_screen_detection_desc">Detects in the top pane and again in the bottom pane. The Y offset is configured per device in Settings, not in this scenario.</string>
     <string name="field_split_screen_detection_device_offset">Device Y offset: %1$d px</string>
     <string name="field_split_screen_detection_offset_warning">Set a split-screen Y offset in Settings to also check the bottom pane.</string>
-    <string name="field_split_screen_detection_settings">Configure offset in Settings</string>
     <string name="input_field_label_offset_repeat_count">Additional copies</string>
     <string name="input_field_label_offset_repeat_x">Offset X (px)</string>
     <string name="input_field_label_offset_repeat_y">Offset Y (px)</string>

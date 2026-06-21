@@ -179,6 +179,12 @@ data class ActionEntity(
     // ActionType.PRECISION_TEXT
     @ColumnInfo(name = "precision_text_value") val precisionTextValue: String? = null,
     @ColumnInfo(name = "precision_text_mode") val precisionTextMode: String? = null,
+
+    // ActionType.THROWLET_CATCH
+    @ColumnInfo(name = "throwlet_catch_operation") val throwletCatchOperation: ThrowletCatchOperationType? = null,
+    @ColumnInfo(name = "throwlet_catch_mode") val throwletCatchMode: ThrowletCatchModeType? = null,
+    @ColumnInfo(name = "throwlet_catch_lane") val throwletCatchLane: ThrowletCatchLaneType? = null,
+    @ColumnInfo(name = "throwlet_catch_pokemon_name_override") val throwletCatchPokemonNameOverride: String? = null,
 ) : EntityWithId
 
 /**

@@ -1,0 +1,74 @@
+[
+  {
+    "mode": "CATCH",
+    "feature": "catch_berry_menu",
+    "lane": "BOTTOM",
+    "variantOrder": 0,
+    "assetPath": "needles/bottom/catch_berry_menu.png",
+    "sourceSize": { "width": 1440, "height": 3120 },
+    "cropRect": { "left": 109, "top": 2762, "right": 244, "bottom": 2882 },
+    "searchRect": { "left": 109, "top": 2762, "right": 244, "bottom": 2882 },
+    "tapPoint": { "x": 176, "y": 2822 },
+    "threshold": 85
+  },
+  {
+    "mode": "CATCH",
+    "feature": "catch_berry_menu",
+    "lane": "BOTTOM",
+    "variantOrder": 1,
+    "assetPath": "needles/bottom/catch_berry_menu_v2.png",
+    "sourceSize": { "width": 1440, "height": 3120 },
+    "cropRect": { "left": 623, "top": 2834, "right": 848, "bottom": 2938 },
+    "searchRect": { "left": 623, "top": 2834, "right": 848, "bottom": 2938 },
+    "tapPoint": { "x": 735, "y": 2886 },
+    "threshold": 85
+  },
+  {
+    "mode": "CATCH",
+    "feature": "catch_berry_menu",
+    "lane": "FULL",
+    "variantOrder": 0,
+    "assetPath": "needles/full/catch_berry_menu.png",
+    "sourceSize": { "width": 1440, "height": 3120 },
+    "cropRect": { "left": 114, "top": 2758, "right": 248, "bottom": 2891 },
+    "searchRect": { "left": 114, "top": 2758, "right": 248, "bottom": 2891 },
+    "tapPoint": { "x": 181, "y": 2824 },
+    "threshold": 93
+  },
+  {
+    "mode": "CATCH",
+    "feature": "catch_berry_menu",
+    "lane": "FULL",
+    "variantOrder": 1,
+    "assetPath": "needles/full/catch_berry_menu_v2.png",
+    "sourceSize": { "width": 1440, "height": 3120 },
+    "cropRect": { "left": 682, "top": 2264, "right": 805, "bottom": 2384 },
+    "searchRect": { "left": 553, "top": 2145, "right": 942, "bottom": 2593 },
+    "tapPoint": { "x": 743, "y": 2324 },
+    "threshold": 85
+  },
+  {
+    "mode": "BUDDY",
+    "feature": "buddy_berry_menu",
+    "lane": "FULL",
+    "variantOrder": 0,
+    "assetPath": "needles/full/buddy_berry_menu.png",
+    "sourceSize": { "width": 1440, "height": 3120 },
+    "cropRect": { "left": 130, "top": 2795, "right": 278, "bottom": 2916 },
+    "searchRect": { "left": 130, "top": 2795, "right": 278, "bottom": 2916 },
+    "tapPoint": { "x": 204, "y": 2855 },
+    "threshold": 85
+  },
+  {
+    "mode": "BUDDY",
+    "feature": "buddy_camera_button",
+    "lane": "FULL",
+    "variantOrder": 0,
+    "assetPath": "needles/full/buddy_camera_button.png",
+    "sourceSize": { "width": 1440, "height": 3120 },
+    "cropRect": { "left": 651, "top": 2802, "right": 787, "bottom": 2962 },
+    "searchRect": { "left": 651, "top": 2802, "right": 787, "bottom": 2962 },
+    "tapPoint": { "x": 719, "y": 2882 },
+    "threshold": 85
+  }
+]

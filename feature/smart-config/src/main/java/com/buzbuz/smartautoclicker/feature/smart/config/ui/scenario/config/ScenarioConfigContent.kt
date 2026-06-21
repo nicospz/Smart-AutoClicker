@@ -69,6 +69,16 @@ class ScenarioConfigContent(appContext: Context) : NavBarDialogContent(appContex
             dialogController.hideSoftInputOnFocusLoss(fieldScenarioName.textField)
             fieldScenarioName.enableEasyOverwriteOnFocus()
 
+            fieldScenarioCategory.apply {
+                setLabel(com.buzbuz.smartautoclicker.core.ui.R.string.input_field_label_scenario_category)
+                setOnTextChangedListener { viewModel.setScenarioCategory(it.toString()) }
+                textField.filters = arrayOf<InputFilter>(
+                    LengthFilter(context.resources.getInteger(R.integer.name_max_length))
+                )
+            }
+            dialogController.hideSoftInputOnFocusLoss(fieldScenarioCategory.textField)
+            fieldScenarioCategory.enableEasyOverwriteOnFocus()
+
             fieldAntiDetection.apply {
                 setTitle(context.resources.getString(R.string.input_field_label_anti_detection))
                 setupDescriptions(
@@ -89,6 +99,17 @@ class ScenarioConfigContent(appContext: Context) : NavBarDialogContent(appContex
                     )
                 )
                 setOnClickListener(viewModel::toggleKeepScreenOn)
+            }
+
+            fieldAccessibilityScreenshot.apply {
+                setTitle(context.resources.getString(R.string.field_scenario_accessibility_screenshot_title))
+                setupDescriptions(
+                    listOf(
+                        context.getString(R.string.field_scenario_accessibility_screenshot_disabled),
+                        context.getString(R.string.field_scenario_accessibility_screenshot_enabled),
+                    )
+                )
+                setOnClickListener(viewModel::toggleScreenCaptureMode)
             }
 
             fieldAutoStart.apply {
@@ -126,8 +147,10 @@ class ScenarioConfigContent(appContext: Context) : NavBarDialogContent(appContex
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch { viewModel.scenarioName.collect(::updateScenarioName) }
                 launch { viewModel.scenarioNameError.collect(viewBinding.fieldScenarioName::setError) }
+                launch { viewModel.scenarioCategory.collect(::updateScenarioCategory) }
                 launch { viewModel.randomization.collect(::updateRandomization) }
                 launch { viewModel.keepScreenOn.collect(::updateKeepScreenOn) }
+                launch { viewModel.useAccessibilityScreenshot.collect(::updateAccessibilityScreenshot) }
                 launch { viewModel.autoStart.collect(::updateAutoStart) }
                 launch { viewModel.autoStartDelay.collect(::updateAutoStartDelay) }
                 launch { viewModel.autoStartDelayError.collect(viewBinding.fieldAutoStartDelay::setError) }
@@ -140,6 +163,10 @@ class ScenarioConfigContent(appContext: Context) : NavBarDialogContent(appContex
         viewBinding.fieldScenarioName.setText(name)
     }
 
+    private fun updateScenarioCategory(category: String?) {
+        viewBinding.fieldScenarioCategory.setText(category)
+    }
+
     private fun updateRandomization(isEnabled: Boolean) {
         viewBinding.fieldAntiDetection.apply {
             setChecked(isEnabled)
@@ -149,6 +176,13 @@ class ScenarioConfigContent(appContext: Context) : NavBarDialogContent(appContex
 
     private fun updateKeepScreenOn(isEnabled: Boolean) {
         viewBinding.fieldKeepScreenOn.apply {
+            setChecked(isEnabled)
+            setDescription(if (isEnabled) 1 else 0)
+        }
+    }
+
+    private fun updateAccessibilityScreenshot(isEnabled: Boolean) {
+        viewBinding.fieldAccessibilityScreenshot.apply {
             setChecked(isEnabled)
             setDescription(if (isEnabled) 1 else 0)
         }

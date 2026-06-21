@@ -75,6 +75,39 @@
         </receiver>
 
         <activity
+            android:name="com.buzbuz.smartautoclicker.scenarios.category.CategoryScenarioLauncherActivity"
+            android:exported="true"
+            android:theme="@style/AppTheme.TranslucentActivity"
+            android:launchMode="singleInstance"
+            android:taskAffinity="${applicationId}.category"
+            android:excludeFromRecents="true"
+            android:noHistory="true">
+            <intent-filter>
+                <action android:name="com.buzbuz.smartautoclicker.action.START_CATEGORY_SCENARIO" />
+                <action android:name="com.buzbuz.smartautoclicker.action.START_SCENARIO_BY_NAME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <receiver
+            android:name="com.buzbuz.smartautoclicker.scenarios.category.CategoryScenarioBroadcastReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.buzbuz.smartautoclicker.action.SHOW_CATEGORY_SCENARIOS" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name="com.buzbuz.smartautoclicker.localservice.ThrowletOverlayBroadcastReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.buzbuz.smartautoclicker.action.TOGGLE_THROWLET_OVERLAY" />
+                <action android:name="com.buzbuz.smartautoclicker.action.SHOW_THROWLET_OVERLAY" />
+                <action android:name="com.buzbuz.smartautoclicker.action.HIDE_THROWLET_OVERLAY" />
+            </intent-filter>
+        </receiver>
+
+        <activity
             android:name="com.buzbuz.smartautoclicker.settings.SettingsActivity"
             android:exported="false" />
 

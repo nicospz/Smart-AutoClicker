@@ -33,6 +33,7 @@ import com.buzbuz.smartautoclicker.core.domain.model.condition.Condition
 import com.buzbuz.smartautoclicker.core.domain.model.condition.ImageCondition
 import com.buzbuz.smartautoclicker.core.domain.model.condition.toDomain
 import com.buzbuz.smartautoclicker.core.domain.model.event.Event
+import com.buzbuz.smartautoclicker.core.domain.model.event.EventGroup
 import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEvent
 import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEventListData
 import com.buzbuz.smartautoclicker.core.domain.model.event.TriggerEvent
@@ -40,6 +41,7 @@ import com.buzbuz.smartautoclicker.core.domain.model.event.toDomainImageEvent
 import com.buzbuz.smartautoclicker.core.domain.model.event.toDomainTriggerEvent
 import com.buzbuz.smartautoclicker.core.domain.model.scenario.Scenario
 import com.buzbuz.smartautoclicker.core.domain.model.scenario.toDomain
+import com.buzbuz.smartautoclicker.core.domain.model.event.toDomain as eventGroupToDomain
 
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -113,6 +115,12 @@ internal class Repository @Inject internal constructor(
     override suspend fun getTriggerEvents(scenarioId: Long): List<TriggerEvent> =
         dataSource.getTriggerEvents(scenarioId).map { it.toDomainTriggerEvent() }
 
+    override suspend fun getImageEventGroups(scenarioId: Long): List<EventGroup> =
+        dataSource.getImageEventGroups(scenarioId).map { it.eventGroupToDomain() }
+
+    override suspend fun getTriggerEventGroups(scenarioId: Long): List<EventGroup> =
+        dataSource.getTriggerEventGroups(scenarioId).map { it.eventGroupToDomain() }
+
     override suspend fun getTriggerEventCount(scenarioId: Long): Int =
         dataSource.getTriggerEventCount(scenarioId)
 
@@ -130,28 +138,60 @@ internal class Repository @Inject internal constructor(
     }
 
     override suspend fun addScenarioCopy(completeScenario: CompleteScenario): Long? {
-        val (scenario, events) = completeScenario.toDomain(cleanIds = true)
-        return dataSource.addCompleteScenario(scenario, events, ::clearRemovedConditionsBitmaps)
+        val (scenario, events, eventGroups) = completeScenario.toDomain(cleanIds = true)
+        return dataSource.addCompleteScenario(scenario, events, eventGroups, ::clearRemovedConditionsBitmaps)
     }
 
     override fun addScenarioCopy(scenarioId: Long, copyName: String, onCopyCompleted: (Boolean) -> Unit) {
         coroutineScopeIo.launch {
-            val (scenario, events) = dataSource.getCompleteScenario(scenarioId)?.toDomain(cleanIds = true) ?: run {
+            val (scenario, events, eventGroups) = dataSource.getCompleteScenario(scenarioId)?.toDomain(cleanIds = true) ?: run {
                 onCopyCompleted(false)
                 return@launch
             }
 
-            dataSource.addCompleteScenario(scenario.copy(name = copyName), events, ::clearRemovedConditionsBitmaps)
+            dataSource.addCompleteScenario(
+                scenario.copy(name = copyName),
+                events,
+                eventGroups,
+                ::clearRemovedConditionsBitmaps,
+            )
             onCopyCompleted(true)
         }
     }
 
-    override suspend fun updateScenario(scenario: Scenario, events: List<Event>): Boolean =
-        dataSource.updateScenario(scenario, events, ::clearRemovedConditionsBitmaps)
+    override suspend fun updateScenario(
+        scenario: Scenario,
+        events: List<Event>,
+        eventGroups: List<EventGroup>,
+    ): Boolean =
+        dataSource.updateScenario(scenario, events, eventGroups, ::clearRemovedConditionsBitmaps)
 
     override suspend fun updateScenarioFavorite(scenarioId: Identifier, isFavorite: Boolean) {
         dataSource.updateScenarioFavorite(scenarioId.databaseId, isFavorite)
     }
+
+    override suspend fun getCompleteScenario(scenarioId: Long): CompleteScenario? =
+        dataSource.getCompleteScenario(scenarioId)
+
+    override suspend fun getCompleteScenarioBySyncId(syncId: String): CompleteScenario? =
+        dataSource.getCompleteScenarioBySyncId(syncId)
+
+    override suspend fun getScenarioDatabaseIdBySyncId(syncId: String): Long? =
+        dataSource.getScenarioDatabaseIdBySyncId(syncId)
+
+    override suspend fun upsertScenarioBySyncId(
+        completeScenario: CompleteScenario,
+        syncId: String,
+        updatedAtMs: Long,
+    ): Long? = dataSource.upsertScenarioBySyncId(
+        completeScenario = completeScenario,
+        syncId = syncId,
+        updatedAtMs = updatedAtMs,
+        onImageConditionsRemoved = ::clearRemovedConditionsBitmaps,
+    )
+
+    override suspend fun deleteScenarioBySyncId(syncId: String): Boolean =
+        dataSource.deleteScenarioBySyncId(syncId, ::clearRemovedConditionsBitmaps)
 
     override suspend fun migrateLegacyImageConditions(): Boolean {
         val legacyConditions = dataSource.getLegacyImageConditions()

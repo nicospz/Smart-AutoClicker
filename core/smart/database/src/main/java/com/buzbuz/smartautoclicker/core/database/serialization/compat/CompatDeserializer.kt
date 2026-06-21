@@ -35,12 +35,15 @@ import com.buzbuz.smartautoclicker.core.database.entity.ChangeCounterOperationTy
 import com.buzbuz.smartautoclicker.core.database.entity.ClickPositionType
 import com.buzbuz.smartautoclicker.core.database.entity.CompleteActionEntity
 import com.buzbuz.smartautoclicker.core.database.entity.CompleteEventEntity
+import com.buzbuz.smartautoclicker.core.database.entity.CompleteEventGroupEntity
 import com.buzbuz.smartautoclicker.core.database.entity.CompleteScenario
 import com.buzbuz.smartautoclicker.core.database.entity.ConditionEntity
 import com.buzbuz.smartautoclicker.core.database.entity.ConditionType
 import com.buzbuz.smartautoclicker.core.database.entity.CounterComparisonOperation
 import com.buzbuz.smartautoclicker.core.database.entity.CounterOperationValueType
 import com.buzbuz.smartautoclicker.core.database.entity.EventEntity
+import com.buzbuz.smartautoclicker.core.database.entity.EventGroupEntity
+import com.buzbuz.smartautoclicker.core.database.entity.EventGroupType
 import com.buzbuz.smartautoclicker.core.database.entity.EventToggleEntity
 import com.buzbuz.smartautoclicker.core.database.entity.EventToggleType
 import com.buzbuz.smartautoclicker.core.database.entity.EventType
@@ -51,6 +54,9 @@ import com.buzbuz.smartautoclicker.core.database.entity.IntentExtraType
 import com.buzbuz.smartautoclicker.core.database.entity.NotificationMessageType
 import com.buzbuz.smartautoclicker.core.database.entity.ScenarioEntity
 import com.buzbuz.smartautoclicker.core.database.entity.SystemActionType
+import com.buzbuz.smartautoclicker.core.database.entity.ThrowletCatchLaneType
+import com.buzbuz.smartautoclicker.core.database.entity.ThrowletCatchModeType
+import com.buzbuz.smartautoclicker.core.database.entity.ThrowletCatchOperationType
 import com.buzbuz.smartautoclicker.core.database.serialization.Deserializer
 
 import kotlinx.serialization.json.JsonArray
@@ -101,6 +107,7 @@ internal open class CompatDeserializer : Deserializer {
 
         /** Tag for logs */
         private const val TAG = "DeserializerCompat"
+        private const val LEGACY_THROWLET_OVERLAY_SYSTEM_ACTION = "TOGGLE_THROWLET_OVERLAY"
     }
 
     override fun deserializeCompleteScenario(jsonCompleteScenario: JsonObject): CompleteScenario {
@@ -110,12 +117,36 @@ internal open class CompatDeserializer : Deserializer {
         val jsonCompleteEvents = jsonCompleteScenario.getJsonArray("events")?.let { jsonEvents ->
             deserializeCompleteEvents(jsonEvents)
         } ?: emptyList()
+        val jsonCompleteEventGroups = jsonCompleteScenario.getJsonArray("eventGroups")?.let { jsonGroups ->
+            deserializeCompleteEventGroups(jsonGroups)
+        } ?: emptyList()
 
         return CompleteScenario(
             scenario = scenarioEntity,
             events =  jsonCompleteEvents,
+            eventGroups = jsonCompleteEventGroups,
         )
     }
+
+    open fun deserializeCompleteEventGroups(jsonCompleteEventGroups: JsonArray): List<CompleteEventGroupEntity> =
+        jsonCompleteEventGroups.mapNotNull { jsonCompleteEventGroup ->
+            val jsonGroupObject = jsonCompleteEventGroup.jsonObject
+            val group = jsonGroupObject.getJsonObject("eventGroup", true)
+                ?.let(::deserializeEventGroup)
+                ?: return@mapNotNull null
+
+            val conditions = jsonGroupObject.getJsonArray("conditions")
+                ?.getListOf(::deserializeCondition)
+            if (conditions.isNullOrEmpty()) {
+                Log.w(TAG, "There is no conditions in this event group")
+                return@mapNotNull null
+            }
+
+            CompleteEventGroupEntity(
+                eventGroup = group,
+                conditions = conditions,
+            )
+        }
 
     open fun deserializeCompleteEvents(jsonCompleteEvents: JsonArray): List<CompleteEventEntity> {
         val eventEntityList = mutableListOf<EventEntity>()
@@ -201,6 +232,8 @@ internal open class CompatDeserializer : Deserializer {
             isFavorite = jsonScenario.getBoolean("isFavorite") ?: false,
             autoStart = jsonScenario.getBoolean("autoStart") ?: false,
             autoStartDelayMs = jsonScenario.getLong("autoStartDelayMs")?.coerceAtLeast(0) ?: 0L,
+            category = jsonScenario.getString("category")?.trim()?.takeIf { it.isNotEmpty() },
+            screenCaptureMode = jsonScenario.getEnum("screenCaptureMode") ?: com.buzbuz.smartautoclicker.core.database.entity.ScreenCaptureMode.MEDIA_PROJECTION,
         )
     }
 
@@ -247,6 +280,7 @@ internal open class CompatDeserializer : Deserializer {
             offsetRepeatX = offsetRepeatX,
             offsetRepeatY = offsetRepeatY,
             offsetRepeatMatchMode = offsetRepeatMatchMode,
+            groupId = jsonEvent.getLong("groupId") ?: jsonEvent.getLong("group_id"),
         )
     }
 
@@ -273,7 +307,12 @@ internal open class CompatDeserializer : Deserializer {
     @VisibleForTesting(otherwise = VisibleForTesting.PROTECTED)
     open fun deserializeConditionImageDetected(jsonCondition: JsonObject): ConditionEntity? {
         val id = jsonCondition.getLong("id", true) ?: return null
-        val eventId = jsonCondition.getLong("eventId", true) ?: return null
+        val eventId = jsonCondition.getLong("eventId")
+        val eventGroupId = jsonCondition.getLong("eventGroupId") ?: jsonCondition.getLong("event_group_id")
+        if (eventId == null && eventGroupId == null) {
+            Log.w(TAG, "Can't deserialize condition, eventId and eventGroupId are missing.")
+            return null
+        }
         val area = jsonCondition.getRect("areaLeft", "areaTop", "areaRight", "areaBottom")
             ?: return null
         val path = jsonCondition.getString("path", true) ?: return null
@@ -281,6 +320,7 @@ internal open class CompatDeserializer : Deserializer {
         return ConditionEntity(
             id = id,
             eventId = eventId,
+            eventGroupId = eventGroupId,
             name = jsonCondition.getString("name") ?: "",
             priority = jsonCondition.getInt("priority") ?: 0,
             type = ConditionType.ON_IMAGE_DETECTED,
@@ -306,12 +346,18 @@ internal open class CompatDeserializer : Deserializer {
     @VisibleForTesting(otherwise = VisibleForTesting.PROTECTED)
     open fun deserializeConditionBroadcastReceived(jsonCondition: JsonObject): ConditionEntity? {
         val id = jsonCondition.getLong("id", true) ?: return null
-        val eventId = jsonCondition.getLong("eventId", true) ?: return null
+        val eventId = jsonCondition.getLong("eventId")
+        val eventGroupId = jsonCondition.getLong("eventGroupId") ?: jsonCondition.getLong("event_group_id")
+        if (eventId == null && eventGroupId == null) {
+            Log.w(TAG, "Can't deserialize condition, eventId and eventGroupId are missing.")
+            return null
+        }
         val broadcastAction = jsonCondition.getString("broadcastAction") ?: return null
 
         return ConditionEntity(
             id = id,
             eventId = eventId,
+            eventGroupId = eventGroupId,
             priority = 0,
             name = jsonCondition.getString("name") ?: "",
             type = ConditionType.ON_BROADCAST_RECEIVED,
@@ -322,7 +368,12 @@ internal open class CompatDeserializer : Deserializer {
     @VisibleForTesting(otherwise = VisibleForTesting.PROTECTED)
     open fun deserializeConditionCounterReached(jsonCondition: JsonObject): ConditionEntity? {
         val id = jsonCondition.getLong("id", true) ?: return null
-        val eventId = jsonCondition.getLong("eventId", true) ?: return null
+        val eventId = jsonCondition.getLong("eventId")
+        val eventGroupId = jsonCondition.getLong("eventGroupId") ?: jsonCondition.getLong("event_group_id")
+        if (eventId == null && eventGroupId == null) {
+            Log.w(TAG, "Can't deserialize condition, eventId and eventGroupId are missing.")
+            return null
+        }
         val counterName = jsonCondition.getString("counterName") ?: return null
         val counterComparisonOperation = jsonCondition.getEnum<CounterComparisonOperation>("counterComparisonOperation")
             ?: return null
@@ -335,6 +386,7 @@ internal open class CompatDeserializer : Deserializer {
         return ConditionEntity(
             id = id,
             eventId = eventId,
+            eventGroupId = eventGroupId,
             name = jsonCondition.getString("name") ?: "",
             priority = 0,
             type = ConditionType.ON_COUNTER_REACHED,
@@ -349,13 +401,19 @@ internal open class CompatDeserializer : Deserializer {
     @VisibleForTesting(otherwise = VisibleForTesting.PROTECTED)
     open fun deserializeConditionTimerReached(jsonCondition: JsonObject): ConditionEntity? {
         val id = jsonCondition.getLong("id", true) ?: return null
-        val eventId = jsonCondition.getLong("eventId", true) ?: return null
+        val eventId = jsonCondition.getLong("eventId")
+        val eventGroupId = jsonCondition.getLong("eventGroupId") ?: jsonCondition.getLong("event_group_id")
+        if (eventId == null && eventGroupId == null) {
+            Log.w(TAG, "Can't deserialize condition, eventId and eventGroupId are missing.")
+            return null
+        }
         val timerValueMs = jsonCondition.getLong("timerValueMs") ?: return null
         val restartWhenReached = jsonCondition.getBoolean("restartWhenReached") ?: return null
 
         return ConditionEntity(
             id = id,
             eventId = eventId,
+            eventGroupId = eventGroupId,
             name = jsonCondition.getString("name") ?: "",
             priority = 0,
             type = ConditionType.ON_TIMER_REACHED,
@@ -368,6 +426,32 @@ internal open class CompatDeserializer : Deserializer {
     @VisibleForTesting(otherwise = VisibleForTesting.PROTECTED)
     open fun deserializeConditionType(jsonCondition: JsonObject): ConditionType? =
         jsonCondition.getEnum<ConditionType>("type", shouldLogError = true)
+
+
+    // ======================= EVENT GROUP
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PROTECTED)
+    open fun deserializeEventGroup(jsonEventGroup: JsonObject): EventGroupEntity? {
+        val id = jsonEventGroup.getLong("id", true) ?: return null
+        val scenarioId = jsonEventGroup.getLong("scenarioId")
+            ?: jsonEventGroup.getLong("scenario_id", true)
+            ?: return null
+        val eventType = jsonEventGroup.getEnum<EventGroupType>("eventType")
+            ?: jsonEventGroup.getEnum<EventGroupType>("event_type", true)
+            ?: return null
+
+        return EventGroupEntity(
+            id = id,
+            scenarioId = scenarioId,
+            name = jsonEventGroup.getString("name") ?: "",
+            eventType = eventType,
+            conditionOperator = jsonEventGroup.getInt("conditionOperator")
+                ?: jsonEventGroup.getInt("operator")
+                ?: OPERATOR_DEFAULT_VALUE,
+            priority = jsonEventGroup.getInt("priority")?.coerceAtLeast(0) ?: 0,
+            parentGroupId = jsonEventGroup.getLong("parentGroupId") ?: jsonEventGroup.getLong("parent_group_id"),
+        )
+    }
 
 
     // ======================= ACTION
@@ -391,6 +475,7 @@ internal open class CompatDeserializer : Deserializer {
             ActionType.STOP_SCENARIO -> deserializeActionStopScenario(jsonAction)
             ActionType.PRECISION_GESTURE -> deserializeActionPrecisionGesture(jsonAction)
             ActionType.PRECISION_TEXT -> deserializeActionPrecisionText(jsonAction)
+            ActionType.THROWLET_CATCH -> deserializeActionThrowletCatch(jsonAction)
             null -> null
         }
 
@@ -645,6 +730,19 @@ internal open class CompatDeserializer : Deserializer {
     open fun deserializeActionSystem(jsonSystem: JsonObject): ActionEntity? {
         val id = jsonSystem.getLong("id", true) ?: return null
         val eventId = jsonSystem.getLong("eventId", true) ?: return null
+        val systemActionTypeName = jsonSystem.getString("systemActionType")
+
+        if (systemActionTypeName == LEGACY_THROWLET_OVERLAY_SYSTEM_ACTION) {
+            return ActionEntity(
+                id = id,
+                eventId = eventId,
+                name = jsonSystem.getString("name") ?: "",
+                priority = jsonSystem.getInt("priority")?.coerceAtLeast(0) ?: 0,
+                type = ActionType.THROWLET_CATCH,
+                throwletCatchOperation = ThrowletCatchOperationType.TOGGLE,
+            )
+        }
+
         val type = jsonSystem.getEnum<SystemActionType>("systemActionType") ?: return null
 
         return ActionEntity(
@@ -654,6 +752,29 @@ internal open class CompatDeserializer : Deserializer {
             priority = jsonSystem.getInt("priority")?.coerceAtLeast(0) ?: 0,
             type = ActionType.SYSTEM,
             systemActionType = type,
+        )
+    }
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PROTECTED)
+    open fun deserializeActionThrowletCatch(jsonThrowletCatch: JsonObject): ActionEntity? {
+        val id = jsonThrowletCatch.getLong("id", true) ?: return null
+        val eventId = jsonThrowletCatch.getLong("eventId", true) ?: return null
+        val operation = jsonThrowletCatch.getEnum<ThrowletCatchOperationType>("throwletCatchOperation")
+            ?: ThrowletCatchOperationType.TOGGLE
+
+        return ActionEntity(
+            id = id,
+            eventId = eventId,
+            name = jsonThrowletCatch.getString("name") ?: "",
+            priority = jsonThrowletCatch.getInt("priority")?.coerceAtLeast(0) ?: 0,
+            type = ActionType.THROWLET_CATCH,
+            throwletCatchOperation = operation,
+            throwletCatchMode = jsonThrowletCatch.getEnum<ThrowletCatchModeType>("throwletCatchMode")
+                ?: ThrowletCatchModeType.CATCH,
+            throwletCatchLane = jsonThrowletCatch.getEnum<ThrowletCatchLaneType>("throwletCatchLane")
+                ?: ThrowletCatchLaneType.FULL,
+            throwletCatchPokemonNameOverride = jsonThrowletCatch.getString("throwletCatchPokemonNameOverride")
+                ?.takeIf { it.isNotBlank() },
         )
     }
 

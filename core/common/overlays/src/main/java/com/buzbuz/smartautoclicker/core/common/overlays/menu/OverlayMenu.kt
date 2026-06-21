@@ -279,6 +279,12 @@ abstract class OverlayMenu(
                     view.setOnClickListener { onToggleOverlayVisibilityClicked() }
                 }
                 else -> view.setDebouncedOnClickListener { v ->
+                    Log.d(
+                        TAG,
+                        "menu item clicked overlay=${javaClass.simpleName}#${hashCode()} " +
+                            "viewId=${v.resources.getResourceEntryName(v.id)} lifecycle=${lifecycle.currentState} " +
+                            "isAnimating=${resizeController.isAnimating}",
+                    )
                     if (resizeController.isAnimating) return@setDebouncedOnClickListener
                     onMenuItemClicked(v.id)
                 }

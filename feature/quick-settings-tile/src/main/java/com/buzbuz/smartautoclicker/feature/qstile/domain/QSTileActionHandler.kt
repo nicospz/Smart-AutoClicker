@@ -23,6 +23,6 @@ import com.buzbuz.smartautoclicker.core.dumb.domain.model.DumbScenario
 interface QSTileActionHandler {
     fun isRunning() : Boolean
     fun startDumbScenario(dumbScenario: DumbScenario)
-    fun startSmartScenario(resultCode: Int, data: Intent, scenario: Scenario)
+    fun startSmartScenario(resultCode: Int, data: Intent?, scenario: Scenario)
     fun stop()
 }

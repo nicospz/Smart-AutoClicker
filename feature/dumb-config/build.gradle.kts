@@ -42,4 +42,5 @@ dependencies {
     implementation(project(":core:common:overlays"))
     implementation(project(":core:common:ui"))
     implementation(project(":core:dumb"))
+    implementation(project(":feature:sync"))
 }

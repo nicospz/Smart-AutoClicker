@@ -35,6 +35,7 @@ fun ItemImageEventBinding.bind(
     item: UiImageEvent,
     canDrag: Boolean,
     itemClickedListener: (ImageEvent) -> Unit,
+    ignoreChangedListener: (ImageEvent, Boolean) -> Unit = { _, _ -> },
 ) {
     textName.text = item.name
     textConditionsCount.text = item.conditionsCountText
@@ -46,8 +47,14 @@ fun ItemImageEventBinding.bind(
 
     textEnabled.setText(item.enabledOnStartTextRes)
     iconEnabled.setImageResource(item.enabledOnStartIconRes)
+    toggleIgnore.setOnCheckedChangeListener(null)
+    toggleIgnore.isChecked = item.ignored
+    toggleIgnore.setOnCheckedChangeListener { _, isChecked ->
+        ignoreChangedListener(item.event, isChecked)
+    }
 
     btnReorder.visibility = if (canDrag) View.VISIBLE else View.GONE
+    root.alpha = if (item.ignored) 0.55f else 1f
 
     root.setOnClickListener { itemClickedListener(item.event) }
 }

@@ -43,6 +43,7 @@ private fun ImageEvent.toEntity() = EventEntity(
     priority = priority,
     keepDetecting = keepDetecting,
     enabledOnStart = enabledOnStart,
+    ignored = ignored,
     cooldownMs = cooldownMs,
     type = EventType.IMAGE_EVENT,
     imageDetectionMode = detectionMode.toEntity(),
@@ -50,6 +51,7 @@ private fun ImageEvent.toEntity() = EventEntity(
     offsetRepeatX = offsetRepeatX,
     offsetRepeatY = offsetRepeatY,
     offsetRepeatMatchMode = offsetRepeatMatchMode.toEntity(),
+    groupId = groupId?.databaseId,
 )
 
 private fun TriggerEvent.toEntity() : EventEntity =
@@ -59,9 +61,11 @@ private fun TriggerEvent.toEntity() : EventEntity =
         name = name,
         conditionOperator = conditionOperator,
         enabledOnStart = enabledOnStart,
+        ignored = ignored,
         cooldownMs = cooldownMs,
-        priority = -1,
+        priority = priority,
         type = EventType.TRIGGER_EVENT,
+        groupId = groupId?.databaseId,
     )
 
 
@@ -81,6 +85,7 @@ internal fun CompleteEventEntity.toDomainImageEvent(cleanIds: Boolean = false): 
         conditionOperator = event.conditionOperator,
         priority = event.priority,
         enabledOnStart = event.enabledOnStart,
+        ignored = event.ignored,
         cooldownMs = event.cooldownMs.coerceAtLeast(0),
         keepDetecting = event.keepDetecting == true,
         detectionMode = event.imageDetectionMode.toDomain(),
@@ -88,6 +93,7 @@ internal fun CompleteEventEntity.toDomainImageEvent(cleanIds: Boolean = false): 
         offsetRepeatX = event.offsetRepeatX,
         offsetRepeatY = event.offsetRepeatY,
         offsetRepeatMatchMode = event.offsetRepeatMatchMode.toDomain(),
+        groupId = event.groupId?.let { Identifier(id = it, asTemporary = cleanIds) },
         actions = actions.map { it.toDomain(cleanIds) }.sortedByPriority().toMutableList(),
         conditions = conditions.map { it.toDomain(cleanIds) as ImageCondition }.sortedByPriority().toMutableList(),
     )
@@ -100,7 +106,10 @@ internal fun CompleteEventEntity.toDomainTriggerEvent(cleanIds: Boolean = false)
         name= event.name,
         conditionOperator = event.conditionOperator,
         enabledOnStart = event.enabledOnStart,
+        ignored = event.ignored,
+        priority = event.priority.coerceAtLeast(0),
         cooldownMs = event.cooldownMs.coerceAtLeast(0),
+        groupId = event.groupId?.let { Identifier(id = it, asTemporary = cleanIds) },
         actions = actions.map { it.toDomain(cleanIds) }.sortedByPriority().toMutableList(),
         conditions = conditions.map { it.toDomain(cleanIds) as TriggerCondition }.toMutableList(),
     )

@@ -26,14 +26,18 @@ import com.buzbuz.smartautoclicker.core.domain.model.action.Action
 import com.buzbuz.smartautoclicker.core.domain.model.action.intent.IntentExtra
 import com.buzbuz.smartautoclicker.core.domain.model.condition.Condition
 import com.buzbuz.smartautoclicker.core.domain.model.condition.ImageCondition
+import com.buzbuz.smartautoclicker.core.domain.model.condition.TriggerCondition
 import com.buzbuz.smartautoclicker.core.domain.model.event.Event
+import com.buzbuz.smartautoclicker.core.domain.model.event.EventGroup
 import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEvent
+import com.buzbuz.smartautoclicker.core.domain.model.event.TriggerEvent
 import com.buzbuz.smartautoclicker.core.domain.model.scenario.Scenario
 import com.buzbuz.smartautoclicker.feature.smart.config.data.ScenarioEditor
 import com.buzbuz.smartautoclicker.feature.smart.config.domain.model.IEditionState
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -46,6 +50,8 @@ import javax.inject.Singleton
 class EditionRepository @Inject constructor(
     private val repository: IRepository,
     private val bitmapRepository: BitmapRepository,
+    private val sacSyncCoordinator: com.buzbuz.smartautoclicker.feature.sync.domain.SacSyncCoordinator,
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
 ) {
 
     /** Keep tracks of all changes in the currently edited scenario. */
@@ -66,9 +72,21 @@ class EditionRepository @Inject constructor(
     val isEditingEvent: Flow<Boolean> = scenarioEditor.currentEventEditor
         .flatMapLatest { eventsEditor -> eventsEditor?.editedItem ?: flowOf(null) }
         .map { it?.id != null }
+    /** Tells if the user is currently editing an event group. */
+    val isEditingEventGroup: Flow<Boolean> = scenarioEditor.currentEventGroupEditor
+        .flatMapLatest { groupEditor -> groupEditor?.editedItem ?: flowOf(null) }
+        .map { it?.id != null }
     /** Tells if the user is currently editing a condition. */
-    val isEditingCondition: Flow<Boolean> = scenarioEditor.currentEventEditor
-        .flatMapLatest { eventsEditor -> eventsEditor?.conditionsEditor?.editedItem ?: flowOf(null) }
+    val isEditingCondition: Flow<Boolean> = combine(
+        scenarioEditor.currentEventEditor,
+        scenarioEditor.currentEventGroupEditor,
+    ) { eventEditor, groupEditor ->
+        when {
+            groupEditor != null -> groupEditor.conditionsEditor.editedItem
+            eventEditor != null -> eventEditor.conditionsEditor.editedItem
+            else -> flowOf(null)
+        }
+    }.flatMapLatest { it ?: flowOf(null) }
         .map { it?.id != null }
     /** Tells if the user is currently editing an action. */
     val isEditingAction: Flow<Boolean> = scenarioEditor.currentEventEditor
@@ -94,6 +112,8 @@ class EditionRepository @Inject constructor(
             scenario = scenario,
             imageEvents = repository.getImageEvents(scenarioId),
             triggerEvents = repository.getTriggerEvents(scenarioId),
+            imageEventGroups = repository.getImageEventGroups(scenarioId),
+            triggerEventGroups = repository.getTriggerEventGroups(scenarioId),
         )
         return true
     }
@@ -105,10 +125,17 @@ class EditionRepository @Inject constructor(
         val updateResult = repository.updateScenario(
             scenario = scenarioEditor.editedScenario.value ?: return false,
             events = scenarioEditor.getAllEditedEvents(),
+            eventGroups = scenarioEditor.getAllEditedEventGroups(),
         )
 
         // In case of error, do not stop the edition
         if (!updateResult) return false
+
+        val savedScenario = scenarioEditor.editedScenario.value
+        savedScenario?.syncId?.takeIf { it.isNotBlank() }?.let { syncId ->
+            val metrics = context.resources.displayMetrics
+            sacSyncCoordinator.scheduleScenarioPush(syncId, isSmart = true, metrics.widthPixels, metrics.heightPixels)
+        }
 
         scenarioEditor.stopEdition()
         editedItemsBuilder.resetBuilder()
@@ -132,6 +159,27 @@ class EditionRepository @Inject constructor(
             newEvents.mapIndexed { index, event -> event.copy(priority = index) }
         )
     }
+    fun updateTriggerEventsOrder(newEvents: List<TriggerEvent>) {
+        scenarioEditor.updateTriggerEventsOrder(
+            newEvents.mapIndexed { index, event -> event.copy(priority = index) }
+        )
+    }
+
+    fun updateImageEventsAndGroupsOrder(events: List<ImageEvent>, groups: List<EventGroup>) {
+        scenarioEditor.updateImageEventsAndGroupsOrder(events, groups)
+    }
+
+    fun updateTriggerEventsAndGroupsOrder(events: List<TriggerEvent>, groups: List<EventGroup>) {
+        scenarioEditor.updateTriggerEventsAndGroupsOrder(events, groups)
+    }
+
+    fun getEditedImageEvents(): List<ImageEvent> = scenarioEditor.getEditedImageEvents()
+
+    fun getEditedImageEventGroups(): List<EventGroup> = scenarioEditor.getEditedImageEventGroups()
+
+    fun getEditedTriggerEvents(): List<TriggerEvent> = scenarioEditor.getEditedTriggerEvents()
+
+    fun getEditedTriggerEventGroups(): List<EventGroup> = scenarioEditor.getEditedTriggerEventGroups()
 
     // --- EVENT
 
@@ -145,9 +193,12 @@ class EditionRepository @Inject constructor(
         )
     }
     fun updateImageConditionsOrder(imageConditions: List<ImageCondition>) {
-        scenarioEditor.updateImageConditionsOrder(
-            imageConditions.mapIndexed { index, imgCond -> imgCond.copy(priority = index) }
-        )
+        val updatedConditions = imageConditions.mapIndexed { index, imgCond -> imgCond.copy(priority = index) }
+        if (scenarioEditor.currentEventGroupEditor.value != null) {
+            scenarioEditor.updateImageGroupConditionsOrder(updatedConditions)
+        } else {
+            scenarioEditor.updateImageConditionsOrder(updatedConditions)
+        }
     }
 
     fun upsertEditedEvent() {
@@ -163,16 +214,45 @@ class EditionRepository @Inject constructor(
 
     // --- CONDITION
 
-    fun startConditionEdition(condition: Condition) =
-        scenarioEditor.currentEventEditor.value?.conditionsEditor?.startItemEdition(condition)
-    fun updateEditedCondition(condition: Condition) =
-        scenarioEditor.currentEventEditor.value?.conditionsEditor?.updateEditedItem(condition)
-    fun upsertEditedCondition() =
-        scenarioEditor.currentEventEditor.value?.conditionsEditor?.upsertEditedItem()
-    fun deleteEditedCondition() =
-        scenarioEditor.currentEventEditor.value?.conditionsEditor?.deleteEditedItem()
-    fun stopConditionEdition() =
-        scenarioEditor.currentEventEditor.value?.conditionsEditor?.stopItemEdition()
+    fun startConditionEdition(condition: Condition) {
+        if (scenarioEditor.currentEventGroupEditor.value != null) {
+            scenarioEditor.startGroupConditionEdition(condition)
+        } else {
+            scenarioEditor.currentEventEditor.value?.conditionsEditor?.startItemEdition(condition)
+        }
+    }
+
+    fun updateEditedCondition(condition: Condition) {
+        if (scenarioEditor.currentEventGroupEditor.value != null) {
+            scenarioEditor.updateEditedGroupCondition(condition)
+        } else {
+            scenarioEditor.currentEventEditor.value?.conditionsEditor?.updateEditedItem(condition)
+        }
+    }
+
+    fun upsertEditedCondition() {
+        if (scenarioEditor.currentEventGroupEditor.value != null) {
+            scenarioEditor.upsertEditedGroupCondition()
+        } else {
+            scenarioEditor.currentEventEditor.value?.conditionsEditor?.upsertEditedItem()
+        }
+    }
+
+    fun deleteEditedCondition() {
+        if (scenarioEditor.currentEventGroupEditor.value != null) {
+            scenarioEditor.deleteEditedGroupCondition()
+        } else {
+            scenarioEditor.currentEventEditor.value?.conditionsEditor?.deleteEditedItem()
+        }
+    }
+
+    fun stopConditionEdition() {
+        if (scenarioEditor.currentEventGroupEditor.value != null) {
+            scenarioEditor.stopGroupConditionEdition()
+        } else {
+            scenarioEditor.currentEventEditor.value?.conditionsEditor?.stopItemEdition()
+        }
+    }
 
 
     // --- ACTION
@@ -201,6 +281,36 @@ class EditionRepository @Inject constructor(
         scenarioEditor.currentEventEditor.value?.actionsEditor?.intentExtraEditor?.deleteEditedItem()
     fun stopIntentExtraEdition() =
         scenarioEditor.currentEventEditor.value?.actionsEditor?.intentExtraEditor?.stopItemEdition()
+
+    // --- EVENT GROUP
+
+    fun startEventGroupEdition(group: EventGroup) =
+        scenarioEditor.startEventGroupEdition(group)
+
+    fun updateEditedEventGroup(group: EventGroup) =
+        scenarioEditor.updateEditedEventGroup(group)
+
+    fun upsertEditedEventGroup() =
+        scenarioEditor.upsertEditedEventGroup()
+
+    fun upsertNewEventGroup(group: EventGroup) {
+        scenarioEditor.startEventGroupEdition(group)
+        scenarioEditor.upsertEditedEventGroup()
+    }
+
+    fun deleteEditedEventGroup() =
+        scenarioEditor.deleteEditedEventGroup()
+
+    fun stopEventGroupEdition() =
+        scenarioEditor.stopEventGroupEdition()
+
+    fun updateEditedGroupConditionsOrder(conditions: List<ImageCondition>) {
+        scenarioEditor.updateImageGroupConditionsOrder(conditions)
+    }
+
+    fun updateEditedTriggerGroupConditionsOrder(conditions: List<TriggerCondition>) {
+        scenarioEditor.updateTriggerGroupConditionsOrder(conditions)
+    }
 }
 
 

@@ -10,6 +10,9 @@ import com.buzbuz.smartautoclicker.core.database.entity.CompleteActionEntity
 import com.buzbuz.smartautoclicker.core.database.entity.EventToggleType
 import com.buzbuz.smartautoclicker.core.database.entity.NotificationMessageType
 import com.buzbuz.smartautoclicker.core.database.entity.SystemActionType
+import com.buzbuz.smartautoclicker.core.database.entity.ThrowletCatchLaneType
+import com.buzbuz.smartautoclicker.core.database.entity.ThrowletCatchModeType
+import com.buzbuz.smartautoclicker.core.database.entity.ThrowletCatchOperationType
 import com.buzbuz.smartautoclicker.core.domain.model.CounterOperationValue
 import com.buzbuz.smartautoclicker.core.domain.model.action.Action
 import com.buzbuz.smartautoclicker.core.domain.model.action.ChangeCounter
@@ -23,6 +26,7 @@ import com.buzbuz.smartautoclicker.core.domain.model.action.SetText
 import com.buzbuz.smartautoclicker.core.domain.model.action.StopScenario
 import com.buzbuz.smartautoclicker.core.domain.model.action.Swipe
 import com.buzbuz.smartautoclicker.core.domain.model.action.SystemAction
+import com.buzbuz.smartautoclicker.core.domain.model.action.ThrowletCatch
 import com.buzbuz.smartautoclicker.core.domain.model.action.ToggleEvent
 import com.buzbuz.smartautoclicker.core.common.actions.precision.PrecisionTextMode
 import com.buzbuz.smartautoclicker.core.domain.model.action.intent.toDomainIntentExtra
@@ -42,6 +46,7 @@ internal fun CompleteActionEntity.toDomain(cleanIds: Boolean = false): Action = 
     ActionType.STOP_SCENARIO -> toDomainStopScenario(cleanIds)
     ActionType.PRECISION_GESTURE -> toDomainPrecisionGesture(cleanIds)
     ActionType.PRECISION_TEXT -> toDomainPrecisionText(cleanIds)
+    ActionType.THROWLET_CATCH -> toDomainThrowletCatch(cleanIds)
 }
 
 private fun CompleteActionEntity.toDomainClick(cleanIds: Boolean = false) = Click(
@@ -170,6 +175,17 @@ private fun CompleteActionEntity.toDomainPrecisionText(cleanIds: Boolean = false
         ?: PrecisionTextMode.KEY_EVENTS,
 )
 
+private fun CompleteActionEntity.toDomainThrowletCatch(cleanIds: Boolean = false) = ThrowletCatch(
+    id = Identifier(id = action.id, asTemporary = cleanIds),
+    eventId = Identifier(id = action.eventId, asTemporary = cleanIds),
+    name = action.name,
+    priority = action.priority,
+    operation = action.throwletCatchOperation?.toDomain()!!,
+    mode = action.throwletCatchMode?.toDomain() ?: ThrowletCatch.Mode.CATCH,
+    lane = action.throwletCatchLane?.toDomain() ?: ThrowletCatch.Lane.FULL,
+    pokemonNameOverride = action.throwletCatchPokemonNameOverride?.takeIf { it.isNotBlank() },
+)
+
 private fun ClickPositionType.toDomain(): Click.PositionType =
     Click.PositionType.valueOf(name)
 
@@ -184,6 +200,15 @@ private fun NotificationMessageType.toDomain(): Notification.MessageType =
 
 private fun SystemActionType.toDomain(): SystemAction.Type =
     SystemAction.Type.valueOf(name)
+
+private fun ThrowletCatchOperationType.toDomain(): ThrowletCatch.Operation =
+    ThrowletCatch.Operation.valueOf(name)
+
+private fun ThrowletCatchModeType.toDomain(): ThrowletCatch.Mode =
+    ThrowletCatch.Mode.valueOf(name)
+
+private fun ThrowletCatchLaneType.toDomain(): ThrowletCatch.Lane =
+    ThrowletCatch.Lane.valueOf(name)
 
 private fun String?.toComponentName(): ComponentName? = this?.let {
     ComponentName.unflattenFromString(it)

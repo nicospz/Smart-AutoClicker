@@ -41,6 +41,8 @@ import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEventDetectionMo
 import com.buzbuz.smartautoclicker.core.domain.model.event.OffsetRepeatMatchMode
 import com.buzbuz.smartautoclicker.core.domain.model.event.TriggerEvent
 import com.buzbuz.smartautoclicker.core.processing.data.processor.ScenarioProcessor
+import com.buzbuz.smartautoclicker.core.processing.data.processor.SPLIT_SCREEN_SEARCH_PADDING_PX
+import com.buzbuz.smartautoclicker.core.processing.data.processor.SPLIT_SCREEN_Y_OFFSET_PX
 import com.buzbuz.smartautoclicker.core.processing.data.scaling.ImageConditionScalingInfo
 import com.buzbuz.smartautoclicker.core.processing.data.scaling.ScalingManager
 import com.buzbuz.smartautoclicker.core.processing.domain.SmartProcessingListener
@@ -169,10 +171,10 @@ class ScenarioProcessorTests {
     private fun createNewScenarioProcessor(
         events: List<ImageEvent>,
         triggerEvent: List<TriggerEvent>,
-        splitScreenYOffsetPx: Int = 0,
     ) : ScenarioProcessor {
         val processor = ScenarioProcessor(
             processingTag = "",
+            scenarioName = "Test",
             imageDetector = mockImageDetector,
             scalingManager = mockScalingManager,
             randomize = false,
@@ -180,7 +182,6 @@ class ScenarioProcessorTests {
             triggerEvents = triggerEvent,
             bitmapSupplier = mockBitmapSupplier::getBitmap,
             androidExecutor = mockAndroidExecutor,
-            splitScreenYOffsetPx = splitScreenYOffsetPx,
             onStopRequested = mockEndListener::onStopRequested,
             progressListener = mockProgressListener,
         )
@@ -1239,6 +1240,12 @@ class ScenarioProcessorTests {
 
     @Test
     fun splitScreen_bottomPaneMatches_triggersOnBottom() = runTest {
+        mockWhen(mockScreenBitmap.height).thenReturn(SPLIT_SCREEN_Y_OFFSET_PX + TEST_DATA_SCREEN_IMAGE_HEIGHT)
+        mockWhen(mockScalingManager.getScaledScreenBounds())
+            .thenReturn(Rect(0, 0, TEST_DATA_SCREEN_IMAGE_WIDTH, SPLIT_SCREEN_Y_OFFSET_PX + TEST_DATA_SCREEN_IMAGE_HEIGHT))
+        mockWhen(mockScalingManager.scaleDownOffset(SPLIT_SCREEN_SEARCH_PADDING_PX))
+            .thenReturn(SPLIT_SCREEN_SEARCH_PADDING_PX)
+
         val condition = newCondition("ROW", Rect(10, 10, 30, 30), 1, EXACT, true)
             .copy(id = Identifier(databaseId = 203L))
         val conditionBitmap = mock(Bitmap::class.java)
@@ -1248,8 +1255,13 @@ class ScenarioProcessorTests {
             .thenReturn(ImageConditionScalingInfo(condition, condition.area, condition.area))
         mockWhen(mockImageDetector.detectCondition(conditionBitmap, 20, 20, Rect(10, 10, 30, 30), 1))
             .thenReturn(DetectionResult(false, Point(0, 0), 0.0))
-        mockWhen(mockImageDetector.detectCondition(conditionBitmap, 20, 20, Rect(10, 60, 30, 80), 1))
-            .thenReturn(DetectionResult(true, Point(20, 70), 100.0))
+        mockWhen(mockImageDetector.detectCondition(
+            conditionBitmap,
+            20,
+            20,
+            Rect(0, 10 + SPLIT_SCREEN_Y_OFFSET_PX - SPLIT_SCREEN_SEARCH_PADDING_PX, 30 + SPLIT_SCREEN_SEARCH_PADDING_PX, 30 + SPLIT_SCREEN_Y_OFFSET_PX + SPLIT_SCREEN_SEARCH_PADDING_PX),
+            1,
+        )).thenReturn(DetectionResult(true, Point(20, 20 + SPLIT_SCREEN_Y_OFFSET_PX), 100.0))
 
         val event = newEvent(
             operator = AND,
@@ -1257,17 +1269,29 @@ class ScenarioProcessorTests {
             actions = listOf(newDefaultClickAction()),
         ).copy(detectionMode = SPLIT_SCREEN)
 
-        scenarioProcessor = createNewScenarioProcessor(listOf(event), emptyList(), splitScreenYOffsetPx = 50)
+        scenarioProcessor = createNewScenarioProcessor(listOf(event), emptyList())
         scenarioProcessor.process(mockScreenBitmap)
 
         verify(mockImageDetector).detectCondition(conditionBitmap, 20, 20, Rect(10, 10, 30, 30), 1)
-        verify(mockImageDetector).detectCondition(conditionBitmap, 20, 20, Rect(10, 60, 30, 80), 1)
+        verify(mockImageDetector).detectCondition(
+            conditionBitmap,
+            20,
+            20,
+            Rect(0, 10 + SPLIT_SCREEN_Y_OFFSET_PX - SPLIT_SCREEN_SEARCH_PADDING_PX, 30 + SPLIT_SCREEN_SEARCH_PADDING_PX, 30 + SPLIT_SCREEN_Y_OFFSET_PX + SPLIT_SCREEN_SEARCH_PADDING_PX),
+            1,
+        )
         assertActionGesture(1L)
         verifyNoInteractions(mockEndListener)
     }
 
     @Test
     fun splitScreen_bothPanesMatch_executesForEachPane() = runTest {
+        mockWhen(mockScreenBitmap.height).thenReturn(SPLIT_SCREEN_Y_OFFSET_PX + TEST_DATA_SCREEN_IMAGE_HEIGHT)
+        mockWhen(mockScalingManager.getScaledScreenBounds())
+            .thenReturn(Rect(0, 0, TEST_DATA_SCREEN_IMAGE_WIDTH, SPLIT_SCREEN_Y_OFFSET_PX + TEST_DATA_SCREEN_IMAGE_HEIGHT))
+        mockWhen(mockScalingManager.scaleDownOffset(SPLIT_SCREEN_SEARCH_PADDING_PX))
+            .thenReturn(SPLIT_SCREEN_SEARCH_PADDING_PX)
+
         val condition = newCondition("ROW", Rect(10, 10, 30, 30), 1, EXACT, true)
             .copy(id = Identifier(databaseId = 204L))
         val conditionBitmap = mock(Bitmap::class.java)
@@ -1277,8 +1301,13 @@ class ScenarioProcessorTests {
             .thenReturn(ImageConditionScalingInfo(condition, condition.area, condition.area))
         mockWhen(mockImageDetector.detectCondition(conditionBitmap, 20, 20, Rect(10, 10, 30, 30), 1))
             .thenReturn(DetectionResult(true, Point(20, 20), 100.0))
-        mockWhen(mockImageDetector.detectCondition(conditionBitmap, 20, 20, Rect(10, 60, 30, 80), 1))
-            .thenReturn(DetectionResult(true, Point(20, 70), 100.0))
+        mockWhen(mockImageDetector.detectCondition(
+            conditionBitmap,
+            20,
+            20,
+            Rect(0, 10 + SPLIT_SCREEN_Y_OFFSET_PX - SPLIT_SCREEN_SEARCH_PADDING_PX, 30 + SPLIT_SCREEN_SEARCH_PADDING_PX, 30 + SPLIT_SCREEN_Y_OFFSET_PX + SPLIT_SCREEN_SEARCH_PADDING_PX),
+            1,
+        )).thenReturn(DetectionResult(true, Point(20, 20 + SPLIT_SCREEN_Y_OFFSET_PX), 100.0))
 
         val event = newEvent(
             operator = AND,
@@ -1286,7 +1315,7 @@ class ScenarioProcessorTests {
             actions = listOf(newDefaultClickAction()),
         ).copy(detectionMode = SPLIT_SCREEN)
 
-        scenarioProcessor = createNewScenarioProcessor(listOf(event), emptyList(), splitScreenYOffsetPx = 50)
+        scenarioProcessor = createNewScenarioProcessor(listOf(event), emptyList())
         scenarioProcessor.process(mockScreenBitmap)
 
         verify(mockAndroidExecutor, Mockito.times(2)).dispatchGesture(anyNotNull())

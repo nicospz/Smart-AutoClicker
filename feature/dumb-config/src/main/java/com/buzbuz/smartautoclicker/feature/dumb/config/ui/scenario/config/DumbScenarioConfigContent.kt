@@ -72,6 +72,16 @@ class DumbScenarioConfigContent(appContext: Context) : NavBarDialogContent(appCo
             dialogController.hideSoftInputOnFocusLoss(fieldName.textField)
             fieldName.enableEasyOverwriteOnFocus()
 
+            fieldCategory.apply {
+                setLabel(com.buzbuz.smartautoclicker.core.ui.R.string.input_field_label_scenario_category)
+                setOnTextChangedListener { dialogViewModel.setDumbScenarioCategory(it.toString()) }
+                textField.filters = arrayOf<InputFilter>(
+                    InputFilter.LengthFilter(context.resources.getInteger(R.integer.name_max_length))
+                )
+            }
+            dialogController.hideSoftInputOnFocusLoss(fieldCategory.textField)
+            fieldCategory.enableEasyOverwriteOnFocus()
+
             fieldRepeatCount.apply {
                 textField.filters = arrayOf(MinMaxInputFilter(
                     REPEAT_COUNT_MIN_VALUE,
@@ -134,6 +144,7 @@ class DumbScenarioConfigContent(appContext: Context) : NavBarDialogContent(appCo
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch { dialogViewModel.scenarioName.collect(viewBinding.fieldName::setText) }
                 launch { dialogViewModel.scenarioNameError.collect(viewBinding.fieldName::setError)}
+                launch { dialogViewModel.scenarioCategory.collect(viewBinding.fieldCategory::setText) }
                 launch { dialogViewModel.repeatCount.collect(viewBinding.fieldRepeatCount::setNumericValue) }
                 launch { dialogViewModel.repeatCountError.collect(viewBinding.fieldRepeatCount::setError) }
                 launch { dialogViewModel.repeatInfiniteState.collect(viewBinding.fieldRepeatCount::setChecked) }

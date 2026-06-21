@@ -52,18 +52,27 @@ import kotlinx.serialization.Serializable
  */
 @Entity(
     tableName = CONDITION_TABLE,
-    indices = [Index("eventId")],
-    foreignKeys = [ForeignKey(
-        entity = EventEntity::class,
-        parentColumns = ["id"],
-        childColumns = ["eventId"],
-        onDelete = ForeignKey.CASCADE
-    )]
+    indices = [Index("eventId"), Index("event_group_id")],
+    foreignKeys = [
+        ForeignKey(
+            entity = EventEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["eventId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+        ForeignKey(
+            entity = EventGroupEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["event_group_id"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
 )
 @Serializable
 data class ConditionEntity(
     @PrimaryKey(autoGenerate = true) @ColumnInfo(name= "id") override var id: Long,
-    @ColumnInfo(name = "eventId") var eventId: Long,
+    @ColumnInfo(name = "eventId") var eventId: Long? = null,
+    @ColumnInfo(name = "event_group_id") var eventGroupId: Long? = null,
     @ColumnInfo(name = "name") val name: String,
     @ColumnInfo(name = "type") val type: ConditionType,
     @ColumnInfo(name = "priority", defaultValue = "0") val priority: Int,

@@ -31,6 +31,7 @@ fun WindowManager.safeAddView(view: View?, params: WindowManager.LayoutParams?):
     }
 
     return try {
+        params.preferSmoothOverlayFrameRate()
         addView(view, params)
         Log.i(TAG, "safeAddView ok: view=${view.javaClass.simpleName} size=${params.width}x${params.height}")
         true
@@ -45,10 +46,27 @@ fun WindowManager.safeAddView(view: View?, params: WindowManager.LayoutParams?):
 
 fun WindowManager.safeUpdateViewLayout(view: View, params: WindowManager.LayoutParams?): Boolean {
     return try {
+        params?.preferSmoothOverlayFrameRate()
         updateViewLayout(view, params)
         true
     } catch (ex: IllegalArgumentException) {
         false
+    }
+}
+
+/**
+ * Ask SurfaceFlinger to keep Smart Auto Clicker overlays at an interactive frame rate.
+ *
+ * Accessibility overlay windows are layered on top of the foreground app. When that app is a 60 FPS game, leaving the
+ * overlay without a frame-rate preference can make menu animations and drag updates feel noticeably sluggish on some
+ * devices/emulators. Request 60 Hz for the overlay surfaces and, on Android 15+, opt in to the platform touch boost
+ * so dragging the floating menu is composited promptly.
+ */
+fun WindowManager.LayoutParams.preferSmoothOverlayFrameRate() {
+    preferredRefreshRate = OVERLAY_REFRESH_RATE_FPS
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+        setFrameRateBoostOnTouchEnabled(true)
     }
 }
 
@@ -71,3 +89,4 @@ fun WindowManager.LayoutParams.disableMoveAnimations() {
 }
 
 private const val TAG = "WindowManagerExt"
+private const val OVERLAY_REFRESH_RATE_FPS = 60f

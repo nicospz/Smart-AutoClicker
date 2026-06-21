@@ -20,19 +20,32 @@ import android.content.Context
 
 import com.buzbuz.smartautoclicker.core.domain.model.condition.TriggerCondition
 import com.buzbuz.smartautoclicker.core.domain.model.event.Event
+import com.buzbuz.smartautoclicker.core.domain.model.event.EventGroup
+import com.buzbuz.smartautoclicker.core.domain.model.event.GroupEventType
 import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEvent
 import com.buzbuz.smartautoclicker.core.domain.model.event.TriggerEvent
 import com.buzbuz.smartautoclicker.core.processing.domain.SmartProcessingListener
 
 internal class ProcessingState(
+    private val catalogImageEvents: List<ImageEvent>,
+    private val catalogTriggerEvents: List<TriggerEvent>,
     imageEvents: List<ImageEvent>,
     triggerEvents: List<TriggerEvent>,
+    imageGroups: List<EventGroup>,
+    triggerGroups: List<EventGroup>,
     private val progressListener: SmartProcessingListener?,
-    private val eventsState: EventsState = EventsState(imageEvents, triggerEvents),
+    private val eventsState: EventsState = EventsState(
+        imageEvents = imageEvents,
+        triggerEvents = triggerEvents,
+        imageGroups = imageGroups,
+        triggerGroups = triggerGroups,
+    ),
+    private val groupsState: GroupsState = GroupsState(imageGroups, triggerGroups),
     private val broadcastsState: BroadcastsState = BroadcastsState(triggerEvents),
     private val countersState: CountersState = CountersState(imageEvents, triggerEvents, progressListener),
     private val timersState: TimersState = TimersState(triggerEvents),
-) : IBroadcastsState by broadcastsState, ICountersState by countersState, ITimersState by timersState, IEventsState by eventsState {
+) : IBroadcastsState by broadcastsState, ICountersState by countersState, ITimersState by timersState,
+    IEventsState by eventsState, IGroupsState by groupsState {
 
     init {
         eventsState.setEventStateListener(object : EventStateListener {
@@ -54,6 +67,10 @@ internal class ProcessingState(
     fun clearIterationState() {
         broadcastsState.clearReceivedBroadcast()
     }
+
+    fun getCatalogImageEvents(): List<ImageEvent> = catalogImageEvents
+
+    fun getCatalogTriggerEvents(): List<TriggerEvent> = catalogTriggerEvents
 
     private fun onEventEnabled(event: Event) {
         event.conditions.forEach { condition ->

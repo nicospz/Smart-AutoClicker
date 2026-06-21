@@ -100,6 +100,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.livedata.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.lifecycle.common.java8)
 
     implementation(libs.airbnb.lottie)
@@ -127,5 +128,7 @@ dependencies {
     implementation(project(":feature:review"))
     implementation(project(":feature:smart-config"))
     implementation(project(":feature:smart-debugging"))
+    implementation(project(":feature:throwlet"))
+    implementation(project(":feature:sync"))
     implementation(project(":feature:dumb-config"))
 }

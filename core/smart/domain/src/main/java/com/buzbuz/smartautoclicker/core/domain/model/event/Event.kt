@@ -45,12 +45,16 @@ sealed class Event: Identifiable, Completable {
     @ConditionOperator abstract val conditionOperator: Int
     /** Tells if the event should be evaluated with the scenario, or if it should be enabled by an action. */
     abstract val enabledOnStart: Boolean
+    /** Tells if this event should be ignored for scenario runs. */
+    abstract val ignored: Boolean
     /** Time in milliseconds this event should be ignored after its actions have been executed. */
     abstract val cooldownMs: Long
     /** The list of action to execute when the [conditions] have been fulfilled. */
     abstract val actions: List<Action>
     /** The list of conditions to fulfill to execute the [actions].  */
     abstract val conditions: List<Condition>
+    /** Optional group this event belongs to. */
+    abstract val groupId: Identifier?
 
     @Suppress("UNCHECKED_CAST")
     fun copyBase(
@@ -59,15 +63,19 @@ sealed class Event: Identifiable, Completable {
         name: String = this.name,
         conditionOperator: Int = this.conditionOperator,
         enabledOnStart: Boolean = this.enabledOnStart,
+        ignored: Boolean = this.ignored,
         cooldownMs: Long = this.cooldownMs,
         actions: List<Action> = this.actions,
         conditions: List<Condition> = this.conditions,
+        groupId: Identifier? = this.groupId,
     ): Event =
         when (this) {
             is ImageEvent -> copy(id = id, scenarioId = scenarioId, name = name, conditionOperator = conditionOperator,
-                enabledOnStart = enabledOnStart, cooldownMs = cooldownMs, actions = actions, conditions = conditions as List<ImageCondition>)
+                enabledOnStart = enabledOnStart, ignored = ignored, cooldownMs = cooldownMs, actions = actions,
+                conditions = conditions as List<ImageCondition>, groupId = groupId)
             is TriggerEvent -> copy(id = id, scenarioId = scenarioId, name = name, conditionOperator = conditionOperator,
-                enabledOnStart = enabledOnStart, cooldownMs = cooldownMs, actions = actions, conditions = conditions as List<TriggerCondition>)
+                enabledOnStart = enabledOnStart, ignored = ignored, cooldownMs = cooldownMs, actions = actions,
+                conditions = conditions as List<TriggerCondition>, groupId = groupId)
         }
 
     @CallSuper
@@ -97,6 +105,8 @@ data class ImageEvent(
     val offsetRepeatY: Int = 0,
     val offsetRepeatMatchMode: OffsetRepeatMatchMode = OffsetRepeatMatchMode.FIRST_MATCH,
     override val cooldownMs: Long = 0,
+    override val groupId: Identifier? = null,
+    override val ignored: Boolean = false,
 ): Event(), Prioritizable {
 
     /** Tells if this event is complete and valid for save. */
@@ -145,8 +155,11 @@ data class TriggerEvent(
     override val actions: List<Action> = emptyList(),
     override val conditions: List<TriggerCondition> =  emptyList(),
     override val enabledOnStart: Boolean = true,
+    override var priority: Int = 0,
     override val cooldownMs: Long = 0,
-) : Event() {
+    override val groupId: Identifier? = null,
+    override val ignored: Boolean = false,
+) : Event(), Prioritizable {
 
     override fun isComplete(): Boolean {
         if (!super.isComplete()) return false

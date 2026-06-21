@@ -48,6 +48,14 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="@dimen/margin_horizontal_small"/>
 
+            <include layout="@layout/include_input_field_dropdown"
+                android:id="@+id/field_event_group"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/margin_horizontal_small"
+                android:visibility="gone"
+                tools:visibility="visible"/>
+
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/card_conditions"
                 style="@style/AppTheme.Widget.Card"
@@ -148,12 +156,6 @@
                             android:textColor="?attr/colorError"
                             android:visibility="gone"
                             tools:visibility="visible" />
-
-                        <include layout="@layout/include_field_selector"
-                            android:id="@+id/field_split_screen_settings"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="@dimen/margin_vertical_small" />
 
                     </LinearLayout>
 

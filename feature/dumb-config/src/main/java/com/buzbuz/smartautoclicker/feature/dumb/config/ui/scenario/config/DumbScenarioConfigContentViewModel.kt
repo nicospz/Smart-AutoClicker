@@ -86,6 +86,18 @@ class DumbScenarioConfigContentViewModel @Inject constructor(
     val autoStartDelayError: Flow<Boolean> = userModifications
         .map { it == null || it.autoStartDelayMs < 0 }
 
+    /** The scenario category value currently edited by the user. */
+    val scenarioCategory: Flow<String> = userModifications
+        .filterNotNull()
+        .map { it.category.orEmpty() }
+        .take(1)
+
+    fun setDumbScenarioCategory(category: String) {
+        userModifications.value?.copy(category = category.trim().ifEmpty { null })?.let {
+            dumbEditionRepository.updateDumbScenario(it)
+        }
+    }
+
     fun setDumbScenarioName(name: String) {
         userModifications.value?.copy(name = name)?.let {
             dumbEditionRepository.updateDumbScenario(it)

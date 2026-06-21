@@ -24,6 +24,8 @@ import com.buzbuz.smartautoclicker.core.domain.model.EXACT
 import com.buzbuz.smartautoclicker.core.domain.model.IN_AREA
 import com.buzbuz.smartautoclicker.core.domain.model.WHOLE_SCREEN
 import com.buzbuz.smartautoclicker.core.domain.model.condition.ImageCondition
+import com.buzbuz.smartautoclicker.core.domain.model.event.EventGroup
+import com.buzbuz.smartautoclicker.core.domain.model.event.GroupEventType
 import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEvent
 import javax.inject.Inject
 import kotlin.math.roundToInt
@@ -39,11 +41,18 @@ class ScalingManager @Inject constructor(
     private var scalingRatio: Double = 1.0
 
 
-    internal fun startScaling(quality: Double, screenEvents: List<ImageEvent>): Point {
+    internal fun startScaling(
+        quality: Double,
+        screenEvents: List<ImageEvent>,
+        imageGroups: List<EventGroup> = emptyList(),
+    ): Point {
         detectionQuality = quality
 
         val scaledScreenSize = refreshScalingMetrics()
-        refreshScalingData(scaledScreenSize, screenEvents.toConditionsList())
+        refreshScalingData(
+            scaledScreenSize,
+            screenEvents.toConditionsList() + imageGroups.imageGateConditions(),
+        )
 
         return scaledScreenSize
     }
@@ -121,6 +130,10 @@ class ScalingManager @Inject constructor(
 
     private fun List<ImageEvent>.toConditionsList(): List<ImageCondition> =
         fold(listOf()) { acc, event -> acc + event.conditions }
+
+    private fun List<EventGroup>.imageGateConditions(): List<ImageCondition> =
+        filter { it.eventType == GroupEventType.IMAGE }
+            .flatMap { group -> group.conditions.filterIsInstance<ImageCondition>() }
 
     private fun Point.scaleDown(): Point = scale(scalingRatio)
     private fun Point.scaleUp(): Point = scale(scalingRatio.inverseScalingRatio())

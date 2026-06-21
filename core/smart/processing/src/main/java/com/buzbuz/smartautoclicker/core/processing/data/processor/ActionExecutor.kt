@@ -26,6 +26,11 @@ import android.util.Log
 import com.buzbuz.smartautoclicker.core.base.workarounds.UnblockGestureScheduler
 import com.buzbuz.smartautoclicker.core.base.workarounds.buildUnblockGesture
 import com.buzbuz.smartautoclicker.core.common.actions.AndroidActionExecutor
+import com.buzbuz.smartautoclicker.core.common.actions.ThrowletCatchControllers
+import com.buzbuz.smartautoclicker.core.common.actions.ThrowletCatchLane
+import com.buzbuz.smartautoclicker.core.common.actions.ThrowletCatchMode
+import com.buzbuz.smartautoclicker.core.common.actions.ThrowletCatchOperation
+import com.buzbuz.smartautoclicker.core.common.actions.ThrowletCatchSession
 import com.buzbuz.smartautoclicker.core.common.actions.precision.PrecisionGestureExecutor
 import com.buzbuz.smartautoclicker.core.common.actions.precision.PrecisionGesturePayload
 import com.buzbuz.smartautoclicker.core.common.actions.precision.PrecisionTextExecutor
@@ -51,6 +56,7 @@ import com.buzbuz.smartautoclicker.core.domain.model.action.Notification
 import com.buzbuz.smartautoclicker.core.domain.model.action.SetText
 import com.buzbuz.smartautoclicker.core.domain.model.action.StopScenario
 import com.buzbuz.smartautoclicker.core.domain.model.action.SystemAction
+import com.buzbuz.smartautoclicker.core.domain.model.action.ThrowletCatch
 import com.buzbuz.smartautoclicker.core.domain.model.action.intent.putDomainExtra
 import com.buzbuz.smartautoclicker.core.domain.model.event.Event
 import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEvent
@@ -145,6 +151,10 @@ internal class ActionExecutor(
                 }
                 is PrecisionText -> {
                     executePrecisionText(action)
+                    false
+                }
+                is ThrowletCatch -> {
+                    executeThrowletCatch(action)
                     false
                 }
             }
@@ -373,6 +383,56 @@ internal class ActionExecutor(
         }
     }
 
+    private suspend fun executeThrowletCatch(action: ThrowletCatch) {
+        val operation = when (action.operation) {
+            ThrowletCatch.Operation.TOGGLE -> ThrowletCatchOperation.TOGGLE
+            ThrowletCatch.Operation.HIDE -> ThrowletCatchOperation.HIDE
+            ThrowletCatch.Operation.SHOW -> ThrowletCatchOperation.SHOW
+        }
+        val session = ThrowletCatchSession(
+            mode = when (action.mode) {
+                ThrowletCatch.Mode.CATCH -> ThrowletCatchMode.CATCH
+                ThrowletCatch.Mode.BUDDY -> ThrowletCatchMode.BUDDY
+            },
+            lane = action.resolveThrowletCatchLane(),
+            pokemonNameOverride = action.pokemonNameOverride,
+        )
+
+        Log.i(
+            THROWLET_CATCH_TAG,
+            "executeThrowletCatch action=${action.name} operation=$operation mode=${session.mode} lane=${session.lane} override=${session.pokemonNameOverride ?: "<none>"} eventId=${action.eventId}",
+        )
+
+        val controller = ThrowletCatchControllers.instance
+        if (controller != null) {
+            Log.i(THROWLET_CATCH_TAG, "executeThrowletCatch: invoking direct controller")
+            withContext(Dispatchers.Main) {
+                controller.execute(operation, session)
+            }
+            delay(INTENT_BROADCAST_DELAY)
+            return
+        }
+
+        val broadcastAction = when (operation) {
+            ThrowletCatchOperation.TOGGLE -> THROWLET_OVERLAY_TOGGLE_ACTION
+            ThrowletCatchOperation.HIDE -> THROWLET_OVERLAY_HIDE_ACTION
+            ThrowletCatchOperation.SHOW -> THROWLET_OVERLAY_SHOW_ACTION
+        }
+
+        Log.w(THROWLET_CATCH_TAG, "executeThrowletCatch: no controller, broadcasting $broadcastAction")
+        withContext(Dispatchers.Main) {
+            androidExecutor.sendBroadcast(AndroidIntent(broadcastAction))
+        }
+        delay(INTENT_BROADCAST_DELAY)
+    }
+
+    private fun ThrowletCatch.resolveThrowletCatchLane(): ThrowletCatchLane =
+        when (lane) {
+            ThrowletCatch.Lane.FULL -> ThrowletCatchLane.FULL
+            ThrowletCatch.Lane.TOP -> ThrowletCatchLane.TOP
+            ThrowletCatch.Lane.BOTTOM -> ThrowletCatchLane.BOTTOM
+        }
+
     private suspend fun executeSetText(action: SetText) {
         val counters = buildMap {
             action.text.findCounterReferences().forEach { counterName ->
@@ -399,7 +459,10 @@ internal class ActionExecutor(
         val payload = action.payloadHex ?: return
         val executor = precisionGestureExecutor ?: return
         val offsetDx = results?.offsetRepeatDx ?: 0
-        val offsetDy = results?.offsetRepeatDy ?: 0
+        val offsetDy = when (results?.offsetRepeatDy ?: 0) {
+            SPLIT_SCREEN_Y_OFFSET_PX -> SPLIT_SCREEN_PRECISION_GESTURE_Y_OFFSET_EV
+            else -> results?.offsetRepeatDy ?: 0
+        }
         val translatedPayload = if (offsetDx == 0 && offsetDy == 0) {
             payload
         } else {
@@ -427,7 +490,11 @@ internal class ActionExecutor(
 
 /** Tag for logs. */
 private const val TAG = "ActionExecutor"
+private const val THROWLET_CATCH_TAG = "SacThrowletCatch"
 /** Waiting delay after a start activity to avoid overflowing the system. */
 private const val INTENT_START_ACTIVITY_DELAY = 1000L
 /** Waiting delay after a broadcast to avoid overflowing the system. */
 private const val INTENT_BROADCAST_DELAY = 100L
+private const val THROWLET_OVERLAY_TOGGLE_ACTION = "com.buzbuz.smartautoclicker.action.TOGGLE_THROWLET_OVERLAY"
+private const val THROWLET_OVERLAY_HIDE_ACTION = "com.buzbuz.smartautoclicker.action.HIDE_THROWLET_OVERLAY"
+private const val THROWLET_OVERLAY_SHOW_ACTION = "com.buzbuz.smartautoclicker.action.SHOW_THROWLET_OVERLAY"

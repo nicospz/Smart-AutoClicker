@@ -251,6 +251,12 @@ abstract class BaseOverlay internal constructor(
                 delay(500)
                 debounceUserInteractionJob = null
             }
+        } else {
+            Log.d(
+                TAG,
+                "debounceUserInteraction skipped for ${javaClass.simpleName}#${hashCode()}: " +
+                    "jobActive=${debounceUserInteractionJob != null} lifecycle=${lifecycleRegistry.currentState}",
+            )
         }
     }
 

@@ -27,6 +27,7 @@ import com.buzbuz.smartautoclicker.core.database.SCENARIO_USAGE_TABLE
 import com.buzbuz.smartautoclicker.core.database.entity.CompleteScenario
 import com.buzbuz.smartautoclicker.core.database.entity.ScenarioEntity
 import com.buzbuz.smartautoclicker.core.database.entity.ScenarioStatsEntity
+import com.buzbuz.smartautoclicker.core.database.entity.ScenarioSyncMeta
 import com.buzbuz.smartautoclicker.core.database.entity.ScenarioWithEvents
 
 import kotlinx.coroutines.flow.Flow
@@ -88,8 +89,8 @@ interface ScenarioDao {
     suspend fun update(scenarioEntity: ScenarioEntity)
 
     /** Update favorite state for a scenario. */
-    @Query("UPDATE scenario_table SET is_favorite = :isFavorite WHERE id = :scenarioId")
-    suspend fun updateFavorite(scenarioId: Long, isFavorite: Boolean)
+    @Query("UPDATE scenario_table SET is_favorite = :isFavorite, updated_at_ms = :updatedAtMs WHERE id = :scenarioId")
+    suspend fun updateFavorite(scenarioId: Long, isFavorite: Boolean, updatedAtMs: Long)
 
     /**
      * Delete the provided click scenario from the database.
@@ -125,4 +126,15 @@ interface ScenarioDao {
      */
     @Update
     suspend fun updateScenarioStats(stats: ScenarioStatsEntity)
+
+    @Query("SELECT id, sync_id, updated_at_ms, deleted_at_ms FROM scenario_table")
+    suspend fun getAllSyncMeta(): List<ScenarioSyncMeta>
+
+    @Query("SELECT * FROM scenario_table WHERE sync_id = :syncId LIMIT 1")
+    suspend fun getScenarioEntityBySyncId(syncId: String): ScenarioEntity?
+
+    @Query(
+        "UPDATE scenario_table SET updated_at_ms = :updatedAtMs, deleted_at_ms = :deletedAtMs WHERE id = :scenarioId",
+    )
+    suspend fun updateSyncTimestamps(scenarioId: Long, updatedAtMs: Long, deletedAtMs: Long?)
 }

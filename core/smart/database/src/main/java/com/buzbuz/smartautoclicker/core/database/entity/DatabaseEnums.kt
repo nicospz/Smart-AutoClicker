@@ -45,6 +45,14 @@ enum class OffsetRepeatMatchMode {
     ALL_MATCHES,
 }
 
+/** Source used by a smart scenario to capture screen frames for image detection. */
+enum class ScreenCaptureMode {
+    /** Existing behavior: use MediaProjection and Android's screen sharing permission. */
+    MEDIA_PROJECTION,
+    /** Use AccessibilityService screenshots, avoiding MediaProjection ownership. */
+    ACCESSIBILITY_SCREENSHOT,
+}
+
 /**
  * Type of [ActionEntity].
  * For each type there is a set of values that will be available in the database, all others will always be null. Refers
@@ -75,6 +83,8 @@ enum class ActionType {
     PRECISION_GESTURE,
     /** Text injected through Shizuku shell key events or input text. */
     PRECISION_TEXT,
+    /** Control the SAC Throwlet Catch overlay rail. */
+    THROWLET_CATCH,
 }
 
 
@@ -192,4 +202,27 @@ enum class SystemActionType {
     HOME,
     /** Open recent apps screen. */
     RECENT_APPS,
+}
+
+/** Operations for [ActionType.THROWLET_CATCH]. */
+enum class ThrowletCatchOperationType {
+    /** Show the overlay if hidden, hide it if visible. */
+    TOGGLE,
+    /** Hide the overlay. */
+    HIDE,
+    /** Show the overlay. */
+    SHOW,
+}
+
+/** Helper mode for [ActionType.THROWLET_CATCH]. */
+enum class ThrowletCatchModeType {
+    CATCH,
+    BUDDY,
+}
+
+/** Screen lane for [ActionType.THROWLET_CATCH]. */
+enum class ThrowletCatchLaneType {
+    FULL,
+    TOP,
+    BOTTOM,
 }

@@ -21,6 +21,7 @@ import android.graphics.Point
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.buzbuz.smartautoclicker.core.display.config.DisplayConfigManager
+import com.buzbuz.smartautoclicker.core.domain.model.scenario.ScreenCaptureMode
 
 import com.buzbuz.smartautoclicker.feature.smart.config.domain.EditionRepository
 import com.buzbuz.smartautoclicker.core.processing.domain.DETECTION_QUALITY_MIN
@@ -65,6 +66,10 @@ class ScenarioConfigViewModel @Inject constructor(
     val keepScreenOn: Flow<Boolean> = configuredScenario
         .map { it.keepScreenOn }
 
+    /** Tells if this scenario uses accessibility screenshots instead of MediaProjection. */
+    val useAccessibilityScreenshot: Flow<Boolean> = configuredScenario
+        .map { it.screenCaptureMode == ScreenCaptureMode.ACCESSIBILITY_SCREENSHOT }
+
     /** Tells if the scenario should start automatically. */
     val autoStart: Flow<Boolean> = configuredScenario
         .map { it.autoStart }
@@ -83,6 +88,21 @@ class ScenarioConfigViewModel @Inject constructor(
         .map { scenario ->
             context.getUiDetectionQuality(displayConfigManager.displayConfig.sizePx, scenario.detectionQuality)
         }
+
+    /** The scenario category value currently edited by the user. */
+    val scenarioCategory: Flow<String> = configuredScenario
+        .map { it.category.orEmpty() }
+        .take(1)
+
+    /** Set a new category for the scenario. */
+    fun setScenarioCategory(category: String) {
+        editionRepository.editionState.getScenario()?.let { scenario ->
+            viewModelScope.launch {
+                val normalizedCategory = category.trim().ifEmpty { null }
+                editionRepository.updateEditedScenario(scenario.copy(category = normalizedCategory))
+            }
+        }
+    }
 
     /** Set a new name for the scenario. */
     fun setScenarioName(name: String) {
@@ -107,6 +127,22 @@ class ScenarioConfigViewModel @Inject constructor(
         editionRepository.editionState.getScenario()?.let { scenario ->
             viewModelScope.launch {
                 editionRepository.updateEditedScenario(scenario.copy(keepScreenOn = !scenario.keepScreenOn))
+            }
+        }
+    }
+
+    /** Toggle the screen capture mode between MediaProjection and Accessibility screenshots. */
+    fun toggleScreenCaptureMode() {
+        editionRepository.editionState.getScenario()?.let { scenario ->
+            viewModelScope.launch {
+                editionRepository.updateEditedScenario(
+                    scenario.copy(
+                        screenCaptureMode = when (scenario.screenCaptureMode) {
+                            ScreenCaptureMode.MEDIA_PROJECTION -> ScreenCaptureMode.ACCESSIBILITY_SCREENSHOT
+                            ScreenCaptureMode.ACCESSIBILITY_SCREENSHOT -> ScreenCaptureMode.MEDIA_PROJECTION
+                        }
+                    )
+                )
             }
         }
     }

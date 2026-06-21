@@ -38,6 +38,8 @@ import javax.inject.Singleton
 @Singleton
 class DumbEditionRepository @Inject constructor(
     private val dumbRepository: IDumbRepository,
+    private val sacSyncCoordinator: com.buzbuz.smartautoclicker.feature.sync.domain.SacSyncCoordinator,
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
 ) {
 
     private val _editedDumbScenario: MutableStateFlow<DumbScenario?> = MutableStateFlow(null)
@@ -83,6 +85,10 @@ class DumbEditionRepository @Inject constructor(
         Log.d(TAG, "Save editions")
 
         dumbRepository.updateDumbScenario(scenarioToSave)
+        scenarioToSave.syncId.takeIf { it.isNotBlank() }?.let { syncId ->
+            val metrics = context.resources.displayMetrics
+            sacSyncCoordinator.scheduleScenarioPush(syncId, isSmart = false, metrics.widthPixels, metrics.heightPixels)
+        }
         stopEdition()
     }
 

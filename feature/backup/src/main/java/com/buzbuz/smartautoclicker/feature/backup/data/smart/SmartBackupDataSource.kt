@@ -56,15 +56,7 @@ internal class SmartBackupDataSource(
         fileName.matches(conditionUnzipMatchRegex) || fileName.matches(legacyConditionUnzipMatchRegex)
 
     override fun getBackupAdditionalFilesPaths(scenario: CompleteScenario): Set<String> =
-        buildSet {
-            scenario.events.forEach { completeEvent ->
-                if (completeEvent.event.type == EventType.IMAGE_EVENT) {
-                    completeEvent.conditions.forEach { condition ->
-                        if (condition.type == ConditionType.ON_IMAGE_DETECTED) add(condition.path!!)
-                    }
-                }
-            }
-        }
+        collectConditionImagePaths(scenario)
 
     override fun getBackupZipFolderName(scenario: CompleteScenario): String =
         scenario.backupFolderName()

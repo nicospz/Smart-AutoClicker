@@ -71,7 +71,7 @@ internal object EventTestsData {
         @ConditionOperator conditionOperator: Int = EVENT_CONDITION_OPERATOR,
         enabledOnStart: Boolean = EVENT_ENABLED_ON_START,
         scenarioId: Long,
-    ) = EventEntity(id, scenarioId, name, conditionOperator, -1, enabledOnStart, EventType.TRIGGER_EVENT)
+    ) = EventEntity(id, scenarioId, name, conditionOperator, 0, enabledOnStart, EventType.TRIGGER_EVENT)
 
     fun getNewImageEvent(
         id: Long = EVENT_ID,

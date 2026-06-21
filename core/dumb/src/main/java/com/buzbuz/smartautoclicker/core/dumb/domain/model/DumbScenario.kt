@@ -33,6 +33,10 @@ data class DumbScenario(
     val isFavorite: Boolean = false,
     val autoStart: Boolean = false,
     val autoStartDelayMs: Long = 0L,
+    val category: String? = null,
+    val syncId: String = "",
+    val updatedAtMs: Long = 0L,
+    val deletedAtMs: Long? = null,
 ) : Identifiable, Repeatable {
 
     fun isValid(): Boolean = name.isNotEmpty() && dumbActions.isNotEmpty()

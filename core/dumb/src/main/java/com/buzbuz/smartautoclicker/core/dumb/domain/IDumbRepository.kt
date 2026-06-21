@@ -46,4 +46,16 @@ interface IDumbRepository {
     suspend fun deleteDumbScenario(scenario: DumbScenario)
 
     suspend fun markAsUsed(scenarioId: Identifier)
+
+    suspend fun getDumbScenarioWithActionsBySyncId(syncId: String): DumbScenarioWithActions?
+
+    suspend fun getDumbScenarioDatabaseIdBySyncId(syncId: String): Long?
+
+    suspend fun upsertDumbScenarioBySyncId(
+        scenarioWithActions: DumbScenarioWithActions,
+        syncId: String,
+        updatedAtMs: Long,
+    ): Long?
+
+    suspend fun deleteDumbScenarioBySyncId(syncId: String): Boolean
 }

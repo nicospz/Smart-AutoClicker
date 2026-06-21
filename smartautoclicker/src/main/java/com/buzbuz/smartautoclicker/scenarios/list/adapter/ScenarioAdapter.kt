@@ -27,6 +27,7 @@ import com.buzbuz.smartautoclicker.R
 import com.buzbuz.smartautoclicker.core.domain.model.condition.ImageCondition
 import com.buzbuz.smartautoclicker.databinding.ItemDumbScenarioBinding
 import com.buzbuz.smartautoclicker.databinding.ItemEmptyScenarioBinding
+import com.buzbuz.smartautoclicker.databinding.ItemScenarioCategoryHeaderBinding
 import com.buzbuz.smartautoclicker.databinding.ItemOrderingAndFilteringBinding
 import com.buzbuz.smartautoclicker.databinding.ItemSmartScenarioBinding
 import com.buzbuz.smartautoclicker.scenarios.list.model.ScenarioListUiState
@@ -62,6 +63,7 @@ class ScenarioAdapter(
             is ScenarioListUiState.Item.ScenarioItem.Valid.Dumb -> R.layout.item_dumb_scenario
             is ScenarioListUiState.Item.ScenarioItem.Valid.Smart -> R.layout.item_smart_scenario
             is ScenarioListUiState.Item.SortItem -> R.layout.item_ordering_and_filtering
+            is ScenarioListUiState.Item.CategoryHeaderItem -> R.layout.item_scenario_category_header
         }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder =
@@ -103,6 +105,14 @@ class ScenarioAdapter(
                 onSortOrderClicked = onSortOrderClicked,
             )
 
+            R.layout.item_scenario_category_header -> CategoryHeaderViewHolder(
+                viewBinding = ItemScenarioCategoryHeaderBinding.inflate(
+                    LayoutInflater.from(parent.context),
+                    parent,
+                    false,
+                ),
+            )
+
             else -> throw IllegalArgumentException("Unsupported view type !")
         }
 
@@ -112,6 +122,7 @@ class ScenarioAdapter(
             is DumbScenarioViewHolder -> holder.onBind(getItem(position) as ScenarioListUiState.Item.ScenarioItem.Valid.Dumb)
             is SmartScenarioViewHolder -> holder.onBind(getItem(position) as ScenarioListUiState.Item.ScenarioItem.Valid.Smart)
             is SortViewHolder -> holder.onBind(getItem(position) as ScenarioListUiState.Item.SortItem)
+            is CategoryHeaderViewHolder -> holder.onBind(getItem(position) as ScenarioListUiState.Item.CategoryHeaderItem)
         }
     }
 
@@ -134,10 +145,16 @@ object ScenarioDiffUtilCallback: DiffUtil.ItemCallback<ScenarioListUiState.Item>
             oldItem is ScenarioListUiState.Item.ScenarioItem.Valid.Smart && newItem is ScenarioListUiState.Item.ScenarioItem.Valid.Smart ->
                 oldItem.scenario.id == newItem.scenario.id
             oldItem is ScenarioListUiState.Item.SortItem && newItem is ScenarioListUiState.Item.SortItem -> true
+            oldItem is ScenarioListUiState.Item.CategoryHeaderItem &&
+                newItem is ScenarioListUiState.Item.CategoryHeaderItem ->
+                oldItem.categoryKey == newItem.categoryKey
             else -> false
         }
 
     override fun areContentsTheSame(oldItem: ScenarioListUiState.Item, newItem: ScenarioListUiState.Item): Boolean =
         if (oldItem is ScenarioListUiState.Item.SortItem && newItem is ScenarioListUiState.Item.SortItem) true
+        else if (oldItem is ScenarioListUiState.Item.CategoryHeaderItem &&
+            newItem is ScenarioListUiState.Item.CategoryHeaderItem
+        ) oldItem == newItem
         else oldItem == newItem
 }

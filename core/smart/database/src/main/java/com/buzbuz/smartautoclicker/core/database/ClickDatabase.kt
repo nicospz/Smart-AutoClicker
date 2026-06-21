@@ -22,6 +22,7 @@ import androidx.room.Database
 import com.buzbuz.smartautoclicker.core.database.entity.ActionEntity
 import com.buzbuz.smartautoclicker.core.database.entity.ConditionEntity
 import com.buzbuz.smartautoclicker.core.database.entity.EventEntity
+import com.buzbuz.smartautoclicker.core.database.entity.EventGroupEntity
 import com.buzbuz.smartautoclicker.core.database.entity.EventToggleEntity
 import com.buzbuz.smartautoclicker.core.database.entity.IntentExtraEntity
 import com.buzbuz.smartautoclicker.core.database.entity.ScenarioEntity
@@ -35,6 +36,7 @@ import javax.inject.Singleton
     entities = [
         ActionEntity::class,
         EventEntity::class,
+        EventGroupEntity::class,
         ScenarioEntity::class,
         ConditionEntity::class,
         IntentExtraEntity::class,
@@ -57,4 +59,4 @@ import javax.inject.Singleton
 abstract class ClickDatabase : ScenarioDatabase()
 
 /** Current version of the database. */
-const val CLICK_DATABASE_VERSION = 26
+const val CLICK_DATABASE_VERSION = 35

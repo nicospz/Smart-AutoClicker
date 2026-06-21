@@ -71,7 +71,7 @@ fun IncludeDropdownWithSelectorBinding.setItems(
 }
 
 fun IncludeDropdownWithSelectorBinding.setSelectedItem(item: DropdownItem) {
-    textField.setText(textField.resources.getString(item.title), false)
+    textField.setText(item.titleText ?: textField.resources.getString(item.title), false)
 
     textLayout.apply {
         if (item.helperText != null) {

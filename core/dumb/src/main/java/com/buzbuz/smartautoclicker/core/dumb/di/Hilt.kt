@@ -20,6 +20,7 @@ import android.content.Context
 import androidx.room.Room
 
 import com.buzbuz.smartautoclicker.core.dumb.data.database.DumbDatabase
+import com.buzbuz.smartautoclicker.core.dumb.data.database.migrations.Migration6to7
 import com.buzbuz.smartautoclicker.core.dumb.domain.DumbRepository
 import com.buzbuz.smartautoclicker.core.dumb.domain.IDumbRepository
 import dagger.Binds
@@ -43,7 +44,7 @@ internal object DumbDatabaseModule {
             context.applicationContext,
             DumbDatabase::class.java,
             "dumb_database"
-        ).build()
+        ).addMigrations(Migration6to7).build()
 }
 
 @Module

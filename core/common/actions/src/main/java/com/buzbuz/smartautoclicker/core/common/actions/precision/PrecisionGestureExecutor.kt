@@ -38,5 +38,6 @@ fun PrecisionGestureSetupResult.throwIfNotRunning() {
         PrecisionGestureSetupResult.PermissionDenied -> throw IllegalStateException("Shizuku permission is required for precision gestures.")
         is PrecisionGestureSetupResult.NotStarted -> throw IllegalStateException("Precision gesture helper is not running.", error)
         is PrecisionGestureSetupResult.StartFailed -> throw IllegalStateException("Precision gesture helper failed to start: ${error.message ?: error.javaClass.simpleName}", error)
+        is PrecisionGestureSetupResult.StopFailed -> throw IllegalStateException("Precision gesture helper failed to stop: ${error.message ?: error.javaClass.simpleName}", error)
     }
 }

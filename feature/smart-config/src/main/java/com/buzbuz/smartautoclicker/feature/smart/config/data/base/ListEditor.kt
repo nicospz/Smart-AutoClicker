@@ -116,6 +116,16 @@ internal open class ListEditor<Item , Parent>(
         _editedItem.value = item
     }
 
+    /** Replace an item already in [editedList] without re-normalizing priorities. */
+    fun replaceEditedListItem(item: Item) {
+        val list = _editedList.value?.toMutableList() ?: return
+        val index = list.indexOfItem(item)
+        if (index == -1) return
+
+        list[index] = item
+        _editedList.value = list
+    }
+
     /** Update/Insert a new item to the list. */
     fun upsertEditedItem() {
         val newItem = _editedItem.value ?: return

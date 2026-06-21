@@ -19,7 +19,7 @@ package com.buzbuz.smartautoclicker.core.settings.data
 import android.content.Context
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 
 import com.buzbuz.smartautoclicker.core.base.PreferencesDataStore
 import com.buzbuz.smartautoclicker.core.base.di.Dispatcher
@@ -29,6 +29,7 @@ import com.buzbuz.smartautoclicker.core.base.workarounds.isImpactedByInputBlock
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 import javax.inject.Inject
@@ -54,8 +55,8 @@ internal class SettingsDataSource @Inject constructor(
             booleanPreferencesKey("forceEntireScreen")
         val KEY_INPUT_BLOCK_WORKAROUND: Preferences.Key<Boolean> =
             booleanPreferencesKey("inputBlockWorkaround")
-        val KEY_SPLIT_SCREEN_Y_OFFSET_PX: Preferences.Key<Int> =
-            intPreferencesKey("splitScreenYOffsetPx")
+        val KEY_SYNC_UPDATED_AT_MS: Preferences.Key<Long> =
+            longPreferencesKey("sacSyncUpdatedAtMs")
     }
 
     private val dataStore: PreferencesDataStore =
@@ -72,6 +73,7 @@ internal class SettingsDataSource @Inject constructor(
     internal suspend fun toggleFilterScenarioUi() =
         dataStore.edit { preferences ->
             preferences[KEY_IS_FILTER_SCENARIO_UI_ENABLED] = !(preferences[KEY_IS_FILTER_SCENARIO_UI_ENABLED] ?: true)
+            preferences[KEY_SYNC_UPDATED_AT_MS] = System.currentTimeMillis()
         }
 
     internal fun isLegacyActionUiEnabled(): Flow<Boolean> =
@@ -80,6 +82,7 @@ internal class SettingsDataSource @Inject constructor(
     internal suspend fun toggleLegacyActionUi() =
         dataStore.edit { preferences ->
             preferences[KEY_IS_LEGACY_ACTION_UI] = !(preferences[KEY_IS_LEGACY_ACTION_UI] ?: false)
+            preferences[KEY_SYNC_UPDATED_AT_MS] = System.currentTimeMillis()
         }
 
     internal fun isLegacyNotificationUiEnabled(): Flow<Boolean> =
@@ -88,6 +91,7 @@ internal class SettingsDataSource @Inject constructor(
     internal suspend fun toggleLegacyNotificationUi() =
         dataStore.edit { preferences ->
             preferences[KEY_IS_LEGACY_NOTIFICATION_UI] = !(preferences[KEY_IS_LEGACY_NOTIFICATION_UI] ?: false)
+            preferences[KEY_SYNC_UPDATED_AT_MS] = System.currentTimeMillis()
         }
 
     internal fun isEntireScreenCaptureForced(): Flow<Boolean> =
@@ -96,6 +100,7 @@ internal class SettingsDataSource @Inject constructor(
     internal suspend fun toggleForceEntireScreenCapture() =
         dataStore.edit { preferences ->
             preferences[KEY_FORCE_ENTIRE_SCREEN] = !(preferences[KEY_FORCE_ENTIRE_SCREEN] ?: false)
+            preferences[KEY_SYNC_UPDATED_AT_MS] = System.currentTimeMillis()
         }
 
     internal fun isInputBlockWorkaroundEnabled(): Flow<Boolean> =
@@ -105,15 +110,40 @@ internal class SettingsDataSource @Inject constructor(
         if (!isImpactedByInputBlock()) return
         dataStore.edit { preferences ->
             preferences[KEY_INPUT_BLOCK_WORKAROUND] = !(preferences[KEY_INPUT_BLOCK_WORKAROUND] ?: false)
+            preferences[KEY_SYNC_UPDATED_AT_MS] = System.currentTimeMillis()
         }
     }
 
-    internal fun splitScreenYOffsetPx(): Flow<Int> =
-        dataStore.data.map { preferences -> preferences[KEY_SPLIT_SCREEN_Y_OFFSET_PX] ?: 0 }
+    internal suspend fun readSyncSnapshot(): SettingsSyncSnapshot {
+        val prefs = dataStore.data.first()
+        return SettingsSyncSnapshot(
+            isFilterScenarioUiEnabled = prefs[KEY_IS_FILTER_SCENARIO_UI_ENABLED] ?: true,
+            isLegacyActionUiEnabled = prefs[KEY_IS_LEGACY_ACTION_UI] ?: false,
+            isLegacyNotificationUiEnabled = prefs[KEY_IS_LEGACY_NOTIFICATION_UI] ?: false,
+            forceEntireScreen = prefs[KEY_FORCE_ENTIRE_SCREEN] ?: false,
+            inputBlockWorkaround = prefs[KEY_INPUT_BLOCK_WORKAROUND] ?: false,
+            updatedAtMs = prefs[KEY_SYNC_UPDATED_AT_MS] ?: 0L,
+        )
+    }
 
-    internal suspend fun setSplitScreenYOffsetPx(offsetPx: Int) {
+    internal suspend fun applySyncSnapshot(snapshot: SettingsSyncSnapshot) {
+        val now = System.currentTimeMillis()
         dataStore.edit { preferences ->
-            preferences[KEY_SPLIT_SCREEN_Y_OFFSET_PX] = offsetPx.coerceAtLeast(0)
+            preferences[KEY_IS_FILTER_SCENARIO_UI_ENABLED] = snapshot.isFilterScenarioUiEnabled
+            preferences[KEY_IS_LEGACY_ACTION_UI] = snapshot.isLegacyActionUiEnabled
+            preferences[KEY_IS_LEGACY_NOTIFICATION_UI] = snapshot.isLegacyNotificationUiEnabled
+            preferences[KEY_FORCE_ENTIRE_SCREEN] = snapshot.forceEntireScreen
+            preferences[KEY_INPUT_BLOCK_WORKAROUND] = snapshot.inputBlockWorkaround
+            preferences[KEY_SYNC_UPDATED_AT_MS] = now
         }
     }
 }
+
+data class SettingsSyncSnapshot(
+    val isFilterScenarioUiEnabled: Boolean,
+    val isLegacyActionUiEnabled: Boolean,
+    val isLegacyNotificationUiEnabled: Boolean,
+    val forceEntireScreen: Boolean,
+    val inputBlockWorkaround: Boolean,
+    val updatedAtMs: Long,
+)

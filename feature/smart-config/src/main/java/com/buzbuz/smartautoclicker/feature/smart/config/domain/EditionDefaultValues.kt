@@ -37,6 +37,8 @@ internal class EditionDefaultValues {
 
     fun eventName(context: Context): String =
         context.getString(R.string.default_event_name)
+    fun eventGroupName(context: Context): String =
+        context.getString(R.string.default_event_group_name)
     @ConditionOperator fun eventConditionOperator(): Int =
         AND
 
@@ -98,6 +100,9 @@ internal class EditionDefaultValues {
 
     fun stopScenarioName(context: Context): String =
         context.getString(R.string.default_stop_scenario_name)
+
+    fun throwletCatchName(context: Context): String =
+        context.getString(R.string.default_throwlet_catch_name)
 
     fun counterComparisonOperation(): TriggerCondition.OnCounterCountReached.ComparisonOperation =
         TriggerCondition.OnCounterCountReached.ComparisonOperation.EQUALS

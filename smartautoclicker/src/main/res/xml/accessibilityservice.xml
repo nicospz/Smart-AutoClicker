@@ -20,4 +20,5 @@
     android:description="@string/accessibility_service_description"
     android:canPerformGestures="true"
     android:canRequestFilterKeyEvents="true"
+    android:canTakeScreenshot="true"
     android:canRetrieveWindowContent="true"/>

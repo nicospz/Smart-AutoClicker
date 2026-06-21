@@ -97,7 +97,13 @@ class QSTileLauncherActivity : AppCompatActivity() {
         viewModel.startPermissionFlowIfNeeded(
             activity = this,
             onMandatoryDenied = ::finish,
-            onAllGranted = ::showMediaProjectionWarning
+            onAllGranted = {
+                viewModel.startSmartScenarioOrRequestProjection(
+                    scenarioId = scenarioId,
+                    onProjectionRequired = ::showMediaProjectionWarning,
+                    onStarted = ::finish,
+                )
+            }
         )
     }
 

@@ -39,6 +39,13 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="@dimen/margin_horizontal_small"/>
 
+        <include layout="@layout/include_field_text_input"
+            android:id="@+id/field_scenario_category"
+            style="@style/AppTheme.Widget.InputText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/margin_horizontal_small"/>
+
         <com.google.android.material.card.MaterialCardView
             style="@style/AppTheme.Widget.Card"
             android:layout_width="match_parent"
@@ -62,6 +69,21 @@
 
             <include layout="@layout/include_field_switch"
                 android:id="@+id/field_keep_screen_on"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginVertical="@dimen/margin_vertical_default"
+                android:layout_marginHorizontal="@dimen/margin_horizontal_default"/>
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            style="@style/AppTheme.Widget.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/margin_vertical_large">
+
+            <include layout="@layout/include_field_switch"
+                android:id="@+id/field_accessibility_screenshot"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginVertical="@dimen/margin_vertical_default"

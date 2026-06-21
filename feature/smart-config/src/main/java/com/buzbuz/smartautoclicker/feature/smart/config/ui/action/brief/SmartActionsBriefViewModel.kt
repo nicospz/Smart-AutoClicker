@@ -130,6 +130,7 @@ class SmartActionsBriefViewModel @Inject constructor(
                 add(ActionTypeChoice.SetText)
                 add(ActionTypeChoice.PrecisionText)
                 add(ActionTypeChoice.StopScenario)
+                add(ActionTypeChoice.ThrowletCatch)
                 add(ActionTypeChoice.System)
                 add(ActionTypeChoice.ChangeCounter)
                 add(ActionTypeChoice.ToggleEvent)
@@ -179,6 +180,7 @@ class SmartActionsBriefViewModel @Inject constructor(
         ActionTypeChoice.SetText -> editionRepository.editedItemsBuilder.createNewSetText(context)
         ActionTypeChoice.PrecisionText -> editionRepository.editedItemsBuilder.createNewPrecisionText(context)
         ActionTypeChoice.StopScenario -> editionRepository.editedItemsBuilder.createNewStopScenario(context)
+        ActionTypeChoice.ThrowletCatch -> editionRepository.editedItemsBuilder.createNewThrowletCatch(context)
         ActionTypeChoice.Copy -> throw IllegalArgumentException("Unsupported action type for creation $choice")
     }
 

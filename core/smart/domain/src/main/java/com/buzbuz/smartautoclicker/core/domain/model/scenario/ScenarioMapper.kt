@@ -23,6 +23,7 @@ import com.buzbuz.smartautoclicker.core.database.entity.ScenarioEntity
 import com.buzbuz.smartautoclicker.core.database.entity.ScenarioStatsEntity
 import com.buzbuz.smartautoclicker.core.database.entity.ScenarioWithEvents
 import com.buzbuz.smartautoclicker.core.domain.model.event.Event
+import com.buzbuz.smartautoclicker.core.domain.model.event.EventGroup
 import com.buzbuz.smartautoclicker.core.domain.model.event.toDomain
 
 /** @return the entity equivalent of this scenario. */
@@ -35,6 +36,11 @@ internal fun Scenario.toEntity() = ScenarioEntity(
     isFavorite = isFavorite,
     autoStart = autoStart,
     autoStartDelayMs = autoStartDelayMs,
+    category = category,
+    screenCaptureMode = screenCaptureMode.toEntity(),
+    syncId = syncId,
+    updatedAtMs = updatedAtMs,
+    deletedAtMs = deletedAtMs,
 )
 
 /** @return the scenario for this entity. */
@@ -47,15 +53,22 @@ internal fun ScenarioWithEvents.toDomain(asDomain: Boolean = false) = Scenario(
     isFavorite = scenario.isFavorite,
     autoStart = scenario.autoStart,
     autoStartDelayMs = scenario.autoStartDelayMs,
+    category = scenario.category,
+    screenCaptureMode = scenario.screenCaptureMode.toDomain(),
+    syncId = scenario.syncId,
+    updatedAtMs = scenario.updatedAtMs,
+    deletedAtMs = scenario.deletedAtMs,
     eventCount = events.size,
     stats = stats.toDomain(),
 )
 
 /** @return the scenario for this entity. */
-internal fun CompleteScenario.toDomain(cleanIds: Boolean = false): Pair<Scenario, List<Event>> =
-    scenario.toDomain(cleanIds) to events.map { completeEventEntity ->
-        completeEventEntity.toDomain(cleanIds)
-    }
+internal fun CompleteScenario.toDomain(cleanIds: Boolean = false): Triple<Scenario, List<Event>, List<EventGroup>> =
+    Triple(
+        scenario.toDomain(cleanIds),
+        events.map { completeEventEntity -> completeEventEntity.toDomain(cleanIds) },
+        eventGroups.map { completeEventGroupEntity -> completeEventGroupEntity.toDomain(cleanIds) },
+    )
 
 
 /** @return the scenario for this entity. */
@@ -68,6 +81,11 @@ private fun ScenarioEntity.toDomain(cleanIds: Boolean = false) = Scenario(
     isFavorite = isFavorite,
     autoStart = autoStart,
     autoStartDelayMs = autoStartDelayMs,
+    category = category,
+    screenCaptureMode = screenCaptureMode.toDomain(),
+    syncId = syncId,
+    updatedAtMs = updatedAtMs,
+    deletedAtMs = deletedAtMs,
 )
 
 private fun ScenarioStatsEntity?.toDomain() =
@@ -78,3 +96,9 @@ private fun ScenarioStatsEntity?.toDomain() =
         lastStartTimestampMs = lastStartTimestampMs,
         startCount = startCount,
     )
+
+private fun ScreenCaptureMode.toEntity(): com.buzbuz.smartautoclicker.core.database.entity.ScreenCaptureMode =
+    com.buzbuz.smartautoclicker.core.database.entity.ScreenCaptureMode.valueOf(name)
+
+private fun com.buzbuz.smartautoclicker.core.database.entity.ScreenCaptureMode.toDomain(): ScreenCaptureMode =
+    ScreenCaptureMode.valueOf(name)

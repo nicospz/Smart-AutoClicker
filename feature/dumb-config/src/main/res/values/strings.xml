@@ -50,11 +50,15 @@
     <string name="item_desc_dumb_swipe_positions">Swipe from %1$d, %2$d to %3$d, %4$d</string>
     <string name="item_desc_dumb_precision_gesture">Record and replay a raw touch gesture with Shizuku</string>
     <string name="item_desc_dumb_precision_gesture_details">%1$d events during %2$s</string>
-    <string name="item_desc_dumb_precision_text">Send text with Shizuku key events or shell input</string>
+    <string name="item_desc_dumb_precision_text">Send text with Shizuku key events, shell input, or clipboard paste</string>
     <string name="item_desc_dumb_precision_text_details">%1$d chars, %2$s</string>
     <string name="input_field_label_precision_text">Text</string>
     <string name="button_dumb_precision_text_mode_keys">Key events</string>
     <string name="button_dumb_precision_text_mode_shell">Shell input</string>
+    <string name="button_dumb_precision_text_mode_paste">Paste</string>
+    <string name="field_dumb_precision_text_replace_existing_title">Replace existing text</string>
+    <string name="field_dumb_precision_text_replace_existing_disabled">Paste at the current cursor position.</string>
+    <string name="field_dumb_precision_text_replace_existing_enabled">Select all text before pasting.</string>
     <string name="button_dumb_precision_text_try">Try</string>
     <string name="status_dumb_precision_text_ready">%1$d chars, %2$s</string>
     <string name="status_dumb_precision_text_typing">Sending precision text</string>

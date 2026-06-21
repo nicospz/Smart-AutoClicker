@@ -18,6 +18,7 @@ package com.buzbuz.smartautoclicker.core.processing.data.processor
 
 import android.graphics.Bitmap
 import android.graphics.Rect
+import android.os.SystemClock
 
 import com.buzbuz.smartautoclicker.core.detection.DetectionResult
 import com.buzbuz.smartautoclicker.core.detection.ImageDetector
@@ -49,40 +50,85 @@ internal class ConditionsVerifier(
     /** List of results for the last call to verifyConditions. */
     private val verificationResults: ConditionsResults = ConditionsResults()
 
+    /** Event label for detailed processing logs. */
+    private var currentEventContext: String? = null
+
+    /** Bitmap load / detection timings for the last image condition check. */
+    private var lastImageTimings: ImageConditionTimings? = null
+
+    private data class ImageConditionTimings(
+        val bitmapLoadNs: Long,
+        val detectionNs: Long,
+    )
+
     /**
      * Set only during a [verifyConditions], it contains the system time at verification start.
      * This allows to use the same reference time for all conditions during the same verification loop.
      */
     private var currentVerificationTsMs: Long? = null
 
-    suspend fun verifyConditions(@ConditionOperator operator: Int, conditions: List<Condition>): ConditionsResults {
+    suspend fun verifyConditions(
+        @ConditionOperator operator: Int,
+        conditions: List<Condition>,
+        eventContext: String? = currentEventContext,
+    ): ConditionsResults {
         verificationResults.reset()
         currentVerificationTsMs = System.currentTimeMillis()
+        currentEventContext = eventContext
+
+        val batchStartNs = SystemClock.elapsedRealtimeNanos()
+        ConditionProcessingLog.batchStarted(eventContext, operator, conditions.size)
 
         var verificationResult: ProcessedConditionResult
         for (condition in conditions) {
+            val conditionStartNs = SystemClock.elapsedRealtimeNanos()
             verificationResult = verifyCondition(condition)
+            val imageTimings = lastImageTimings.also { lastImageTimings = null }
+            ConditionProcessingLog.conditionProcessed(
+                eventContext = eventContext,
+                condition = condition,
+                result = verificationResult,
+                durationNs = SystemClock.elapsedRealtimeNanos() - conditionStartNs,
+                bitmapLoadNs = imageTimings?.bitmapLoadNs,
+                detectionNs = imageTimings?.detectionNs,
+            )
             verificationResults.addResult(condition.getValidId(), verificationResult)
 
             if (operator == OR && verificationResult.isFulfilled) {
                 verificationResults.setFulfilledState(true)
+                ConditionProcessingLog.batchCompleted(eventContext, true, SystemClock.elapsedRealtimeNanos() - batchStartNs)
+                currentEventContext = null
                 return verificationResults
             }
             if (operator == AND && !verificationResult.isFulfilled) {
                 verificationResults.setFulfilledState(false)
+                ConditionProcessingLog.batchCompleted(eventContext, false, SystemClock.elapsedRealtimeNanos() - batchStartNs)
+                currentEventContext = null
                 return verificationResults
             }
 
             yield()
         }
 
-        verificationResults.setFulfilledState(operator == AND)
+        val fulfilled = operator == AND
+        verificationResults.setFulfilledState(fulfilled)
+        ConditionProcessingLog.batchCompleted(eventContext, fulfilled, SystemClock.elapsedRealtimeNanos() - batchStartNs)
+        currentEventContext = null
         return verificationResults
     }
 
-    suspend fun verifyOffsetRepeatImageEvent(event: ImageEvent): ConditionsResults {
+    suspend fun verifyOffsetRepeatImageEvent(event: ImageEvent, eventContext: String? = null): ConditionsResults {
+        val resolvedEventContext = eventContext ?: "image:${event.name}(id=${event.id.databaseId})"
         verificationResults.reset()
         currentVerificationTsMs = System.currentTimeMillis()
+        currentEventContext = resolvedEventContext
+
+        val batchStartNs = SystemClock.elapsedRealtimeNanos()
+        ConditionProcessingLog.batchStarted(
+            eventContext = resolvedEventContext,
+            operator = event.conditionOperator,
+            conditionCount = event.conditions.size,
+        )
 
         val screenBounds = scalingManager.getScaledScreenBounds()
         val matches = mutableListOf<OffsetRepeatMatch>()
@@ -92,6 +138,11 @@ internal class ConditionsVerifier(
             val dyScreen = event.offsetRepeatY * instanceIndex
             val dxScaled = scalingManager.scaleDownOffset(dxScreen)
             val dyScaled = scalingManager.scaleDownOffset(dyScreen)
+            val splitSearchPadding = if (event.offsetRepeatY == SPLIT_SCREEN_Y_OFFSET_PX && instanceIndex > 0) {
+                scalingManager.scaleDownOffset(SPLIT_SCREEN_SEARCH_PADDING_PX)
+            } else {
+                0
+            }
 
             val instanceResults = mutableListOf<Pair<Long, ProcessedConditionResult>>()
             var instanceFulfilled = when (event.conditionOperator) {
@@ -101,40 +152,42 @@ internal class ConditionsVerifier(
             }
 
             for (condition in event.conditions) {
+                val conditionStartNs = SystemClock.elapsedRealtimeNanos()
+                val instanceSuffix = "instance=$instanceIndex offset=($dxScreen,$dyScreen)"
                 val baseScaling = scalingManager.getImageConditionScalingInfo(condition)
-                if (baseScaling == null) {
-                    val invalidResult = condition.toInvalidConditionResult()
-                    instanceResults += condition.getValidId() to invalidResult
-                    if (event.conditionOperator == AND) {
-                        instanceFulfilled = false
-                        break
-                    }
-                    continue
-                }
-
-                val imageArea = baseScaling.imageArea.translated(dxScaled, dyScaled)
-                val detectionArea = baseScaling.detectionArea.translated(dxScaled, dyScaled)
-                if (!imageArea.fitsIn(screenBounds) || !detectionArea.fitsIn(screenBounds)) {
-                    val invalidResult = condition.toNotDetectedResult()
-                    instanceResults += condition.getValidId() to invalidResult
-                    if (event.conditionOperator == AND) {
-                        instanceFulfilled = false
-                        break
-                    }
-                    continue
-                }
-
-                val result = if (detectionArea.canContain(imageArea)) {
-                    verifyImageConditionInArea(
-                        condition = condition,
-                        scaledConditionArea = baseScaling.copy(imageArea = imageArea, detectionArea = detectionArea),
-                        detectionArea = detectionArea,
-                        notifyProgress = false,
-                    )
+                val result = if (baseScaling == null) {
+                    condition.toInvalidConditionResult()
                 } else {
-                    condition.toNotDetectedResult()
+                    val imageArea = baseScaling.imageArea.translated(dxScaled, dyScaled)
+                    val detectionArea = baseScaling.detectionArea
+                        .translated(dxScaled, dyScaled)
+                        .padded(splitSearchPadding)
+                        .clampedTo(screenBounds)
+                    when {
+                        !imageArea.fitsIn(screenBounds) ->
+                            condition.toNotDetectedResult()
+                        detectionArea.canContain(imageArea) ->
+                            verifyImageConditionInArea(
+                                condition = condition,
+                                scaledConditionArea = baseScaling.copy(imageArea = imageArea, detectionArea = detectionArea),
+                                detectionArea = detectionArea,
+                                notifyProgress = false,
+                                logContextSuffix = instanceSuffix,
+                            )
+                        else -> condition.toNotDetectedResult()
+                    }
                 }
 
+                ConditionProcessingLog.conditionProcessed(
+                    eventContext = resolvedEventContext,
+                    condition = condition,
+                    result = result,
+                    durationNs = SystemClock.elapsedRealtimeNanos() - conditionStartNs,
+                    contextSuffix = instanceSuffix,
+                    bitmapLoadNs = lastImageTimings?.bitmapLoadNs,
+                    detectionNs = lastImageTimings?.detectionNs,
+                )
+                lastImageTimings = null
                 instanceResults += condition.getValidId() to result
 
                 if (event.conditionOperator == OR && result.isFulfilled) {
@@ -158,6 +211,12 @@ internal class ConditionsVerifier(
 
                 if (event.offsetRepeatMatchMode == OffsetRepeatMatchMode.FIRST_MATCH) {
                     verificationResults.setOffsetRepeatMatches(matches)
+                    ConditionProcessingLog.batchCompleted(
+                        eventContext = resolvedEventContext,
+                        fulfilled = true,
+                        durationNs = SystemClock.elapsedRealtimeNanos() - batchStartNs,
+                    )
+                    currentEventContext = null
                     return verificationResults
                 }
             }
@@ -167,10 +226,21 @@ internal class ConditionsVerifier(
 
         if (matches.isNotEmpty()) {
             verificationResults.setOffsetRepeatMatches(matches)
+            ConditionProcessingLog.batchCompleted(
+                eventContext = resolvedEventContext,
+                fulfilled = true,
+                durationNs = SystemClock.elapsedRealtimeNanos() - batchStartNs,
+            )
         } else {
             verificationResults.setFulfilledState(false)
+            ConditionProcessingLog.batchCompleted(
+                eventContext = resolvedEventContext,
+                fulfilled = false,
+                durationNs = SystemClock.elapsedRealtimeNanos() - batchStartNs,
+            )
         }
 
+        currentEventContext = null
         return verificationResults
     }
 
@@ -249,16 +319,20 @@ internal class ConditionsVerifier(
         scaledConditionArea: ImageConditionScalingInfo,
         detectionArea: Rect,
         notifyProgress: Boolean,
+        logContextSuffix: String = "",
     ): ProcessedConditionResult.Image {
         if (notifyProgress) progressListener?.onImageConditionProcessingStarted()
 
+        val bitmapLoadStartNs = SystemClock.elapsedRealtimeNanos()
         val bitmap = bitmapSupplier(
             condition.path,
             scaledConditionArea.imageArea.width(),
             scaledConditionArea.imageArea.height(),
         )
+        val bitmapLoadNs = SystemClock.elapsedRealtimeNanos() - bitmapLoadStartNs
 
         val result = bitmap?.let { conditionBitmap ->
+            val detectionStartNs = SystemClock.elapsedRealtimeNanos()
             val detectionResult = imageDetector.detectCondition(
                 conditionBitmap = conditionBitmap,
                 conditionWidth = scaledConditionArea.imageArea.width(),
@@ -266,9 +340,13 @@ internal class ConditionsVerifier(
                 detectionArea = detectionArea,
                 threshold = condition.threshold,
             )
-
+            val detectionNs = SystemClock.elapsedRealtimeNanos() - detectionStartNs
+            lastImageTimings = ImageConditionTimings(bitmapLoadNs = bitmapLoadNs, detectionNs = detectionNs)
             condition.toImageResult(detectionResult)
-        } ?: condition.toInvalidConditionResult()
+        } ?: run {
+            lastImageTimings = ImageConditionTimings(bitmapLoadNs = bitmapLoadNs, detectionNs = 0L)
+            condition.toInvalidConditionResult()
+        }
 
         if (notifyProgress) progressListener?.onImageConditionProcessingCompleted(result)
         return result
@@ -299,6 +377,17 @@ internal class ConditionsVerifier(
 
     private fun Rect.translated(dx: Int, dy: Int): Rect =
         Rect(left + dx, top + dy, right + dx, bottom + dy)
+
+    private fun Rect.padded(padding: Int): Rect =
+        if (padding <= 0) this else Rect(left - padding, top - padding, right + padding, bottom + padding)
+
+    private fun Rect.clampedTo(bounds: Rect): Rect =
+        Rect(
+            left.coerceIn(bounds.left, bounds.right),
+            top.coerceIn(bounds.top, bounds.bottom),
+            right.coerceIn(bounds.left, bounds.right),
+            bottom.coerceIn(bounds.top, bounds.bottom),
+        )
 
     private fun ImageCondition.toNotDetectedResult(): ProcessedConditionResult.Image =
         ProcessedConditionResult.Image(

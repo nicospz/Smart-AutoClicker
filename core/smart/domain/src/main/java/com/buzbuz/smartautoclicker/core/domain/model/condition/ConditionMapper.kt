@@ -29,6 +29,7 @@ import com.buzbuz.smartautoclicker.core.domain.model.CounterOperationValue
 internal fun ImageCondition.toEntity() = ConditionEntity(
     id = id.databaseId,
     eventId = eventId.databaseId,
+    eventGroupId = null,
     name = name,
     priority = priority,
     type = ConditionType.ON_IMAGE_DETECTED,
@@ -91,8 +92,28 @@ private fun TriggerCondition.OnTimerReached.toTimerReachedEntity(): ConditionEnt
     )
 
 
+internal fun Condition.toGroupEntity(groupDbId: Long): ConditionEntity =
+    when (this) {
+        is ImageCondition -> toEntity().copy(eventId = null, eventGroupId = groupDbId)
+        is TriggerCondition -> toEntity().copy(eventId = null, eventGroupId = groupDbId)
+    }
+
+internal fun ConditionEntity.toDomainGroupCondition(cleanIds: Boolean = false): Condition {
+    val groupDbId = eventGroupId
+        ?: throw IllegalStateException("Can't map group condition without eventGroupId")
+
+    return when (type) {
+        ConditionType.ON_IMAGE_DETECTED -> toDomainImageCondition(groupDbId, cleanIds)
+        ConditionType.ON_BROADCAST_RECEIVED -> toDomainBroadcastReceived(groupDbId, cleanIds)
+        ConditionType.ON_COUNTER_REACHED -> toDomainCounterReached(groupDbId, cleanIds)
+        ConditionType.ON_TIMER_REACHED -> toDomainTimerReached(groupDbId, cleanIds)
+    }
+}
+
+
 internal fun ConditionEntity.toDomain(cleanIds: Boolean = false): Condition =
-    when (type) {
+    if (eventGroupId != null) toDomainGroupCondition(cleanIds)
+    else when (type) {
         ConditionType.ON_IMAGE_DETECTED -> toDomainImageCondition(cleanIds)
         ConditionType.ON_BROADCAST_RECEIVED -> toDomainBroadcastReceived(cleanIds)
         ConditionType.ON_COUNTER_REACHED -> toDomainCounterReached(cleanIds)
@@ -101,9 +122,15 @@ internal fun ConditionEntity.toDomain(cleanIds: Boolean = false): Condition =
 
 /** @return the condition for this entity. */
 private fun ConditionEntity.toDomainImageCondition(cleanIds: Boolean = false): ImageCondition =
+    toDomainImageCondition(
+        ownerDbId = eventId ?: throw IllegalStateException("Can't map event condition without eventId"),
+        cleanIds = cleanIds,
+    )
+
+private fun ConditionEntity.toDomainImageCondition(ownerDbId: Long, cleanIds: Boolean): ImageCondition =
     ImageCondition(
         id = Identifier(id = id, asTemporary = cleanIds),
-        eventId = Identifier(id = eventId, asTemporary = cleanIds),
+        eventId = Identifier(id = ownerDbId, asTemporary = cleanIds),
         name = name,
         priority = priority,
         path = path!!,
@@ -115,17 +142,29 @@ private fun ConditionEntity.toDomainImageCondition(cleanIds: Boolean = false): I
     )
 
 private fun ConditionEntity.toDomainBroadcastReceived(cleanIds: Boolean = false): TriggerCondition =
+    toDomainBroadcastReceived(
+        ownerDbId = eventId ?: throw IllegalStateException("Can't map event condition without eventId"),
+        cleanIds = cleanIds,
+    )
+
+private fun ConditionEntity.toDomainBroadcastReceived(ownerDbId: Long, cleanIds: Boolean): TriggerCondition =
     TriggerCondition.OnBroadcastReceived(
         id = Identifier(id = id, asTemporary = cleanIds),
-        eventId = Identifier(id = eventId, asTemporary = cleanIds),
+        eventId = Identifier(id = ownerDbId, asTemporary = cleanIds),
         name = name,
         intentAction = broadcastAction!!,
     )
 
 private fun ConditionEntity.toDomainCounterReached(cleanIds: Boolean = false): TriggerCondition =
+    toDomainCounterReached(
+        ownerDbId = eventId ?: throw IllegalStateException("Can't map event condition without eventId"),
+        cleanIds = cleanIds,
+    )
+
+private fun ConditionEntity.toDomainCounterReached(ownerDbId: Long, cleanIds: Boolean): TriggerCondition =
     TriggerCondition.OnCounterCountReached(
         id = Identifier(id = id, asTemporary = cleanIds),
-        eventId = Identifier(id = eventId, asTemporary = cleanIds),
+        eventId = Identifier(id = ownerDbId, asTemporary = cleanIds),
         name = name,
         counterName = counterName!!,
         comparisonOperation = counterComparisonOperation!!.toDomain(),
@@ -136,11 +175,16 @@ private fun ConditionEntity.toDomainCounterReached(cleanIds: Boolean = false): T
         ),
     )
 
-
 private fun ConditionEntity.toDomainTimerReached(cleanIds: Boolean = false): TriggerCondition =
+    toDomainTimerReached(
+        ownerDbId = eventId ?: throw IllegalStateException("Can't map event condition without eventId"),
+        cleanIds = cleanIds,
+    )
+
+private fun ConditionEntity.toDomainTimerReached(ownerDbId: Long, cleanIds: Boolean): TriggerCondition =
     TriggerCondition.OnTimerReached(
         id = Identifier(id = id, asTemporary = cleanIds),
-        eventId = Identifier(id = eventId, asTemporary = cleanIds),
+        eventId = Identifier(id = ownerDbId, asTemporary = cleanIds),
         name = name,
         durationMs = timerValueMs!!,
         restartWhenReached = restartWhenReached!!,

@@ -17,6 +17,7 @@
 package com.buzbuz.smartautoclicker.scenarios.list
 
 import android.graphics.Bitmap
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.buzbuz.smartautoclicker.core.bitmaps.BitmapRepository
@@ -35,7 +36,9 @@ import com.buzbuz.smartautoclicker.feature.smart.config.utils.getImageConditionB
 import com.buzbuz.smartautoclicker.scenarios.list.sort.ScenarioSortConfigRepository
 import com.buzbuz.smartautoclicker.scenarios.list.sort.ScenarioSortType
 
+import com.buzbuz.smartautoclicker.feature.sync.domain.SacSyncCoordinator
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -52,11 +55,13 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ScenarioListViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val filteredScenarioListUseCase: FilteredScenarioListUseCase,
     private val sortConfigRepository: ScenarioSortConfigRepository,
     private val bitmapRepository: BitmapRepository,
     private val smartRepository: IRepository,
     private val dumbRepository: IDumbRepository,
+    private val sacSyncCoordinator: SacSyncCoordinator,
 ) : ViewModel() {
 
     /** Current state type of the ui. */
@@ -141,9 +146,30 @@ class ScenarioListViewModel @Inject constructor(
 
     fun toggleFavorite(item: ScenarioListUiState.Item.ScenarioItem) {
         viewModelScope.launch(Dispatchers.IO) {
+            val metrics = context.resources.displayMetrics
             when (val scenario = item.scenario) {
-                is DumbScenario -> dumbRepository.updateDumbScenarioFavorite(scenario.id, !scenario.isFavorite)
-                is Scenario -> smartRepository.updateScenarioFavorite(scenario.id, !scenario.isFavorite)
+                is DumbScenario -> {
+                    dumbRepository.updateDumbScenarioFavorite(scenario.id, !scenario.isFavorite)
+                    scenario.syncId.takeIf { it.isNotBlank() }?.let { syncId ->
+                        sacSyncCoordinator.scheduleScenarioPush(
+                            syncId = syncId,
+                            isSmart = false,
+                            screenWidth = metrics.widthPixels,
+                            screenHeight = metrics.heightPixels,
+                        )
+                    }
+                }
+                is Scenario -> {
+                    smartRepository.updateScenarioFavorite(scenario.id, !scenario.isFavorite)
+                    scenario.syncId.takeIf { it.isNotBlank() }?.let { syncId ->
+                        sacSyncCoordinator.scheduleScenarioPush(
+                            syncId = syncId,
+                            isSmart = true,
+                            screenWidth = metrics.widthPixels,
+                            screenHeight = metrics.heightPixels,
+                        )
+                    }
+                }
             }
         }
     }
@@ -212,9 +238,30 @@ class ScenarioListViewModel @Inject constructor(
      */
     fun deleteScenario(item: ScenarioListUiState.Item.ScenarioItem) {
         viewModelScope.launch(Dispatchers.IO) {
+            val metrics = context.resources.displayMetrics
             when (val scenario = item.scenario) {
-                is DumbScenario -> dumbRepository.deleteDumbScenario(scenario)
-                is Scenario -> smartRepository.deleteScenario(scenario.id)
+                is DumbScenario -> {
+                    if (scenario.syncId.isNotBlank()) {
+                        sacSyncCoordinator.scheduleScenarioDeletePush(
+                            syncId = scenario.syncId,
+                            isSmart = false,
+                            screenWidth = metrics.widthPixels,
+                            screenHeight = metrics.heightPixels,
+                        )
+                    }
+                    dumbRepository.deleteDumbScenario(scenario)
+                }
+                is Scenario -> {
+                    if (scenario.syncId.isNotBlank()) {
+                        sacSyncCoordinator.scheduleScenarioDeletePush(
+                            syncId = scenario.syncId,
+                            isSmart = true,
+                            screenWidth = metrics.widthPixels,
+                            screenHeight = metrics.heightPixels,
+                        )
+                    }
+                    smartRepository.deleteScenario(scenario.id)
+                }
             }
         }
     }
@@ -248,6 +295,7 @@ class ScenarioListViewModel @Inject constructor(
     ) : List<ScenarioListUiState.Item> = mapNotNull { item ->
         when (item) {
             is ScenarioListUiState.Item.SortItem -> item
+            is ScenarioListUiState.Item.CategoryHeaderItem -> null
             is ScenarioListUiState.Item.ScenarioItem.Valid.Dumb -> item.copy(
                 showExportCheckbox = true,
                 checkedForExport = backupSelection.dumbSelection.contains(item.scenario.id.databaseId)

@@ -24,6 +24,8 @@ internal class ScenarioUpdateState {
 
     /** Keep track of the events identifiers (DomainId to DatabaseId]. */
     private val eventsDomainToDbIdMap = mutableMapOf<Long, Long>()
+    /** Keep track of the event groups identifiers (DomainId to DatabaseId]. */
+    private val groupsDomainToDbIdMap = mutableMapOf<Long, Long>()
     /** Keep track of the conditions identifiers (DomainId to DatabaseId]. */
     private val conditionsDomainToDbIdMap = mutableMapOf<Long, Long>()
     /** Keep track of the actions identifiers (DomainId to DatabaseId]. */
@@ -31,8 +33,19 @@ internal class ScenarioUpdateState {
 
     fun initUpdateState() {
         eventsDomainToDbIdMap.clear()
+        groupsDomainToDbIdMap.clear()
         conditionsDomainToDbIdMap.clear()
         actionsDomainToDbIdMap.clear()
+    }
+
+    fun addGroupIdMapping(domainId: Long, dbId: Long) {
+        groupsDomainToDbIdMap[domainId] = dbId
+    }
+
+    fun getGroupDbId(identifier: Identifier): Long = when {
+        identifier.tempId == null && identifier.databaseId != 0L -> identifier.databaseId
+        else -> groupsDomainToDbIdMap[identifier.tempId]
+            ?: throw IllegalStateException("Identifier is not found in group map for $identifier")
     }
 
     fun addEventIdMapping(domainId: Long, dbId: Long) {

@@ -24,6 +24,8 @@ import com.buzbuz.smartautoclicker.core.domain.model.condition.Condition
 import com.buzbuz.smartautoclicker.core.domain.model.condition.ImageCondition
 import com.buzbuz.smartautoclicker.core.domain.model.condition.TriggerCondition
 import com.buzbuz.smartautoclicker.core.domain.model.event.Event
+import com.buzbuz.smartautoclicker.core.domain.model.event.EventGroup
+import com.buzbuz.smartautoclicker.core.domain.model.event.GroupEventType
 import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEvent
 import com.buzbuz.smartautoclicker.core.domain.model.event.TriggerEvent
 import com.buzbuz.smartautoclicker.feature.smart.config.utils.isClickOnCondition
@@ -71,6 +73,56 @@ internal fun List<Condition>.filterConditionsForCopy(editedEvent: Event, editedC
             // Ok for copy
             else -> true
         }
+    }
+
+internal fun List<EventGroup>.getEditedGroupConditionsForCopy(editedGroup: EventGroup): List<Condition> = buildList {
+    editedGroup.conditions.forEach { editedCondition ->
+        if (editedCondition.isComplete()) add(editedCondition)
+    }
+
+    this@getEditedGroupConditionsForCopy.forEach { group ->
+        if (group.id == editedGroup.id || group.eventType != editedGroup.eventType || !group.isComplete()) return@forEach
+
+        group.conditions.forEach { editedCondition ->
+            if (editedCondition.isComplete()) add(editedCondition)
+        }
+    }
+}
+
+internal fun List<Event>.getEditedEventConditionsForGroupCopy(editedGroup: EventGroup): List<Condition> = buildList {
+    when (editedGroup.eventType) {
+        GroupEventType.IMAGE -> filterIsInstance<ImageEvent>().forEach { event ->
+            if (!event.isComplete()) return@forEach
+            event.conditions.forEach { editedCondition ->
+                if (editedCondition.isComplete()) add(editedCondition)
+            }
+        }
+        GroupEventType.TRIGGER -> filterIsInstance<TriggerEvent>().forEach { event ->
+            if (!event.isComplete()) return@forEach
+            event.conditions.forEach { editedCondition ->
+                if (editedCondition.isComplete()) add(editedCondition)
+            }
+        }
+    }
+}
+
+internal fun List<Condition>.filterConditionsForGroupCopy(
+    editedGroup: EventGroup,
+    editedConditions: List<Condition>,
+): List<Condition> =
+    filter { condition ->
+        when {
+            !condition.isComplete() -> false
+            condition.eventId == editedGroup.id || editedConditions.containsIdentifiable(condition.id) -> false
+            !editedGroup.isConditionCompatibleForCopy(condition) -> false
+            else -> true
+        }
+    }
+
+private fun EventGroup.isConditionCompatibleForCopy(condition: Condition): Boolean =
+    when (eventType) {
+        GroupEventType.IMAGE -> condition is ImageCondition
+        GroupEventType.TRIGGER -> condition is TriggerCondition
     }
 
 internal fun List<Event>.getEditedActionsForCopy(editedEvent: Event): List<Action> = buildList {

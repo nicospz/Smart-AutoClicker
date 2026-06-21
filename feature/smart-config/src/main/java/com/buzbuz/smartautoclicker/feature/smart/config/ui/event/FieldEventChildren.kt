@@ -27,7 +27,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.buzbuz.smartautoclicker.feature.smart.config.databinding.IncludeFieldEventChildrenBinding
 
 
-internal fun IncludeFieldEventChildrenBinding.setTitle(
+fun IncludeFieldEventChildrenBinding.setTitle(
     @StringRes titleRes: Int,
     @StringRes emptyTitleRes: Int,
 ) {
@@ -35,12 +35,12 @@ internal fun IncludeFieldEventChildrenBinding.setTitle(
     title.tag = FieldTitles(titleRes, emptyTitleRes)
 }
 
-internal fun IncludeFieldEventChildrenBinding.setEmptyDescription(@StringRes descRes: Int) {
+fun IncludeFieldEventChildrenBinding.setEmptyDescription(@StringRes descRes: Int) {
     emptyDescription.setText(descRes)
 }
 
 @SuppressLint("ClickableViewAccessibility")
-internal fun IncludeFieldEventChildrenBinding.setOnClickListener(listener: (() -> Unit)?) {
+fun IncludeFieldEventChildrenBinding.setOnClickListener(listener: (() -> Unit)?) {
     if (listener != null) {
         root.setOnClickListener { listener() }
         list.setEmptySpaceClickListener(listener)
@@ -50,11 +50,11 @@ internal fun IncludeFieldEventChildrenBinding.setOnClickListener(listener: (() -
     }
 }
 
-internal fun <Item> IncludeFieldEventChildrenBinding.setAdapter(adapter: ListAdapter<Item, *>) {
+fun <Item> IncludeFieldEventChildrenBinding.setAdapter(adapter: ListAdapter<Item, *>) {
     list.adapter = adapter
 }
 
-internal fun <Item> IncludeFieldEventChildrenBinding.setItems(items: List<Item>) {
+fun <Item> IncludeFieldEventChildrenBinding.setItems(items: List<Item>) {
     if (items.isEmpty()) toEmptyState()
     else toListState(items)
 }
