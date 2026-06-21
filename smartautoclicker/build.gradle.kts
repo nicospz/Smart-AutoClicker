@@ -56,6 +56,10 @@ android {
     defaultConfig {
         applicationId = getExtraActualApplicationId()
 
+        ndk {
+            abiFilters += "arm64-v8a"
+        }
+
         versionCode = 85
         versionName = "3.5.1"
     }

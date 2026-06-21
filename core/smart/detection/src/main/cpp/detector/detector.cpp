@@ -17,7 +17,6 @@
 #include <android/log.h>
 #include <android/bitmap.h>
 #include <memory>
-#include <opencv2/imgproc/imgproc_c.h>
 
 #include "../logs/log.h"
 #include "../utils/roi.h"

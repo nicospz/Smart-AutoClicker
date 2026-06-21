@@ -68,48 +68,30 @@ find_library( # Sets the name of the path variable.
         # you want CMake to locate.
         log )
 
-# Prefer building OpenCV from source when it is available so the resulting
-# shared libraries inherit the current Android/NDK linker configuration,
-# including 16 KB page-size compatibility. The debug prebuilts are kept only
-# as a local fallback for faster iteration before the sources are downloaded.
-IF(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/release/opencv")
-
-    set(SOURCE_OPENCV_PATH "${CMAKE_CURRENT_SOURCE_DIR}/release/opencv")
-
-    # Adds the CMakeLists.txt file located in the specified directory
-    # as a build dependency.
-    add_subdirectory(${SOURCE_OPENCV_PATH})
-
-    # For a reason I'm missing, we have to set the correct output for opencv_core
-    set_target_properties( opencv_core PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )
-
-    target_include_directories(smartautoclicker PUBLIC
-            ${SOURCE_OPENCV_PATH}/modules/core/include
-            ${SOURCE_OPENCV_PATH}/modules/imgproc/include )
-
-    # Required to get opencv2/open_modules.hpp generated at build time
-    include_directories (${CMAKE_BINARY_DIR})
-ELSEIF(CMAKE_BUILD_TYPE MATCHES Debug)
-
-    set(PREBUILT_OPENCV_PATH "${CMAKE_CURRENT_SOURCE_DIR}/debug/opencv")
-
-    add_library( opencv_core SHARED IMPORTED )
-    set_target_properties(
-            opencv_core
-            PROPERTIES IMPORTED_LOCATION
-            "${PREBUILT_OPENCV_PATH}/libs/${ANDROID_ABI}/libopencv_core.so" )
-
-    add_library( opencv_imgproc SHARED IMPORTED )
-    set_target_properties(
-            opencv_imgproc
-            PROPERTIES IMPORTED_LOCATION
-            "${PREBUILT_OPENCV_PATH}/libs/${ANDROID_ABI}/libopencv_imgproc.so" )
-
-    target_include_directories(
-            smartautoclicker
-            PUBLIC
-            ${PREBUILT_OPENCV_PATH}/include )
+# Build OpenCV from source so the resulting shared libraries inherit the current
+# Android/NDK linker configuration, including 16 KB page-size compatibility.
+set(SOURCE_OPENCV_PATH "${CMAKE_CURRENT_SOURCE_DIR}/release/opencv")
+IF(NOT EXISTS "${SOURCE_OPENCV_PATH}/CMakeLists.txt")
+    message(FATAL_ERROR "OpenCV sources are missing. Run a Gradle build so sourceDownload can populate src/release/opencv.")
 ENDIF()
+
+# Adds the CMakeLists.txt file located in the specified directory
+# as a build dependency.
+add_subdirectory(${SOURCE_OPENCV_PATH})
+
+# Ensure OpenCV shared libraries are emitted where Android Gradle Plugin packages
+# native outputs for this module.
+set_target_properties(
+        opencv_core
+        opencv_imgproc
+        PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )
+
+target_include_directories(smartautoclicker PUBLIC
+        ${SOURCE_OPENCV_PATH}/modules/core/include
+        ${SOURCE_OPENCV_PATH}/modules/imgproc/include )
+
+# Required to get opencv2/open_modules.hpp generated at build time
+include_directories (${CMAKE_BINARY_DIR})
 
 # Specifies libraries CMake should link to your target library. You
 # can link multiple libraries, such as libraries you define in this

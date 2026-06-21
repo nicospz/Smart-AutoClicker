@@ -26,8 +26,7 @@ import com.buzbuz.smartautoclicker.core.base.extensions.throwWithKeys
  * Native implementation of the image detector.
  * It uses OpenCv template matching algorithms to achieve condition detection on the screen.
  *
- * Debug flavour of the library is build against build artifacts of OpenCv in the debug folder.
- * Release flavour of the library is build against the sources of the OpenCv project, downloaded from github.
+ * The library is built against the sources of the OpenCv project, downloaded from GitHub.
  */
 class NativeDetector private constructor() : ImageDetector {
 

@@ -15,7 +15,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <opencv2/imgproc/imgproc_c.h>
 #include <opencv2/imgproc/imgproc.hpp>
 #include "template_matching_result.hpp"
 
@@ -46,7 +45,7 @@ void TemplateMatchingResult::invalidateCurrentResult(const cv::Mat& condition, c
             matchingResults,
             cv::Rect(maxLoc.x, maxLoc.y,  condition.cols,condition.rows),
             cv::Scalar(0),
-            CV_FILLED);
+            cv::FILLED);
 }
 
 void TemplateMatchingResult::reset() {

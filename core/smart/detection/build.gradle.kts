@@ -43,6 +43,10 @@ android {
     namespace = "com.buzbuz.smartautoclicker.core.detection"
 
     defaultConfig {
+        ndk {
+            abiFilters += "arm64-v8a"
+        }
+
         externalNativeBuild {
             cmake {
                 arguments.addAll(
@@ -53,14 +57,15 @@ android {
                         "-DOPENCV_ENABLE_NONFREE=OFF",
                         "-DBUILD_opencv_ittnotify=OFF",
                         "-DBUILD_ITT=OFF",
-                        "-DCV_DISABLE_OPTIMIZATION=ON",
+                        "-DCV_DISABLE_OPTIMIZATION=OFF",
+                        "-DWITH_KLEIDICV=ON",
+                        "-DWITH_CAROTENE=ON",
+                        "-DWITH_CPUFEATURES=ON",
                         "-DWITH_CUDA=OFF",
                         "-DWITH_OPENCL=OFF",
                         "-DWITH_OPENCLAMDFFT=OFF",
                         "-DWITH_OPENCLAMDBLAS=OFF",
                         "-DWITH_VA_INTEL=OFF",
-                        "-DENABLE_SSE=OFF",
-                        "-DENABLE_SSE2=OFF",
                         "-DBUILD_TESTING=OFF",
                         "-DBUILD_PERF_TESTS=OFF",
                         "-DBUILD_TESTS=OFF",

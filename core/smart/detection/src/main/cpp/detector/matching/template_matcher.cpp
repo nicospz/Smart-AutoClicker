@@ -16,7 +16,6 @@
  */
 
 #include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/imgproc/imgproc_c.h>
 
 #include "template_matcher.hpp"
 #include "../../logs/log.h"
