@@ -83,6 +83,7 @@ class ScenarioCreationDialog : DialogFragment() {
         viewBinding = DialogScenarioCreationBinding.inflate(layoutInflater).apply {
             layoutTopBar.initTopBar()
             scenarioNameInputLayout.initScenarioNameField()
+            scenarioCategoryInputLayout.initScenarioCategoryField()
             scenarioTypeDumb.initScenarioTypeCard(ScenarioTypeSelection.DUMB)
             scenarioTypeSmart.initScenarioTypeCard(ScenarioTypeSelection.SMART)
         }
@@ -122,6 +123,16 @@ class ScenarioCreationDialog : DialogFragment() {
     private fun IncludeFieldTextInputBinding.initScenarioNameField() {
         setLabel(R.string.input_field_label_scenario_name)
         setOnTextChangedListener { viewModel.setName(it.toString()) }
+        textField.filters = arrayOf<InputFilter>(
+            InputFilter.LengthFilter(requireContext().resources.getInteger(R.integer.name_max_length))
+        )
+        enableEasyOverwriteOnFocus()
+    }
+
+    private fun IncludeFieldTextInputBinding.initScenarioCategoryField() {
+        setLabel(com.buzbuz.smartautoclicker.core.ui.R.string.input_field_label_scenario_category)
+        root.helperText = getString(com.buzbuz.smartautoclicker.core.ui.R.string.input_field_helper_scenario_category)
+        setOnTextChangedListener { viewModel.setCategory(it.toString()) }
         textField.filters = arrayOf<InputFilter>(
             InputFilter.LengthFilter(requireContext().resources.getInteger(R.integer.name_max_length))
         )

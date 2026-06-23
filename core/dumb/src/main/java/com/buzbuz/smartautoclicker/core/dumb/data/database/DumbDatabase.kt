@@ -38,6 +38,8 @@ import javax.inject.Singleton
         AutoMigration (from = 3, to = 4),
         AutoMigration (from = 4, to = 5),
         AutoMigration (from = 5, to = 6),
+        AutoMigration (from = 7, to = 8),
+        AutoMigration (from = 8, to = 9),
     ]
 )
 @TypeConverters(
@@ -51,4 +53,4 @@ abstract class DumbDatabase : RoomDatabase() {
 }
 
 /** Current version of the database. */
-const val DUMB_DATABASE_VERSION = 7
+const val DUMB_DATABASE_VERSION = 9

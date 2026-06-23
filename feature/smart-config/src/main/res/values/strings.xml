@@ -471,6 +471,27 @@
     <string name="field_dropdown_throwlet_catch_lane_bottom">Split bottom</string>
     <string name="field_throwlet_catch_pokemon_override">Pokémon override</string>
 
+    <string name="default_tasker_task_name">Tasker task</string>
+    <string name="item_tasker_task_title">Tasker task</string>
+    <string name="item_tasker_task_desc">Run a Tasker task from this scenario</string>
+    <string name="item_tasker_task_details_text">%1$s%2$s</string>
+    <string name="item_tasker_task_details_missing">No Tasker task selected</string>
+    <string name="item_tasker_task_details_wait_suffix"> · wait</string>
+    <string name="dialog_title_tasker_task">Tasker task</string>
+    <string name="dialog_title_tasker_task_picker">Select Tasker task</string>
+    <string name="field_tasker_task_selection_title">Tasker task</string>
+    <string name="field_tasker_task_selection_desc">Tap to choose a Tasker task</string>
+    <string name="field_tasker_task_selection_selected">Selected Tasker task</string>
+    <string name="field_tasker_wait_for_completion">Wait for completion</string>
+    <string name="field_tasker_wait_for_completion_desc">Pause until Tasker reports the task finished</string>
+    <string name="field_tasker_variables_title">Tasker variables</string>
+    <string name="field_tasker_variable_name">Variable name</string>
+    <string name="field_tasker_variable_value">Value</string>
+    <string name="button_add_tasker_variable">Add variable</string>
+    <string name="message_tasker_not_installed">Tasker is not installed</string>
+    <string name="message_tasker_no_access">Enable Allow External Access in Tasker settings</string>
+    <string name="message_tasker_no_tasks">No Tasker tasks found</string>
+
 
     <!-- Dialogs Action WriteText ================================================================================== -->
 

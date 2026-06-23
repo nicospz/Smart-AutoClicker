@@ -55,7 +55,13 @@ class ServiceNotificationController(
     private var notificationBuilder: ServiceNotificationBuilder? = null
 
 
-    fun createNotification(context: Context, scenarioName: String?, isRunning: Boolean, isMenuVisible: Boolean): Notification {
+    fun createNotification(
+        context: Context,
+        scenarioName: String?,
+        isRunning: Boolean,
+        isMenuVisible: Boolean,
+        isButtonOverlay: Boolean = false,
+    ): Notification {
         Log.i(TAG, "Create notification")
 
         nightModeReceiver.register(context)
@@ -70,6 +76,7 @@ class ServiceNotificationController(
             isScenarioRunning = isRunning,
             isMenuVisible = isMenuVisible,
             isNightMode = nightModeReceiver.isNightModeEnabled,
+            isButtonOverlay = isButtonOverlay,
         )
 
         val forceLegacyNotification = settingsRepository.isLegacyNotificationUiEnabled()
@@ -92,6 +99,12 @@ class ServiceNotificationController(
             context,
             state.copy(isScenarioRunning = isRunning, isMenuVisible = isMenuVisible)
         )
+    }
+
+    @SuppressLint("MissingPermission")
+    fun showNotification(context: Context, notification: Notification) {
+        if (!PermissionPostNotification().checkIfGranted(context)) return
+        notificationManager.notify(NotificationIds.FOREGROUND_SERVICE_NOTIFICATION_ID, notification)
     }
 
     private fun updateNotification(context: Context, isNightModeEnabled: Boolean) {
@@ -118,6 +131,7 @@ class ServiceNotificationController(
     fun destroyNotification() {
         nightModeReceiver.unregister()
         notificationActionReceiver.unregister()
+        notificationManager.cancel(NotificationIds.FOREGROUND_SERVICE_NOTIFICATION_ID)
         notificationBuilder = null
 
         Log.i(TAG, "Notification destroyed")

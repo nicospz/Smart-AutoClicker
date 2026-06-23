@@ -16,6 +16,7 @@ data class ThrowletCatchSession(
     val mode: ThrowletCatchMode = ThrowletCatchMode.CATCH,
     val lane: ThrowletCatchLane = ThrowletCatchLane.FULL,
     val pokemonNameOverride: String? = null,
+    val manualSelectionOnly: Boolean = false,
 )
 
 enum class ThrowletCatchMode {

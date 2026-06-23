@@ -153,6 +153,12 @@ class DumbScenarioBriefViewModel @Inject constructor(
     fun createNewDumbPrecisionText(context: Context): DumbAction.DumbPrecisionText =
         dumbEditionRepository.dumbActionBuilder.createNewDumbPrecisionText(context)
 
+    fun createNewDumbTaskerTask(context: Context): DumbAction.DumbTaskerTask =
+        dumbEditionRepository.dumbActionBuilder.createNewDumbTaskerTask(context)
+
+    fun createNewDumbManualThrowletCatch(context: Context): DumbAction.DumbManualThrowletCatch =
+        dumbEditionRepository.dumbActionBuilder.createNewDumbManualThrowletCatch(context)
+
     fun createDumbActionCopy(actionToCopy: DumbAction): DumbAction =
         dumbEditionRepository.dumbActionBuilder.createNewDumbActionFrom(actionToCopy)
 
@@ -234,6 +240,14 @@ class DumbScenarioBriefViewModel @Inject constructor(
             )
 
             is DumbAction.DumbPrecisionText -> PauseDescription(
+                pauseDurationMs = 0L,
+            )
+
+            is DumbAction.DumbTaskerTask -> PauseDescription(
+                pauseDurationMs = 0L,
+            )
+
+            is DumbAction.DumbManualThrowletCatch -> PauseDescription(
                 pauseDurationMs = 0L,
             )
         }

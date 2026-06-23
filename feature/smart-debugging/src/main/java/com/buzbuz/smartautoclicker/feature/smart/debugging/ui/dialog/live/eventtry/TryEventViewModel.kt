@@ -37,6 +37,7 @@ import com.buzbuz.smartautoclicker.core.domain.model.action.StopScenario
 import com.buzbuz.smartautoclicker.core.domain.model.action.Swipe
 import com.buzbuz.smartautoclicker.core.domain.model.action.SystemAction
 import com.buzbuz.smartautoclicker.core.domain.model.action.ThrowletCatch
+import com.buzbuz.smartautoclicker.core.domain.model.action.TaskerTask
 import com.buzbuz.smartautoclicker.core.domain.model.action.ToggleEvent
 import com.buzbuz.smartautoclicker.core.domain.model.event.Event
 import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEvent
@@ -143,7 +144,8 @@ private fun Action.getDebugIcon(): Int =
         is StopScenario -> R.drawable.ic_stop
         is Swipe -> R.drawable.ic_swipe
         is SystemAction -> R.drawable.ic_action_system
-        is ThrowletCatch -> R.drawable.ic_intent
+            is ThrowletCatch -> R.drawable.ic_intent
+            is TaskerTask -> R.drawable.ic_intent
         is ToggleEvent -> R.drawable.ic_toggle_event
         is PrecisionGesture -> R.drawable.ic_swipe
     }

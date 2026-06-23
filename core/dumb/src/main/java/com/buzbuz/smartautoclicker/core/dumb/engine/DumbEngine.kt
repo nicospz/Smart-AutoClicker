@@ -25,6 +25,7 @@ import com.buzbuz.smartautoclicker.core.dumb.domain.model.DumbAction
 import com.buzbuz.smartautoclicker.core.dumb.domain.model.DumbScenario
 import com.buzbuz.smartautoclicker.core.settings.SettingsRepository
 
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -57,6 +58,8 @@ class DumbEngine @Inject constructor(
     private var timeoutJob: Job? = null
     /** Job for the scenario execution. */
     private var executionJob: Job? = null
+    /** Gate used to pause/resume execution without losing coroutine progress. */
+    private var pauseGate: CompletableDeferred<Unit>? = null
     /** Completion listener on dumb actions tries.*/
     private var onTryCompletedListener: (() -> Unit)? = null
 
@@ -70,6 +73,9 @@ class DumbEngine @Inject constructor(
     private val _isRunning: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val isRunning: StateFlow<Boolean> = _isRunning
 
+    private val _isPaused: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    val isPaused: StateFlow<Boolean> = _isPaused
+
     fun init(dumbScenario: DumbScenario) {
         dumbActionExecutor.setUnblockWorkaround(settingsRepository.isInputBlockWorkaroundEnabled())
         dumbScenarioDbId.value = dumbScenario.id.databaseId
@@ -81,6 +87,10 @@ class DumbEngine @Inject constructor(
     }
 
     fun startDumbScenario() {
+        if (_isPaused.value) {
+            resumeDumbScenario()
+            return
+        }
         if (_isRunning.value) return
 
         processingScope?.launch {
@@ -92,6 +102,25 @@ class DumbEngine @Inject constructor(
         }
     }
 
+    fun pauseDumbScenario() {
+        if (!_isRunning.value || _isPaused.value) return
+
+        Log.d(TAG, "pauseDumbScenario")
+        pauseGate = CompletableDeferred()
+        _isRunning.value = false
+        _isPaused.value = true
+    }
+
+    fun resumeDumbScenario() {
+        if (!_isPaused.value) return
+
+        Log.d(TAG, "resumeDumbScenario")
+        _isPaused.value = false
+        _isRunning.value = true
+        pauseGate?.complete(Unit)
+        pauseGate = null
+    }
+
     fun tryDumbAction(dumbAction: DumbAction, completionListener: () -> Unit) {
         Log.i(TAG, "Trying dumb action: $dumbAction")
         onTryCompletedListener = completionListener
@@ -99,11 +128,14 @@ class DumbEngine @Inject constructor(
     }
 
     fun stopDumbScenario() {
-        if (!isRunning.value) return
+        if (!isRunning.value && !_isPaused.value) return
         _isRunning.value = false
+        _isPaused.value = false
 
         Log.d(TAG, "stopDumbScenario")
 
+        pauseGate?.complete(Unit)
+        pauseGate = null
         timeoutJob?.cancel()
         timeoutJob = null
         executionJob?.cancel()
@@ -122,8 +154,9 @@ class DumbEngine @Inject constructor(
     }
 
     private fun startEngine(scenario: DumbScenario) {
-        if (_isRunning.value || scenario.dumbActions.isEmpty()) return
+        if (_isRunning.value || _isPaused.value || scenario.dumbActions.isEmpty()) return
         _isRunning.value = true
+        _isPaused.value = false
 
         Log.d(TAG, "startDumbScenario ${scenario.id} with ${scenario.dumbActions.size} actions")
 
@@ -143,7 +176,9 @@ class DumbEngine @Inject constructor(
         processingScope?.launch {
             dumbScenario.repeat {
                 dumbScenario.dumbActions.forEach { dumbAction ->
+                    waitIfPaused()
                     dumbActionExecutor.executeDumbAction(dumbAction, dumbScenario.randomize)
+                    waitIfPaused()
                 }
 
                 dumbActionExecutor.onScenarioLoopFinished()
@@ -151,6 +186,10 @@ class DumbEngine @Inject constructor(
 
             processingScope?.launch { stopDumbScenario() }
         }
+
+    private suspend fun waitIfPaused() {
+        pauseGate?.await()
+    }
 
     override fun dump(writer: PrintWriter, prefix: CharSequence) {
         val contentPrefix = prefix.addDumpTabulationLvl()

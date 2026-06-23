@@ -40,6 +40,7 @@ import com.buzbuz.smartautoclicker.core.common.quality.domain.QualityRepository
 import com.buzbuz.smartautoclicker.core.display.config.DisplayConfigManager
 import com.buzbuz.smartautoclicker.core.display.recorder.AccessibilityScreenshotProvider
 import com.buzbuz.smartautoclicker.core.domain.model.scenario.Scenario
+import com.buzbuz.smartautoclicker.core.dumb.domain.IDumbRepository
 import com.buzbuz.smartautoclicker.core.dumb.domain.model.DumbScenario
 import com.buzbuz.smartautoclicker.core.dumb.engine.DumbEngine
 import com.buzbuz.smartautoclicker.core.processing.domain.SmartProcessingRepository
@@ -52,6 +53,7 @@ import com.buzbuz.smartautoclicker.feature.review.ReviewRepository
 import com.buzbuz.smartautoclicker.feature.throwlet.ThrowletRepository
 import com.buzbuz.smartautoclicker.localservice.LocalService
 import com.buzbuz.smartautoclicker.localservice.LocalServiceProvider
+import com.buzbuz.smartautoclicker.buttons.SavedOverlayButtonRepository
 
 import dagger.hilt.android.AndroidEntryPoint
 import java.io.FileDescriptor
@@ -83,6 +85,7 @@ class SmartAutoClickerService : AccessibilityService() {
     @Inject lateinit var overlayManager: OverlayManager
     @Inject lateinit var displayConfigManager: DisplayConfigManager
     @Inject lateinit var smartProcessingRepository: SmartProcessingRepository
+    @Inject lateinit var dumbRepository: IDumbRepository
     @Inject lateinit var dumbEngine: DumbEngine
     @Inject lateinit var bitmapManager: BitmapRepository
     @Inject lateinit var qualityRepository: QualityRepository
@@ -106,6 +109,7 @@ class SmartAutoClickerService : AccessibilityService() {
     @Inject lateinit var displayRecorder: com.buzbuz.smartautoclicker.core.display.recorder.DisplayRecorder
     @Inject lateinit var accessibilityScreenshotProvider: AccessibilityScreenshotProvider
     @Inject lateinit var throwletCropPicker: com.buzbuz.smartautoclicker.core.display.recorder.ThrowletCropPicker
+    @Inject lateinit var savedOverlayButtonRepository: SavedOverlayButtonRepository
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -136,7 +140,9 @@ class SmartAutoClickerService : AccessibilityService() {
                 overlayManager = overlayManager,
                 appComponentsProvider = appComponentsProvider,
                 smartProcessingRepository = smartProcessingRepository,
+                dumbRepository = dumbRepository,
                 dumbEngine = dumbEngine,
+                savedOverlayButtonRepository = savedOverlayButtonRepository,
                 actionExecutor = actionExecutor,
                 throwletRepository = throwletRepository,
                 throwletDatabase = throwletDatabase,
@@ -168,7 +174,7 @@ class SmartAutoClickerService : AccessibilityService() {
         return super.onUnbind(intent)
     }
 
-    private fun onLocalServiceStarted(scenarioId: Long, isSmart: Boolean, serviceNotification: Notification?) {
+    private fun onLocalServiceStarted(scenarioId: Long?, isSmart: Boolean?, serviceNotification: Notification?) {
         reviewRepository.onUserSessionStarted()
         qualityMetricsMonitor.onServiceForegroundStart()
 
@@ -178,7 +184,9 @@ class SmartAutoClickerService : AccessibilityService() {
         requestFilterKeyEvents(true)
 
         displayConfigManager.startMonitoring(this)
-        tileRepository.setTileScenario(scenarioId = scenarioId, isSmart = isSmart)
+        if (scenarioId != null && isSmart != null) {
+            tileRepository.setTileScenario(scenarioId = scenarioId, isSmart = isSmart)
+        }
     }
 
     private fun onLocalServiceStopped() {

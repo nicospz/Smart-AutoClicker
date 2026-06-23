@@ -65,6 +65,12 @@ internal fun Context.getDefaultDumbPrecisionTextRepeatCount(): Int = getDefaultD
 
 internal fun Context.getDefaultDumbPrecisionTextRepeatDelay(): Long = getDefaultDumbSwipeRepeatDelay()
 
+internal fun Context.getDefaultDumbTaskerTaskName(): String =
+    getString(R.string.default_dumb_tasker_task_name)
+
+internal fun Context.getDefaultDumbManualThrowletCatchName(): String =
+    getString(R.string.default_dumb_manual_throwlet_catch_name)
+
 internal fun Context.getDefaultDumbPauseName(): String =
     getString(R.string.default_dumb_pause_name)
 

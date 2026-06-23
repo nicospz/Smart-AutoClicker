@@ -19,6 +19,8 @@ package com.buzbuz.smartautoclicker.core.dumb.domain.model
 import android.graphics.Point
 import com.buzbuz.smartautoclicker.core.base.interfaces.Identifiable
 import com.buzbuz.smartautoclicker.core.base.identifier.Identifier
+import com.buzbuz.smartautoclicker.core.common.actions.ThrowletCatchLane
+import com.buzbuz.smartautoclicker.core.common.actions.ThrowletCatchOperation
 import com.buzbuz.smartautoclicker.core.common.actions.precision.PRECISION_GESTURE_HELPER_MODE
 import com.buzbuz.smartautoclicker.core.common.actions.precision.PrecisionGesturePayload
 import com.buzbuz.smartautoclicker.core.common.actions.precision.PrecisionTextMode
@@ -42,6 +44,8 @@ sealed class DumbAction : Identifiable {
             is DumbSwipe -> copy(scenarioId = scenarioId)
             is DumbPrecisionGesture -> copy(scenarioId = scenarioId)
             is DumbPrecisionText -> copy(scenarioId = scenarioId)
+            is DumbTaskerTask -> copy(scenarioId = scenarioId)
+            is DumbManualThrowletCatch -> copy(scenarioId = scenarioId)
         }
 
     data class DumbClick(
@@ -121,5 +125,29 @@ sealed class DumbAction : Identifiable {
         override fun isValid(): Boolean =
             name.isNotEmpty() && (text.isNotEmpty() || mode.isClipboardPaste()) &&
                 isRepeatCountValid() && isRepeatDelayValid()
+    }
+
+    data class DumbTaskerTask(
+        override val id: Identifier,
+        override val scenarioId: Identifier,
+        override val name: String,
+        override val priority: Int = 0,
+        val taskName: String? = null,
+        val waitForCompletion: Boolean = false,
+        val variablesJson: String? = null,
+    ) : DumbAction() {
+        override fun isValid(): Boolean = name.isNotEmpty() && !taskName.isNullOrBlank()
+    }
+
+    data class DumbManualThrowletCatch(
+        override val id: Identifier,
+        override val scenarioId: Identifier,
+        override val name: String,
+        override val priority: Int = 0,
+        val operation: ThrowletCatchOperation = ThrowletCatchOperation.SHOW,
+        val lane: ThrowletCatchLane = ThrowletCatchLane.FULL,
+        val pokemonNameOverride: String? = null,
+    ) : DumbAction() {
+        override fun isValid(): Boolean = name.isNotEmpty()
     }
 }

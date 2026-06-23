@@ -26,6 +26,7 @@ import com.buzbuz.smartautoclicker.core.domain.model.action.SetText
 import com.buzbuz.smartautoclicker.core.domain.model.action.StopScenario
 import com.buzbuz.smartautoclicker.core.domain.model.action.Swipe
 import com.buzbuz.smartautoclicker.core.domain.model.action.SystemAction
+import com.buzbuz.smartautoclicker.core.domain.model.action.TaskerTask
 import com.buzbuz.smartautoclicker.core.domain.model.action.ThrowletCatch
 import com.buzbuz.smartautoclicker.core.domain.model.action.ToggleEvent
 import com.buzbuz.smartautoclicker.core.common.actions.precision.PrecisionTextMode
@@ -47,6 +48,7 @@ internal fun CompleteActionEntity.toDomain(cleanIds: Boolean = false): Action = 
     ActionType.PRECISION_GESTURE -> toDomainPrecisionGesture(cleanIds)
     ActionType.PRECISION_TEXT -> toDomainPrecisionText(cleanIds)
     ActionType.THROWLET_CATCH -> toDomainThrowletCatch(cleanIds)
+    ActionType.TASKER_TASK -> toDomainTaskerTask(cleanIds)
 }
 
 private fun CompleteActionEntity.toDomainClick(cleanIds: Boolean = false) = Click(
@@ -184,6 +186,16 @@ private fun CompleteActionEntity.toDomainThrowletCatch(cleanIds: Boolean = false
     mode = action.throwletCatchMode?.toDomain() ?: ThrowletCatch.Mode.CATCH,
     lane = action.throwletCatchLane?.toDomain() ?: ThrowletCatch.Lane.FULL,
     pokemonNameOverride = action.throwletCatchPokemonNameOverride?.takeIf { it.isNotBlank() },
+)
+
+private fun CompleteActionEntity.toDomainTaskerTask(cleanIds: Boolean = false) = TaskerTask(
+    id = Identifier(id = action.id, asTemporary = cleanIds),
+    eventId = Identifier(id = action.eventId, asTemporary = cleanIds),
+    name = action.name,
+    priority = action.priority,
+    taskName = action.taskerTaskName,
+    waitForCompletion = action.taskerWaitForCompletion == true,
+    variablesJson = action.taskerVariablesJson,
 )
 
 private fun ClickPositionType.toDomain(): Click.PositionType =

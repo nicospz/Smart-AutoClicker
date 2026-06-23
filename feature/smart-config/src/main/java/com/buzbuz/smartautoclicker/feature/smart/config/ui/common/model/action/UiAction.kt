@@ -30,6 +30,7 @@ import com.buzbuz.smartautoclicker.core.domain.model.action.SetText
 import com.buzbuz.smartautoclicker.core.domain.model.action.StopScenario
 import com.buzbuz.smartautoclicker.core.domain.model.action.Swipe
 import com.buzbuz.smartautoclicker.core.domain.model.action.SystemAction
+import com.buzbuz.smartautoclicker.core.domain.model.action.TaskerTask
 import com.buzbuz.smartautoclicker.core.domain.model.action.ThrowletCatch
 import com.buzbuz.smartautoclicker.core.domain.model.action.ToggleEvent
 import com.buzbuz.smartautoclicker.core.domain.model.event.Event
@@ -66,6 +67,7 @@ internal fun Action.getIconRes(): Int = when (this) {
     is StopScenario -> getStopScenarioIconRes()
     is PrecisionGesture -> getPrecisionGestureIconRes()
     is ThrowletCatch -> getThrowletCatchIconRes()
+    is TaskerTask -> getTaskerTaskIconRes()
     is PrecisionText -> getSetTextIconRes()
 }
 
@@ -82,5 +84,6 @@ internal fun Action.getActionDescription(context: Context, parent: Event, inErro
     is StopScenario -> getDescription(context, inError)
     is PrecisionGesture -> getDescription(context, inError)
     is ThrowletCatch -> getDescription(context, inError)
+    is TaskerTask -> getDescription(context, inError)
     is PrecisionText -> getDescription(context, inError)
 }

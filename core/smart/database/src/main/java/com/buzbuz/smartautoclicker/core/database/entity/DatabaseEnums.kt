@@ -85,6 +85,8 @@ enum class ActionType {
     PRECISION_TEXT,
     /** Control the SAC Throwlet Catch overlay rail. */
     THROWLET_CATCH,
+    /** Run a Tasker task. */
+    TASKER_TASK,
 }
 
 

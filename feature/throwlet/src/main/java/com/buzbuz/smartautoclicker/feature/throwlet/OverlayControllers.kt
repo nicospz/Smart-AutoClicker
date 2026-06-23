@@ -150,7 +150,7 @@ class AndroidRailController(
                 }
             }
             setOnLongClickListener {
-                callbacks.refresh(lane)
+                callbacks.selectPokemon(lane)
                 true
             }
         }
@@ -487,6 +487,7 @@ interface RailCallbacks {
     fun openBerryMenu(lane: HelperLane, anchor: View)
     fun throwBerry(lane: HelperLane)
     fun toggleFastCatch(lane: HelperLane)
+    fun selectPokemon(lane: HelperLane)
 }
 
 fun Context.toast(message: String) = Toast.makeText(this, message, Toast.LENGTH_SHORT).show()

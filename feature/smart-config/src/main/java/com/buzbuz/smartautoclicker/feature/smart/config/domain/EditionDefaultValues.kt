@@ -104,6 +104,9 @@ internal class EditionDefaultValues {
     fun throwletCatchName(context: Context): String =
         context.getString(R.string.default_throwlet_catch_name)
 
+    fun taskerTaskName(context: Context): String =
+        context.getString(R.string.default_tasker_task_name)
+
     fun counterComparisonOperation(): TriggerCondition.OnCounterCountReached.ComparisonOperation =
         TriggerCondition.OnCounterCountReached.ComparisonOperation.EQUALS
 }

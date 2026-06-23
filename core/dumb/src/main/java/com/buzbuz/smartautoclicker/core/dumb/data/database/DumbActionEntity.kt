@@ -77,6 +77,16 @@ data class DumbActionEntity(
     // ActionType.PRECISION_TEXT
     @ColumnInfo(name = "precision_text_value") val precisionTextValue: String? = null,
     @ColumnInfo(name = "precision_text_mode") val precisionTextMode: String? = null,
+
+    // ActionType.TASKER_TASK
+    @ColumnInfo(name = "tasker_task_name") val taskerTaskName: String? = null,
+    @ColumnInfo(name = "tasker_wait_for_completion") val taskerWaitForCompletion: Boolean? = null,
+    @ColumnInfo(name = "tasker_variables_json") val taskerVariablesJson: String? = null,
+
+    // ActionType.MANUAL_THROWLET_CATCH
+    @ColumnInfo(name = "throwlet_catch_operation") val throwletCatchOperation: String? = null,
+    @ColumnInfo(name = "throwlet_catch_lane") val throwletCatchLane: String? = null,
+    @ColumnInfo(name = "throwlet_catch_pokemon_name_override") val throwletCatchPokemonNameOverride: String? = null,
 ) : EntityWithId
 
 /**
@@ -97,6 +107,10 @@ enum class DumbActionType {
     PRECISION_GESTURE,
     /** Text injected through Shizuku shell key events or input text. */
     PRECISION_TEXT,
+    /** Run a Tasker task. */
+    TASKER_TASK,
+    /** Show or hide the Throwlet catch rail with manual Pokémon selection only. */
+    MANUAL_THROWLET_CATCH,
 }
 
 /** Type converter to read/write the [DumbActionType] into the database. */

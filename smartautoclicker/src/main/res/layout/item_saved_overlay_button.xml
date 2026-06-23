@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    style="@style/AppTheme.Widget.Card"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="@dimen/margin_horizontal_default"
+    android:layout_marginEnd="@dimen/margin_horizontal_default"
+    android:layout_marginTop="@dimen/margin_vertical_default"
+    android:layout_marginBottom="@dimen/margin_vertical_small"
+    android:clickable="true"
+    android:focusable="true">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginHorizontal="@dimen/margin_horizontal_default"
+        android:layout_marginTop="@dimen/margin_vertical_large"
+        android:layout_marginBottom="@dimen/margin_vertical_default">
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/button_name"
+            style="@style/AppTheme.TextAppearance.CardTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="@dimen/margin_horizontal_default"
+            android:drawablePadding="@dimen/margin_horizontal_small"
+            android:drawableStart="@drawable/ic_dumb"
+            android:maxLines="2"
+            app:layout_constraintBottom_toTopOf="@id/button_subtitle"
+            app:layout_constraintEnd_toStartOf="@id/switch_visible"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="Auto catch" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/button_subtitle"
+            style="@style/AppTheme.TextAppearance.Body"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/margin_vertical_mini"
+            android:layout_marginEnd="@dimen/margin_horizontal_default"
+            app:layout_constraintBottom_toBottomOf="@id/button_delete"
+            app:layout_constraintEnd_toStartOf="@id/button_delete"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/button_name"
+            tools:text="Runs: Auto Scan" />
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switch_visible"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:contentDescription="@string/button_text_show_saved_buttons"
+            app:layout_constraintBottom_toBottomOf="@id/button_name"
+            app:layout_constraintEnd_toStartOf="@id/button_delete"
+            app:layout_constraintTop_toTopOf="@id/button_name" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/button_delete"
+            style="@style/AppTheme.Widget.IconButton"
+            app:icon="@drawable/ic_delete"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:visibility="visible" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</com.google.android.material.card.MaterialCardView>

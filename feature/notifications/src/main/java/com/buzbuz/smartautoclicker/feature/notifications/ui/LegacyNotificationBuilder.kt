@@ -54,7 +54,9 @@ internal class LegacyNotificationBuilder(
         )
         addServiceNotificationAction(
             context,
-            if (state.isMenuVisible) ServiceNotificationAction.Hide else ServiceNotificationAction.Show,
+            if (state.isButtonOverlay) ServiceNotificationAction.Stop
+            else if (state.isMenuVisible) ServiceNotificationAction.Hide
+            else ServiceNotificationAction.Show,
         )
         addServiceNotificationAction(context, ServiceNotificationAction.Stop)
     }
@@ -69,5 +71,4 @@ internal class LegacyNotificationBuilder(
             action.getPendingIntent(context, appComponentsProvider),
         )
 }
-
 

@@ -21,4 +21,5 @@ internal data class ServiceNotificationState(
     val isScenarioRunning: Boolean,
     val isMenuVisible: Boolean,
     val isNightMode: Boolean,
+    val isButtonOverlay: Boolean = false,
 )

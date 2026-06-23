@@ -23,6 +23,8 @@ import com.buzbuz.smartautoclicker.core.dumb.domain.model.DumbAction.DumbPause
 import com.buzbuz.smartautoclicker.core.dumb.domain.model.DumbAction.DumbPrecisionGesture
 import com.buzbuz.smartautoclicker.core.dumb.domain.model.DumbAction.DumbPrecisionText
 import com.buzbuz.smartautoclicker.core.dumb.domain.model.DumbAction.DumbSwipe
+import com.buzbuz.smartautoclicker.core.dumb.domain.model.DumbAction.DumbTaskerTask
+import com.buzbuz.smartautoclicker.core.dumb.domain.model.DumbAction.DumbManualThrowletCatch
 import com.buzbuz.smartautoclicker.core.dumb.domain.model.DumbScenario
 
 internal fun DumbAction.toDumbScenarioTry(): DumbScenario {
@@ -60,5 +62,11 @@ private fun DumbAction.toFiniteDumbAction(scenarioId: Identifier): DumbAction =
         is DumbPrecisionText -> copy(
             scenarioId = scenarioId,
             isRepeatInfinite = false,
+        )
+        is DumbTaskerTask -> copy(
+            scenarioId = scenarioId,
+        )
+        is DumbManualThrowletCatch -> copy(
+            scenarioId = scenarioId,
         )
     }

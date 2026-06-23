@@ -181,6 +181,9 @@ internal class DumbScenarioSerializer : ScenarioBackupSerializer<DumbScenarioBac
                     DumbActionType.SWIPE -> jsonDumbAction.deserializeDumbSwipeCompat()
                     DumbActionType.PAUSE -> jsonDumbAction.deserializeDumbPauseCompat()
                     DumbActionType.PRECISION_GESTURE -> jsonDumbAction.deserializeDumbPrecisionGestureCompat()
+                    DumbActionType.PRECISION_TEXT -> jsonDumbAction.deserializeDumbPrecisionTextCompat()
+                    DumbActionType.TASKER_TASK -> jsonDumbAction.deserializeDumbTaskerTaskCompat()
+                    DumbActionType.MANUAL_THROWLET_CATCH -> jsonDumbAction.deserializeDumbManualThrowletCatchCompat()
                     else -> null
                 }
             }
@@ -306,6 +309,68 @@ internal class DumbScenarioSerializer : ScenarioBackupSerializer<DumbScenarioBac
             precisionGestureDurationMs = durationMs.coerceAtLeast(0),
             precisionGestureHelperMode = getString("precisionGestureHelperMode")
                 ?: getString("precision_gesture_helper_mode"),
+        )
+    }
+
+    private fun JsonObject.deserializeDumbPrecisionTextCompat(): DumbActionEntity? {
+        val id = getLong("id", true) ?: return null
+        val scenarioId = getLong("dumb_scenario_id", true) ?: return null
+        val name = getString("name", true) ?: return null
+        if (name.isEmpty()) return null
+
+        return DumbActionEntity(
+            id = id,
+            dumbScenarioId = scenarioId,
+            name = name,
+            priority = getInt("priority")?.coerceAtLeast(0) ?: 0,
+            type = DumbActionType.PRECISION_TEXT,
+            repeatCount = getInt("repeatCount") ?: DEFAULT_DUMB_REPEAT_COUNT,
+            isRepeatInfinite = getBoolean("isRepeatInfinite") ?: DEFAULT_DUMB_REPEAT_IS_INFINITE,
+            repeatDelay = getLong("repeatDelay") ?: DEFAULT_DUMB_REPEAT_DELAY_MS,
+            precisionTextValue = getString("precisionTextValue") ?: getString("precision_text_value"),
+            precisionTextMode = getString("precisionTextMode") ?: getString("precision_text_mode"),
+        )
+    }
+
+    private fun JsonObject.deserializeDumbTaskerTaskCompat(): DumbActionEntity? {
+        val id = getLong("id", true) ?: return null
+        val scenarioId = getLong("dumb_scenario_id", true) ?: return null
+        val name = getString("name", true) ?: return null
+        if (name.isEmpty()) return null
+
+        return DumbActionEntity(
+            id = id,
+            dumbScenarioId = scenarioId,
+            name = name,
+            priority = getInt("priority")?.coerceAtLeast(0) ?: 0,
+            type = DumbActionType.TASKER_TASK,
+            taskerTaskName = getString("taskerTaskName") ?: getString("tasker_task_name"),
+            taskerWaitForCompletion = getBoolean("taskerWaitForCompletion")
+                ?: getBoolean("tasker_wait_for_completion"),
+            taskerVariablesJson = getString("taskerVariablesJson") ?: getString("tasker_variables_json"),
+        )
+    }
+
+    private fun JsonObject.deserializeDumbManualThrowletCatchCompat(): DumbActionEntity? {
+        val id = getLong("id", true) ?: return null
+        val scenarioId = getLong("dumb_scenario_id", true) ?: return null
+        val name = getString("name", true) ?: return null
+        if (name.isEmpty()) return null
+
+        return DumbActionEntity(
+            id = id,
+            dumbScenarioId = scenarioId,
+            name = name,
+            priority = getInt("priority")?.coerceAtLeast(0) ?: 0,
+            type = DumbActionType.MANUAL_THROWLET_CATCH,
+            throwletCatchOperation = getString("throwletCatchOperation")
+                ?: getString("throwlet_catch_operation")
+                ?: "SHOW",
+            throwletCatchLane = getString("throwletCatchLane")
+                ?: getString("throwlet_catch_lane")
+                ?: "FULL",
+            throwletCatchPokemonNameOverride = getString("throwletCatchPokemonNameOverride")
+                ?: getString("throwlet_catch_pokemon_name_override"),
         )
     }
 }

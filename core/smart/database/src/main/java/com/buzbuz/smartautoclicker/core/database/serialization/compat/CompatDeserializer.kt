@@ -476,6 +476,7 @@ internal open class CompatDeserializer : Deserializer {
             ActionType.PRECISION_GESTURE -> deserializeActionPrecisionGesture(jsonAction)
             ActionType.PRECISION_TEXT -> deserializeActionPrecisionText(jsonAction)
             ActionType.THROWLET_CATCH -> deserializeActionThrowletCatch(jsonAction)
+            ActionType.TASKER_TASK -> deserializeActionTaskerTask(jsonAction)
             null -> null
         }
 
@@ -775,6 +776,23 @@ internal open class CompatDeserializer : Deserializer {
                 ?: ThrowletCatchLaneType.FULL,
             throwletCatchPokemonNameOverride = jsonThrowletCatch.getString("throwletCatchPokemonNameOverride")
                 ?.takeIf { it.isNotBlank() },
+        )
+    }
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PROTECTED)
+    open fun deserializeActionTaskerTask(jsonTaskerTask: JsonObject): ActionEntity? {
+        val id = jsonTaskerTask.getLong("id", true) ?: return null
+        val eventId = jsonTaskerTask.getLong("eventId", true) ?: return null
+
+        return ActionEntity(
+            id = id,
+            eventId = eventId,
+            name = jsonTaskerTask.getString("name") ?: "",
+            priority = jsonTaskerTask.getInt("priority")?.coerceAtLeast(0) ?: 0,
+            type = ActionType.TASKER_TASK,
+            taskerTaskName = jsonTaskerTask.getString("taskerTaskName"),
+            taskerWaitForCompletion = jsonTaskerTask.getBoolean("taskerWaitForCompletion"),
+            taskerVariablesJson = jsonTaskerTask.getString("taskerVariablesJson"),
         )
     }
 

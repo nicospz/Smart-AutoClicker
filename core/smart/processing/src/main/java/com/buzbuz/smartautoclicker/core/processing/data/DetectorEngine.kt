@@ -44,6 +44,7 @@ import com.buzbuz.smartautoclicker.core.domain.model.scenario.ScreenCaptureMode
 import com.buzbuz.smartautoclicker.core.processing.data.processor.ScenarioProcessor
 import com.buzbuz.smartautoclicker.core.processing.data.scaling.ScalingManager
 import com.buzbuz.smartautoclicker.core.settings.SettingsRepository
+import com.buzbuz.smartautoclicker.core.tasker.TaskerClient
 import com.buzbuz.smartautoclicker.core.processing.domain.SmartProcessingListener
 
 import kotlinx.coroutines.CoroutineDispatcher
@@ -82,6 +83,7 @@ class DetectorEngine @Inject constructor(
     private val actionExecutor: AndroidActionExecutor,
     private val precisionGestureExecutor: PrecisionGestureExecutor,
     private val precisionTextExecutor: PrecisionTextExecutor,
+    private val taskerClient: TaskerClient,
     private val settingsRepository: SettingsRepository,
     private val appComponentsProvider: AppComponentsProvider,
     private val debuggingListener: SmartProcessingListener,
@@ -276,6 +278,7 @@ class DetectorEngine @Inject constructor(
                 androidExecutor = actionExecutor,
                 precisionGestureExecutor = precisionGestureExecutor,
                 precisionTextExecutor = precisionTextExecutor,
+                taskerClient = taskerClient,
                 unblockWorkaroundEnabled = settingsRepository.isInputBlockWorkaroundEnabled(),
                 onStopRequested = { stopDetection() },
                 progressListener  = if (liveDebugging || generateReport) debuggingListener else null,

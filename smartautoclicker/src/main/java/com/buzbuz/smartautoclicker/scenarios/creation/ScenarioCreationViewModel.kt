@@ -58,6 +58,8 @@ class ScenarioCreationViewModel @Inject constructor(
 
     private val _name: MutableStateFlow<String?> =
         MutableStateFlow(context.getString(R.string.default_scenario_name))
+    private val _category: MutableStateFlow<String?> = MutableStateFlow(null)
+
     val name: Flow<String> = _name
         .map { it ?: "" }
         .take(1)
@@ -87,6 +89,10 @@ class ScenarioCreationViewModel @Inject constructor(
 
     fun setName(newName: String?) {
         _name.value = newName
+    }
+
+    fun setCategory(newCategory: String?) {
+        _category.value = newCategory?.trim()?.ifEmpty { null }
     }
 
     fun setSelectedType(type: ScenarioTypeSelection) {
@@ -120,6 +126,7 @@ class ScenarioCreationViewModel @Inject constructor(
                 isFavorite = false,
                 autoStart = false,
                 autoStartDelayMs = 0L,
+                category = _category.value,
             )
         )
     }
@@ -134,6 +141,7 @@ class ScenarioCreationViewModel @Inject constructor(
                 isFavorite = false,
                 autoStart = false,
                 autoStartDelayMs = 0L,
+                category = _category.value,
             )
         )
     }

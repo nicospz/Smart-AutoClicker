@@ -25,6 +25,9 @@
     <string name="default_dumb_precision_gesture_name" translatable="false">Precision gesture</string>
     <string name="default_dumb_precision_text_name" translatable="false">Precision text</string>
 
+    <string name="default_dumb_tasker_task_name" translatable="false">Tasker task</string>
+    <string name="default_dumb_manual_throwlet_catch_name" translatable="false">Manual Throwlet Catch</string>
+
     <string name="default_dumb_pause_name" translatable="false">Wait</string>
     <integer name="default_dumb_pause_duration">50</integer>
 </resources>

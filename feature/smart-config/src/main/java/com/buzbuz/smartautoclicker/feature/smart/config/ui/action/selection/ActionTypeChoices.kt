@@ -29,6 +29,7 @@ import com.buzbuz.smartautoclicker.feature.smart.config.ui.common.model.action.g
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.common.model.action.getSwipeIconRes
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.common.model.action.getSystemActionIconRes
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.common.model.action.getThrowletCatchIconRes
+import com.buzbuz.smartautoclicker.feature.smart.config.ui.common.model.action.getTaskerTaskIconRes
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.common.model.action.getToggleEventIconRes
 
 
@@ -133,5 +134,12 @@ sealed class ActionTypeChoice(
         R.string.item_throwlet_catch_title,
         R.string.item_throwlet_catch_desc,
         getThrowletCatchIconRes(),
+    )
+
+    /** Run a Tasker task. */
+    data object TaskerTask : ActionTypeChoice(
+        R.string.item_tasker_task_title,
+        R.string.item_tasker_task_desc,
+        getTaskerTaskIconRes(),
     )
 }

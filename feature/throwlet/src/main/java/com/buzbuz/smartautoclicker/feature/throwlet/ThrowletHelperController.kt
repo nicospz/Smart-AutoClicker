@@ -52,6 +52,7 @@ class ThrowletHelperController(
     private lateinit var berryAutomation: BerryAutomationCoordinator
     private lateinit var buddyAutomation: BuddyAutomationCoordinator
     private var berryMenuPopup: PopupWindow? = null
+    private val pokemonPickerOverlay = ManualPokemonPickerOverlay(context)
 
     private val manager = HelperSessionManager { mode, lane ->
         val splitLayout = if (lane == HelperLane.FULL) {
@@ -120,10 +121,12 @@ class ThrowletHelperController(
         val mode = session.mode.toHelperMode()
         val lane = session.lane.toHelperLane()
         when (operation) {
-            ThrowletCatchOperation.SHOW -> startSession(mode, lane, session.pokemonNameOverride)
+            ThrowletCatchOperation.SHOW ->
+                startSession(mode, lane, session.pokemonNameOverride, session.manualSelectionOnly)
             ThrowletCatchOperation.HIDE -> stopSession(lane)
             ThrowletCatchOperation.TOGGLE -> {
-                if (manager.activeSessions.containsKey(lane)) stopSession(lane) else startSession(mode, lane, session.pokemonNameOverride)
+                if (manager.activeSessions.containsKey(lane)) stopSession(lane)
+                else startSession(mode, lane, session.pokemonNameOverride, session.manualSelectionOnly)
             }
         }
     }
@@ -131,13 +134,28 @@ class ThrowletHelperController(
     fun hideAll() {
         berryMenuPopup?.dismiss()
         berryMenuPopup = null
+        pokemonPickerOverlay.hide()
         manager.stopAll()
     }
 
-    private fun startSession(mode: HelperMode, lane: HelperLane, pokemonNameOverride: String? = null) {
+    private fun startSession(
+        mode: HelperMode,
+        lane: HelperLane,
+        pokemonNameOverride: String? = null,
+        manualSelectionOnly: Boolean = false,
+    ) {
         Log.i(TAG, "startSession mode=$mode lane=$lane override=${pokemonNameOverride ?: "<none>"}")
         scope.launch { onThrowletSyncRequested() }
-        val session = manager.start(mode = mode, lane = lane, detectOnStart = true, pokemonName = pokemonNameOverride)
+        val session = manager.start(
+            mode = mode,
+            lane = lane,
+            detectOnStart = !manualSelectionOnly,
+            pokemonName = pokemonNameOverride,
+        )
+        session.manualSelectionOnly = manualSelectionOnly
+        if (manualSelectionOnly) {
+            session.detectionState = manualPokemonState(pokemonNameOverride)
+        }
         scope.launch {
             session.detectionState?.let { session.detectionState = enrichDetectionState(session, it) }
             applyBerrySelection(session)
@@ -157,6 +175,10 @@ class ThrowletHelperController(
 
     override fun refresh(lane: HelperLane) {
         val session = manager.activeSessions[lane] ?: return
+        if (session.manualSelectionOnly) {
+            selectPokemon(lane)
+            return
+        }
         scope.launch {
             session.railController.hide()
             delay(300)
@@ -175,6 +197,11 @@ class ThrowletHelperController(
     override fun saveLatest(lane: HelperLane) {
         val session = manager.activeSessions[lane] ?: return
         scope.launch {
+            if (session.manualSelectionOnly && session.detectionState?.pokemonKey == null) {
+                toast("Choose a Pokémon first")
+                selectPokemon(lane)
+                return@launch
+            }
             ensureLatestSwipeCapture("before-save-$lane")
             val export = GestureHelperSession.runExclusive {
                 helperClient.send("EXPORT_LATEST_SWIPE").toExportedGesture()
@@ -337,7 +364,7 @@ class ThrowletHelperController(
         }
         val state = session.detectionState
         if (state?.pokemonName == null) {
-            refresh(lane)
+            if (session.manualSelectionOnly) selectPokemon(lane) else refresh(lane)
             return
         }
         if (!state.hasGesture) return
@@ -397,6 +424,33 @@ class ThrowletHelperController(
         session.fastCatchEnabled = fastCatchStore.toggle(lane)
         renderFastCatchIcon(lane)
         toast(if (session.fastCatchEnabled) "Fast catch on" else "Fast catch off")
+    }
+
+    override fun selectPokemon(lane: HelperLane) {
+        val session = manager.activeSessions[lane] ?: return
+        if (session.mode != HelperMode.CATCH) {
+            refresh(lane)
+            return
+        }
+        scope.launch {
+            session.railController.hide()
+            pokemonPickerOverlay.show(
+                initialPokemonName = session.detectionState?.pokemonName,
+                onPokemonSelected = { pokemonName ->
+                    scope.launch {
+                        session.detectionState = enrichDetectionState(session, manualPokemonState(pokemonName))
+                        applyBerrySelection(session)
+                        applyFastCatchSelection(session)
+                        session.railController.show()
+                        renderSessionRail(session, "manual-pokemon-selected")
+                    }
+                },
+                onDismiss = {
+                    session.railController.show()
+                    renderSessionRail(session, "manual-pokemon-dismiss")
+                },
+            )
+        }
     }
 
     private suspend fun playCatchWithFastHold(
@@ -501,6 +555,30 @@ class ThrowletHelperController(
         return state.copy(
             hasGesture = entity != null,
             throwScore = ThrowScore.fromStored(entity?.throwScore),
+        )
+    }
+
+    private fun manualPokemonState(pokemonName: String?): CatchDetectionState {
+        val clean = pokemonName?.trim().orEmpty()
+        if (clean.isBlank()) {
+            return CatchDetectionState(
+                pokemonKey = null,
+                pokemonName = null,
+                confidencePercent = null,
+                hasGesture = false,
+                message = "Choose a Pokémon",
+            )
+        }
+
+        val match = PokemonCatalog.get(context).resolveExactName(clean)
+        val name = match?.name ?: clean
+        val key = match?.key ?: clean.lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-')
+        return CatchDetectionState(
+            pokemonKey = key,
+            pokemonName = name,
+            confidencePercent = 100,
+            hasGesture = false,
+            message = "Using manually selected Pokémon",
         )
     }
 

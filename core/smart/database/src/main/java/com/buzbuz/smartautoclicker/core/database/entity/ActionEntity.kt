@@ -185,6 +185,11 @@ data class ActionEntity(
     @ColumnInfo(name = "throwlet_catch_mode") val throwletCatchMode: ThrowletCatchModeType? = null,
     @ColumnInfo(name = "throwlet_catch_lane") val throwletCatchLane: ThrowletCatchLaneType? = null,
     @ColumnInfo(name = "throwlet_catch_pokemon_name_override") val throwletCatchPokemonNameOverride: String? = null,
+
+    // ActionType.TASKER_TASK
+    @ColumnInfo(name = "tasker_task_name") val taskerTaskName: String? = null,
+    @ColumnInfo(name = "tasker_wait_for_completion") val taskerWaitForCompletion: Boolean? = null,
+    @ColumnInfo(name = "tasker_variables_json") val taskerVariablesJson: String? = null,
 ) : EntityWithId
 
 /**

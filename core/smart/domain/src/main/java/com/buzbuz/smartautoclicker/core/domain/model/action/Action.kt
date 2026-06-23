@@ -57,5 +57,6 @@ sealed class Action : Identifiable, Completable, Prioritizable {
             is PrecisionGesture -> copy(id = id, eventId = eventId, name = name, priority = priority)
             is PrecisionText -> copy(id = id, eventId = eventId, name = name, priority = priority)
             is ThrowletCatch -> copy(id = id, eventId = eventId, name = name, priority = priority)
+            is TaskerTask -> copy(id = id, eventId = eventId, name = name, priority = priority)
         }
 }

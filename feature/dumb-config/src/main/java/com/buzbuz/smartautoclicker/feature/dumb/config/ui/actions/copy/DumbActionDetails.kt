@@ -53,6 +53,8 @@ fun DumbAction.toDumbActionDetails(
         is DumbAction.DumbPause -> toPauseDetails(context, withPositions, inError)
         is DumbAction.DumbPrecisionGesture -> toPrecisionGestureDetails(context, inError)
         is DumbAction.DumbPrecisionText -> toPrecisionTextDetails(context, inError)
+        is DumbAction.DumbTaskerTask -> toTaskerTaskDetails(context, inError)
+        is DumbAction.DumbManualThrowletCatch -> toManualThrowletCatchDetails(context, inError)
     }
 
 private fun DumbAction.DumbClick.toClickDetails(context: Context, withPositions: Boolean, inError: Boolean): DumbActionDetails =
@@ -144,6 +146,48 @@ private fun DumbAction.DumbPrecisionText.toPrecisionTextDetails(context: Context
         haveError = inError,
         action = this,
     )
+
+private fun DumbAction.DumbTaskerTask.toTaskerTaskDetails(context: Context, inError: Boolean): DumbActionDetails {
+    val taskLabel = taskName?.takeIf { it.isNotBlank() }
+        ?: context.getString(R.string.item_desc_dumb_tasker_task_missing)
+    val waitSuffix = if (waitForCompletion) {
+        context.getString(R.string.item_desc_dumb_tasker_task_wait_suffix)
+    } else {
+        ""
+    }
+    return DumbActionDetails(
+        icon = R.drawable.ic_intent,
+        name = name,
+        detailsText = when {
+            inError -> context.getString(R.string.item_error_action_invalid_generic)
+            else -> context.getString(R.string.item_desc_dumb_tasker_task_details, taskLabel, waitSuffix)
+        },
+        repeatCountText = null,
+        haveError = inError,
+        action = this,
+    )
+}
+
+private fun DumbAction.DumbManualThrowletCatch.toManualThrowletCatchDetails(context: Context, inError: Boolean): DumbActionDetails {
+    val pokemon = pokemonNameOverride?.takeIf { it.isNotBlank() }
+        ?: context.getString(R.string.item_desc_dumb_manual_throwlet_catch_no_pokemon)
+    return DumbActionDetails(
+        icon = R.drawable.ic_intent,
+        name = name,
+        detailsText = when {
+            inError -> context.getString(R.string.item_error_action_invalid_generic)
+            else -> context.getString(
+                R.string.item_desc_dumb_manual_throwlet_catch_details,
+                operation.name,
+                lane.name,
+                pokemon,
+            )
+        },
+        repeatCountText = null,
+        haveError = inError,
+        action = this,
+    )
+}
 
 private fun Repeatable.getRepeatDisplayText(context: Context): String =
     if (isRepeatInfinite) context.getString(R.string.item_desc_dumb_repeat_infinite)

@@ -38,6 +38,7 @@ dependencies {
     implementation(project(":core:common:actions"))
     implementation(project(":core:common:base"))
     implementation(project(":core:common:settings"))
+    implementation(project(":core:tasker"))
 
     testImplementation(libs.androidx.arch.core.testing)
     testImplementation(libs.androidx.room.testing)

@@ -151,6 +151,7 @@ class ScenarioListFragment : Fragment() {
             R.id.action_import -> showBackupDialog(true)
             R.id.action_cancel -> scenarioListViewModel.setUiState(ScenarioListUiState.Type.SELECTION)
             R.id.action_search -> scenarioListViewModel.setUiState(ScenarioListUiState.Type.SEARCH)
+            R.id.action_buttons -> startButtonsActivity()
             R.id.action_select_all -> scenarioListViewModel.toggleAllScenarioSelectionForBackup()
             R.id.action_settings -> startSettingsActivity()
             else -> return false
@@ -334,6 +335,10 @@ class ScenarioListFragment : Fragment() {
 
     private fun startSettingsActivity() {
         requireContext().startActivity(Intent(context, SettingsActivity::class.java))
+    }
+
+    private fun startButtonsActivity() {
+        requireContext().startActivity(Intent(context, com.buzbuz.smartautoclicker.buttons.ButtonListActivity::class.java))
     }
 }
 

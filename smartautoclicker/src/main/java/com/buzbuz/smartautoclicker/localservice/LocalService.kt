@@ -23,6 +23,7 @@ import android.media.projection.MediaProjectionManager
 import android.util.Log
 import android.view.KeyEvent
 
+import com.buzbuz.smartautoclicker.R
 import com.buzbuz.smartautoclicker.core.base.data.AppComponentsProvider
 import com.buzbuz.smartautoclicker.core.common.actions.AndroidActionExecutor
 import com.buzbuz.smartautoclicker.core.common.actions.ThrowletCatchController
@@ -40,6 +41,7 @@ import com.buzbuz.smartautoclicker.feature.throwlet.data.GestureStore
 import com.buzbuz.smartautoclicker.feature.throwlet.data.ThrowletDatabase
 import com.buzbuz.smartautoclicker.feature.throwlet.sync.SupabaseSyncRepository
 import com.buzbuz.smartautoclicker.core.domain.model.scenario.Scenario
+import com.buzbuz.smartautoclicker.core.dumb.domain.IDumbRepository
 import com.buzbuz.smartautoclicker.core.dumb.domain.model.DumbScenario
 import com.buzbuz.smartautoclicker.core.dumb.engine.DumbEngine
 import com.buzbuz.smartautoclicker.core.processing.domain.SmartProcessingRepository
@@ -54,6 +56,8 @@ import com.buzbuz.smartautoclicker.feature.revenue.IRevenueRepository
 import com.buzbuz.smartautoclicker.feature.revenue.UserBillingState
 import com.buzbuz.smartautoclicker.feature.throwlet.ThrowletRepository
 import com.buzbuz.smartautoclicker.feature.sync.domain.SacSyncCoordinator
+import com.buzbuz.smartautoclicker.buttons.ButtonOverlayController
+import com.buzbuz.smartautoclicker.buttons.SavedOverlayButtonRepository
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -74,7 +78,9 @@ class LocalService(
     private val appComponentsProvider: AppComponentsProvider,
     private val settingsRepository: SettingsRepository,
     private val smartProcessingRepository: SmartProcessingRepository,
+    private val dumbRepository: IDumbRepository,
     private val dumbEngine: DumbEngine,
+    private val savedOverlayButtonRepository: SavedOverlayButtonRepository,
     private val actionExecutor: AndroidActionExecutor,
     private val throwletRepository: ThrowletRepository,
     private val throwletDatabase: ThrowletDatabase,
@@ -85,7 +91,7 @@ class LocalService(
     private val throwletCropPicker: ThrowletCropPicker,
     private val revenueRepository: IRevenueRepository,
     private val debuggingRepository: DebuggingRepository,
-    private val onStart: (scenarioId: Long, isSmart: Boolean, foregroundNotification: Notification?) -> Unit,
+    private val onStart: (scenarioId: Long?, isSmart: Boolean?, foregroundNotification: Notification?) -> Unit,
     private val onStop: () -> Unit,
 ) : ILocalService {
 
@@ -140,6 +146,17 @@ class LocalService(
         )
     }
 
+    private val buttonOverlayController: ButtonOverlayController by lazy {
+        ButtonOverlayController(
+            context = context,
+            scope = serviceScope,
+            repository = savedOverlayButtonRepository,
+            dumbRepository = dumbRepository,
+            dumbEngine = dumbEngine,
+            sacSyncCoordinator = sacSyncCoordinator,
+        )
+    }
+
     init {
         ThrowletCatchControllers.instance = ThrowletCatchController { operation, session ->
             Log.i(THROWLET_CATCH_TAG, "controller operation=$operation session=$session")
@@ -181,6 +198,55 @@ class LocalService(
             )
 
             scheduleDumbAutoStart(dumbScenario)
+        }
+    }
+
+    override fun startButtonOverlay() {
+        if (state.isStarted) return
+        autoStartJob?.cancel()
+        state = LocalServiceState(isStarted = true, isSmartLoaded = false, isButtonOverlayLoaded = true)
+        val activeSetName = savedOverlayButtonRepository.sets.value
+            .firstOrNull { it.syncId == savedOverlayButtonRepository.activeSetSyncId.value && it.deletedAtMs == null }
+            ?.name
+        val notification = notificationController.createNotification(
+            context = context,
+            scenarioName = activeSetName
+                ?.let { "${context.getString(R.string.activity_buttons_title)}: $it" }
+                ?: context.getString(R.string.activity_buttons_title),
+            isRunning = false,
+            isMenuVisible = true,
+            isButtonOverlay = true,
+        )
+        notificationController.showNotification(context, notification)
+        onStart(null, null, null)
+
+        startJob = serviceScope.launch {
+            delay(250)
+            buttonOverlayController.show()
+        }
+    }
+
+    override fun startThrowletOverlay() {
+        Log.i(THROWLET_CATCH_TAG, "startThrowletOverlay isStarted=${state.isStarted}")
+        if (state.isStarted) {
+            showThrowletOverlay()
+            return
+        }
+
+        autoStartJob?.cancel()
+        state = LocalServiceState(isStarted = true, isSmartLoaded = false, isThrowletOverlayLoaded = true)
+        val notification = notificationController.createNotification(
+            context = context,
+            scenarioName = context.getString(R.string.activity_throwlet_overlay_title),
+            isRunning = false,
+            isMenuVisible = true,
+        )
+        notificationController.showNotification(context, notification)
+        onStart(null, null, null)
+
+        startJob = serviceScope.launch {
+            delay(250)
+            showThrowletOverlay()
         }
     }
 
@@ -270,6 +336,7 @@ class LocalService(
 
             dumbEngine.release()
             overlayManager.closeAll(context)
+            buttonOverlayController.hideAll()
             throwletHelperController.hideAll()
             smartProcessingRepository.stopScreenRecord()
 
@@ -280,6 +347,7 @@ class LocalService(
 
     override fun release() {
         ThrowletCatchControllers.instance = null
+        buttonOverlayController.hideAll()
         throwletHelperController.hideAll()
         autoStartJob?.cancel()
         serviceScope.cancel()
@@ -405,7 +473,9 @@ class LocalService(
 
 private data class LocalServiceState(
     val isStarted: Boolean,
-    val isSmartLoaded: Boolean
+    val isSmartLoaded: Boolean,
+    val isButtonOverlayLoaded: Boolean = false,
+    val isThrowletOverlayLoaded: Boolean = false,
 )
 
 private const val TAG = "LocalService"

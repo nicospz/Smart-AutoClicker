@@ -353,10 +353,14 @@ class MainMenu(private val onStopClicked: () -> Unit) : OverlayMenu() {
             UiState.Detecting -> {
                 if (currentState == null) {
                     playPauseButtonController.toState2(false)
+                    viewBinding.root.post {
+                        setMenuItemVisibility(viewBinding.btnStop, false)
+                        setMenuItemVisibility(viewBinding.btnClickList, false)
+                    }
                 } else {
                     animateLayoutChanges {
                         setMenuItemVisibility(viewBinding.btnStop, false)
-                        setMenuItemVisibility(viewBinding.btnClickList, true)
+                        setMenuItemVisibility(viewBinding.btnClickList, false)
                         playPauseButtonController.toState2(true)
                     }
                 }

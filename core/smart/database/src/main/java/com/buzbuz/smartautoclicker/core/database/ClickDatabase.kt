@@ -54,9 +54,10 @@ import javax.inject.Singleton
         AutoMigration (from = 15, to = 16),
         AutoMigration (from = 16, to = 17),
         AutoMigration (from = 17, to = 18),
+        AutoMigration (from = 35, to = 36),
     ]
 )
 abstract class ClickDatabase : ScenarioDatabase()
 
 /** Current version of the database. */
-const val CLICK_DATABASE_VERSION = 35
+const val CLICK_DATABASE_VERSION = 36

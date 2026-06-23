@@ -34,7 +34,9 @@ import com.buzbuz.smartautoclicker.feature.dumb.config.ui.actions.copy.DumbActio
 import com.buzbuz.smartautoclicker.feature.dumb.config.ui.actions.pause.DumbPauseDialog
 import com.buzbuz.smartautoclicker.feature.dumb.config.ui.actions.precision.DumbPrecisionGestureDialog
 import com.buzbuz.smartautoclicker.feature.dumb.config.ui.actions.precision.DumbPrecisionTextDialog
+import com.buzbuz.smartautoclicker.feature.dumb.config.ui.actions.throwlet.DumbManualThrowletCatchDialog
 import com.buzbuz.smartautoclicker.feature.dumb.config.ui.actions.swipe.DumbSwipeDialog
+import com.buzbuz.smartautoclicker.feature.dumb.config.ui.actions.tasker.DumbTaskerTaskDialog
 
 internal fun OverlayManager.startDumbActionCreationUiFlow(
     context: Context,
@@ -69,6 +71,16 @@ internal fun OverlayManager.startDumbActionCreationUiFlow(
                         creator.createNewDumbPause(),
                         listener
                     )
+                    DumbActionTypeChoice.TaskerTask -> startDumbTaskerTaskEditionFlow(
+                        context,
+                        creator.createNewDumbTaskerTask(),
+                        listener,
+                    )
+                    DumbActionTypeChoice.ManualThrowletCatch -> startDumbManualThrowletCatchEditionFlow(
+                        context,
+                        creator.createNewDumbManualThrowletCatch(),
+                        listener,
+                    )
                 }
             },
             onCanceled = listener.onDumbActionCreationCancelled,
@@ -89,6 +101,8 @@ internal fun OverlayManager.startDumbActionEditionUiFlow(
         is DumbAction.DumbPause -> startDumbPauseEditionFlow(context, dumbAction, listener)
         is DumbAction.DumbPrecisionGesture -> startDumbPrecisionGestureEditionFlow(context, dumbAction, listener)
         is DumbAction.DumbPrecisionText -> startDumbPrecisionTextEditionFlow(context, dumbAction, listener)
+        is DumbAction.DumbTaskerTask -> startDumbTaskerTaskEditionFlow(context, dumbAction, listener)
+        is DumbAction.DumbManualThrowletCatch -> startDumbManualThrowletCatchEditionFlow(context, dumbAction, listener)
     }
 }
 
@@ -276,6 +290,40 @@ private fun OverlayManager.startDumbPrecisionTextEditionFlow(
     )
 }
 
+private fun OverlayManager.startDumbTaskerTaskEditionFlow(
+    context: Context,
+    dumbTaskerTask: DumbAction.DumbTaskerTask,
+    listener: DumbActionUiFlowListener,
+) {
+    navigateTo(
+        context = context,
+        newOverlay = DumbTaskerTaskDialog(
+            dumbTaskerTask = dumbTaskerTask,
+            onConfirmClicked = listener.onDumbActionSaved,
+            onDeleteClicked = listener.onDumbActionDeleted,
+            onDismissClicked = listener.onDumbActionCreationCancelled,
+        ),
+        hideCurrent = true,
+    )
+}
+
+private fun OverlayManager.startDumbManualThrowletCatchEditionFlow(
+    context: Context,
+    dumbManualThrowletCatch: DumbAction.DumbManualThrowletCatch,
+    listener: DumbActionUiFlowListener,
+) {
+    navigateTo(
+        context = context,
+        newOverlay = DumbManualThrowletCatchDialog(
+            dumbManualThrowletCatch = dumbManualThrowletCatch,
+            onConfirmClicked = listener.onDumbActionSaved,
+            onDeleteClicked = listener.onDumbActionDeleted,
+            onDismissClicked = listener.onDumbActionCreationCancelled,
+        ),
+        hideCurrent = true,
+    )
+}
+
 
 
 internal class DumbActionUiFlowListener(
@@ -290,6 +338,8 @@ internal class DumbActionCreator(
     val createNewDumbPause: () -> DumbAction.DumbPause,
     val createNewDumbPrecisionGesture: () -> DumbAction.DumbPrecisionGesture,
     val createNewDumbPrecisionText: () -> DumbAction.DumbPrecisionText,
+    val createNewDumbTaskerTask: () -> DumbAction.DumbTaskerTask,
+    val createNewDumbManualThrowletCatch: () -> DumbAction.DumbManualThrowletCatch,
     val createDumbActionCopy: ((DumbAction) -> DumbAction)? = null,
 )
 

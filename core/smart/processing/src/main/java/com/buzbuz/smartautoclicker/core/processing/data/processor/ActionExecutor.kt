@@ -56,11 +56,15 @@ import com.buzbuz.smartautoclicker.core.domain.model.action.Notification
 import com.buzbuz.smartautoclicker.core.domain.model.action.SetText
 import com.buzbuz.smartautoclicker.core.domain.model.action.StopScenario
 import com.buzbuz.smartautoclicker.core.domain.model.action.SystemAction
+import com.buzbuz.smartautoclicker.core.domain.model.action.TaskerTask
 import com.buzbuz.smartautoclicker.core.domain.model.action.ThrowletCatch
 import com.buzbuz.smartautoclicker.core.domain.model.action.intent.putDomainExtra
 import com.buzbuz.smartautoclicker.core.domain.model.event.Event
 import com.buzbuz.smartautoclicker.core.domain.model.event.ImageEvent
 import com.buzbuz.smartautoclicker.core.processing.data.processor.state.ProcessingState
+import com.buzbuz.smartautoclicker.core.tasker.TaskerRunRequest
+import com.buzbuz.smartautoclicker.core.tasker.TaskerClient
+import com.buzbuz.smartautoclicker.core.tasker.toTaskerVariables
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -82,6 +86,7 @@ internal class ActionExecutor(
     private val onStopRequested: () -> Unit = {},
     private val precisionGestureExecutor: PrecisionGestureExecutor? = null,
     private val precisionTextExecutor: PrecisionTextExecutor? = null,
+    private val taskerClient: TaskerClient? = null,
 ) {
 
     init { androidExecutor.resetState() }
@@ -155,6 +160,10 @@ internal class ActionExecutor(
                 }
                 is ThrowletCatch -> {
                     executeThrowletCatch(action)
+                    false
+                }
+                is TaskerTask -> {
+                    executeTaskerTask(action)
                     false
                 }
             }
@@ -424,6 +433,23 @@ internal class ActionExecutor(
             androidExecutor.sendBroadcast(AndroidIntent(broadcastAction))
         }
         delay(INTENT_BROADCAST_DELAY)
+    }
+
+    private suspend fun executeTaskerTask(action: TaskerTask) {
+        val client = taskerClient
+        if (client == null) {
+            Log.w(TAG, "TaskerClient not available, skipping task ${action.taskName}")
+            return
+        }
+
+        val taskName = action.taskName ?: return
+        client.runTask(
+            TaskerRunRequest(
+                taskName = taskName,
+                variables = action.variablesJson.toTaskerVariables(),
+                waitForCompletion = action.waitForCompletion,
+            )
+        )
     }
 
     private fun ThrowletCatch.resolveThrowletCatchLane(): ThrowletCatchLane =

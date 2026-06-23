@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <item
+        android:id="@+id/action_show_buttons"
+        android:icon="@drawable/ic_play_arrow"
+        android:title="@string/button_text_show_saved_buttons"
+        app:showAsAction="always"
+        tools:ignore="AlwaysShowAction" />
+
+    <item
+        android:id="@+id/action_new_layout"
+        android:title="@string/menu_item_new_button_layout"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_rename_layout"
+        android:title="@string/menu_item_rename_button_layout"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_duplicate_layout"
+        android:title="@string/menu_item_duplicate_button_layout"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_delete_layout"
+        android:title="@string/menu_item_delete_button_layout"
+        app:showAsAction="never" />
+
+</menu>

@@ -16,6 +16,8 @@ class SettingsSyncRepository @Inject constructor(
     private val localPort: SettingsSyncLocalPort,
     private val api: SacSupabaseClient,
 ) {
+    private val payloadJson = Json { ignoreUnknownKeys = true }
+
     suspend fun syncSettings(): SettingsSyncCounts = withContext(Dispatchers.IO) {
         if (!api.isConfigured) return@withContext SettingsSyncCounts(skipped = true)
         val payload = localPort.readLocalPayload()
@@ -25,13 +27,13 @@ class SettingsSyncRepository @Inject constructor(
         var pushed = false
         if (remote != null && remote.updatedAtMs > localUpdatedAtMs) {
             localPort.applyRemotePayload(
-                Json.decodeFromJsonElement(SacProfileSettingsPayload.serializer(), remote.settingsJson),
+                payloadJson.decodeFromJsonElement(SacProfileSettingsPayload.serializer(), remote.settingsJson),
             )
             pulled = true
         } else if (remote == null || localUpdatedAtMs > remote.updatedAtMs) {
             if (localUpdatedAtMs > 0L || remote == null) {
                 api.upsertProfileSettings(
-                    Json.encodeToJsonElement(payload),
+                    payloadJson.encodeToJsonElement(payload),
                     localUpdatedAtMs.coerceAtLeast(System.currentTimeMillis()),
                 )
                 pushed = true
@@ -45,7 +47,7 @@ class SettingsSyncRepository @Inject constructor(
         if (!api.isConfigured) return@withContext false
         val payload = localPort.readLocalPayload()
         val updatedAtMs = localPort.readLocalUpdatedAtMs().coerceAtLeast(System.currentTimeMillis())
-        api.upsertProfileSettings(Json.encodeToJsonElement(payload), updatedAtMs)
+        api.upsertProfileSettings(payloadJson.encodeToJsonElement(payload), updatedAtMs)
         true
     }
 }
@@ -61,6 +63,11 @@ data class SacProfileSettingsPayload(
     val settings: SacAppSettings,
     @SerialName("scenarioSort") val scenarioSort: SacScenarioSortSettings,
     @SerialName("qsTile") val qsTile: SacQsTileSettings,
+    @SerialName("overlayButtons") val overlayButtons: List<SacSavedOverlayButton>? = null,
+    @SerialName("overlayButtonSets") val overlayButtonSets: List<SacSavedOverlayButtonSet>? = null,
+    @SerialName("activeOverlayButtonSetSyncId") val activeOverlayButtonSetSyncId: String? = null,
+    @SerialName("activeOverlayButtonSetUpdatedAtMs") val activeOverlayButtonSetUpdatedAtMs: Long = 0L,
+    @SerialName("overlayButtonSetButtons") val overlayButtonSetButtons: List<SacSavedOverlayButton>? = null,
 )
 
 @kotlinx.serialization.Serializable
@@ -92,4 +99,41 @@ enum class SacScenarioSortType {
 data class SacQsTileSettings(
     @SerialName("scenarioSyncId") val scenarioSyncId: String? = null,
     @SerialName("isSmartScenario") val isSmartScenario: Boolean? = null,
+)
+
+@kotlinx.serialization.Serializable
+data class SacSavedOverlayButton(
+    val id: Long,
+    val syncId: String,
+    val setSyncId: String? = null,
+    val labelOverride: String? = null,
+    val iconGlyph: String? = null,
+    val scenarioDbId: Long? = null,
+    val scenarioSyncId: String,
+    val scenarioNameSnapshot: String,
+    val enabled: Boolean = true,
+    val isVisible: Boolean = true,
+    val priority: Int = 0,
+    val portraitXPercent: Float = 0.5f,
+    val portraitYPercent: Float = 0.5f,
+    val landscapeXPercent: Float? = null,
+    val landscapeYPercent: Float? = null,
+    val createdAtMs: Long = 0L,
+    val updatedAtMs: Long = 0L,
+    val deletedAtMs: Long? = null,
+)
+
+@kotlinx.serialization.Serializable
+data class SacSavedOverlayButtonSet(
+    val id: Long,
+    val syncId: String,
+    val name: String,
+    val priority: Int = 0,
+    val portraitXPercent: Float = 0.5f,
+    val portraitYPercent: Float = 0.5f,
+    val landscapeXPercent: Float? = null,
+    val landscapeYPercent: Float? = null,
+    val createdAtMs: Long = 0L,
+    val updatedAtMs: Long = 0L,
+    val deletedAtMs: Long? = null,
 )

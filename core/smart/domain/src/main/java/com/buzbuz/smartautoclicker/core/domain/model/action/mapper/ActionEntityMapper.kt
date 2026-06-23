@@ -32,6 +32,7 @@ import com.buzbuz.smartautoclicker.core.domain.model.action.SetText
 import com.buzbuz.smartautoclicker.core.domain.model.action.StopScenario
 import com.buzbuz.smartautoclicker.core.domain.model.action.Swipe
 import com.buzbuz.smartautoclicker.core.domain.model.action.SystemAction
+import com.buzbuz.smartautoclicker.core.domain.model.action.TaskerTask
 import com.buzbuz.smartautoclicker.core.domain.model.action.ThrowletCatch
 import com.buzbuz.smartautoclicker.core.domain.model.action.ToggleEvent
 
@@ -53,6 +54,7 @@ internal fun Action.toEntity(): ActionEntity {
         is PrecisionGesture -> toPrecisionGestureEntity()
         is PrecisionText -> toPrecisionTextEntity()
         is ThrowletCatch -> toThrowletCatchEntity()
+        is TaskerTask -> toTaskerTaskEntity()
     }
 }
 
@@ -217,4 +219,16 @@ private fun ThrowletCatch.toThrowletCatchEntity(): ActionEntity =
         throwletCatchMode = mode.toEntity(),
         throwletCatchLane = lane.toEntity(),
         throwletCatchPokemonNameOverride = pokemonNameOverride?.trim()?.takeIf { it.isNotBlank() },
+    )
+
+private fun TaskerTask.toTaskerTaskEntity(): ActionEntity =
+    ActionEntity(
+        id = id.databaseId,
+        eventId = eventId.databaseId,
+        priority = priority,
+        name = name!!,
+        type = ActionType.TASKER_TASK,
+        taskerTaskName = taskName,
+        taskerWaitForCompletion = waitForCompletion,
+        taskerVariablesJson = variablesJson,
     )

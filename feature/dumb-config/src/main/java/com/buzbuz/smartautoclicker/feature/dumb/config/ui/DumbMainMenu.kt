@@ -126,6 +126,11 @@ class DumbMainMenu(
         if (isPlaying) {
             if (currentState == null) {
                 playPauseButtonController.toState2(false)
+                viewBinding.root.post {
+                    setMenuItemVisibility(viewBinding.btnStop, false)
+                    setMenuItemVisibility(viewBinding.btnShowActions, false)
+                    setMenuItemVisibility(viewBinding.btnActionList, false)
+                }
             } else {
                 animateLayoutChanges {
                     setMenuItemVisibility(viewBinding.btnStop, false)

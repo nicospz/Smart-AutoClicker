@@ -14,6 +14,7 @@ class ThrowletOverlayBroadcastReceiver : BroadcastReceiver() {
             return
         }
         when (action) {
+            ACTION_START_THROWLET_OVERLAY -> service.startThrowletOverlay()
             ACTION_TOGGLE_THROWLET_OVERLAY -> service.toggleThrowletOverlay()
             ACTION_SHOW_THROWLET_OVERLAY -> service.showThrowletOverlay()
             ACTION_HIDE_THROWLET_OVERLAY -> service.hideThrowletOverlay()
@@ -23,6 +24,7 @@ class ThrowletOverlayBroadcastReceiver : BroadcastReceiver() {
 
     companion object {
         private const val TAG = "SacThrowletCatch"
+        const val ACTION_START_THROWLET_OVERLAY = "com.buzbuz.smartautoclicker.action.START_THROWLET_OVERLAY"
         const val ACTION_TOGGLE_THROWLET_OVERLAY = "com.buzbuz.smartautoclicker.action.TOGGLE_THROWLET_OVERLAY"
         const val ACTION_SHOW_THROWLET_OVERLAY = "com.buzbuz.smartautoclicker.action.SHOW_THROWLET_OVERLAY"
         const val ACTION_HIDE_THROWLET_OVERLAY = "com.buzbuz.smartautoclicker.action.HIDE_THROWLET_OVERLAY"

@@ -65,7 +65,9 @@ internal class CustomLayoutNotificationBuilder(
             addAction(
                 context,
                 R.id.button_show_hide,
-                if (state.isMenuVisible) ServiceNotificationAction.Hide else ServiceNotificationAction.Show
+                if (state.isButtonOverlay) ServiceNotificationAction.Stop
+                else if (state.isMenuVisible) ServiceNotificationAction.Hide
+                else ServiceNotificationAction.Show
             )
         }
 
@@ -81,7 +83,9 @@ internal class CustomLayoutNotificationBuilder(
             addAction(
                 context,
                 R.id.button_show_hide,
-                if (state.isMenuVisible) ServiceNotificationAction.Hide else ServiceNotificationAction.Show
+                if (state.isButtonOverlay) ServiceNotificationAction.Stop
+                else if (state.isMenuVisible) ServiceNotificationAction.Hide
+                else ServiceNotificationAction.Show
             )
             addAction(context, R.id.button_config, ServiceNotificationAction.Config)
             addAction(context, R.id.button_exit, ServiceNotificationAction.Stop)
@@ -92,5 +96,4 @@ internal class CustomLayoutNotificationBuilder(
         setOnClickPendingIntent(viewId, action.getPendingIntent(context, appComponentsProvider))
     }
 }
-
 

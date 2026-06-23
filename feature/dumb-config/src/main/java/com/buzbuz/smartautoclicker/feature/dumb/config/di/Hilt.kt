@@ -24,6 +24,9 @@ import com.buzbuz.smartautoclicker.feature.dumb.config.ui.actions.pause.DumbPaus
 import com.buzbuz.smartautoclicker.feature.dumb.config.ui.actions.precision.DumbPrecisionGestureViewModel
 import com.buzbuz.smartautoclicker.feature.dumb.config.ui.actions.precision.DumbPrecisionTextViewModel
 import com.buzbuz.smartautoclicker.feature.dumb.config.ui.actions.swipe.DumbSwipeViewModel
+import com.buzbuz.smartautoclicker.feature.dumb.config.ui.actions.tasker.DumbTaskerTaskViewModel
+import com.buzbuz.smartautoclicker.feature.dumb.config.ui.actions.tasker.DumbTaskerTaskPickerViewModel
+import com.buzbuz.smartautoclicker.feature.dumb.config.ui.actions.throwlet.DumbManualThrowletCatchViewModel
 import com.buzbuz.smartautoclicker.feature.dumb.config.ui.brief.DumbScenarioBriefViewModel
 import com.buzbuz.smartautoclicker.feature.dumb.config.ui.scenario.DumbScenarioViewModel
 import com.buzbuz.smartautoclicker.feature.dumb.config.ui.scenario.actionlist.DumbActionListViewModel
@@ -46,4 +49,7 @@ interface DumbConfigViewModelsEntryPoint {
     fun dumbScenarioViewModel(): DumbScenarioViewModel
     fun dumbScenarioConfigContentViewModel(): DumbScenarioConfigContentViewModel
     fun dumbSwipeViewModel(): DumbSwipeViewModel
+    fun dumbTaskerTaskViewModel(): DumbTaskerTaskViewModel
+    fun dumbTaskerTaskPickerViewModel(): DumbTaskerTaskPickerViewModel
+    fun dumbManualThrowletCatchViewModel(): DumbManualThrowletCatchViewModel
 }

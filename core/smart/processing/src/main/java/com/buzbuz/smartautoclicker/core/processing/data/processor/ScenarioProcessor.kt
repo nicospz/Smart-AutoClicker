@@ -34,6 +34,7 @@ import com.buzbuz.smartautoclicker.core.domain.model.event.childrenOf
 import com.buzbuz.smartautoclicker.core.domain.model.event.rootListEntries
 import com.buzbuz.smartautoclicker.core.processing.data.processor.state.ProcessingState
 import com.buzbuz.smartautoclicker.core.processing.data.scaling.ScalingManager
+import com.buzbuz.smartautoclicker.core.tasker.TaskerClient
 import com.buzbuz.smartautoclicker.core.processing.domain.EventType
 import com.buzbuz.smartautoclicker.core.processing.domain.SmartProcessingListener
 
@@ -64,6 +65,7 @@ internal class ScenarioProcessor(
     androidExecutor: AndroidActionExecutor,
     precisionGestureExecutor: PrecisionGestureExecutor? = null,
     precisionTextExecutor: PrecisionTextExecutor? = null,
+    taskerClient: TaskerClient? = null,
     unblockWorkaroundEnabled: Boolean = false,
     private val onStopRequested: () -> Unit,
     private val progressListener: SmartProcessingListener?,
@@ -96,6 +98,7 @@ internal class ScenarioProcessor(
         onStopRequested = onStopRequested,
         precisionGestureExecutor = precisionGestureExecutor,
         precisionTextExecutor = precisionTextExecutor,
+        taskerClient = taskerClient,
     )
 
     fun onScenarioStart(context: Context) {

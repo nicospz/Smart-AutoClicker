@@ -37,6 +37,8 @@ import com.buzbuz.smartautoclicker.feature.smart.config.ui.action.settext.SetTex
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.action.swipe.SwipeViewModel
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.action.system.SystemActionViewModel
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.action.throwletcatch.ThrowletCatchViewModel
+import com.buzbuz.smartautoclicker.feature.smart.config.ui.action.tasker.TaskerTaskViewModel
+import com.buzbuz.smartautoclicker.feature.smart.config.ui.action.tasker.TaskerTaskPickerViewModel
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.action.toggleevent.EventTogglesViewModel
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.action.toggleevent.ToggleEventViewModel
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.common.dialogs.counter.CounterNameSelectionViewModel
@@ -103,6 +105,8 @@ interface ScenarioConfigViewModelsEntryPoint {
     fun setTextViewModel(): SetTextViewModel
     fun systemActionViewModel(): SystemActionViewModel
     fun throwletCatchViewModel(): ThrowletCatchViewModel
+    fun taskerTaskViewModel(): TaskerTaskViewModel
+    fun taskerTaskPickerViewModel(): TaskerTaskPickerViewModel
     fun smartActionsBriefViewModel(): SmartActionsBriefViewModel
     fun swipeViewModel(): SwipeViewModel
     fun timerReachedConditionViewModel(): TimerReachedConditionViewModel

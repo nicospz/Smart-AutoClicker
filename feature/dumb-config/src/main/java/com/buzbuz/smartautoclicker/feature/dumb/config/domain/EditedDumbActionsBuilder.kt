@@ -92,6 +92,20 @@ class EditedDumbActionsBuilder {
             repeatDelayMs = context.getDefaultDumbPrecisionTextRepeatDelay(),
         )
 
+    fun createNewDumbTaskerTask(context: Context): DumbAction.DumbTaskerTask =
+        DumbAction.DumbTaskerTask(
+            id = dumbActionsIdCreator.generateNewIdentifier(),
+            scenarioId = getEditedScenarioIdOrThrow(),
+            name = context.getDefaultDumbTaskerTaskName(),
+        )
+
+    fun createNewDumbManualThrowletCatch(context: Context): DumbAction.DumbManualThrowletCatch =
+        DumbAction.DumbManualThrowletCatch(
+            id = dumbActionsIdCreator.generateNewIdentifier(),
+            scenarioId = getEditedScenarioIdOrThrow(),
+            name = context.getDefaultDumbManualThrowletCatchName(),
+        )
+
     fun createNewDumbActionFrom(from: DumbAction): DumbAction =
         when (from) {
             is DumbAction.DumbClick -> from.copy(
@@ -111,6 +125,14 @@ class EditedDumbActionsBuilder {
                 scenarioId = getEditedScenarioIdOrThrow(),
             )
             is DumbAction.DumbPrecisionText -> from.copy(
+                id = dumbActionsIdCreator.generateNewIdentifier(),
+                scenarioId = getEditedScenarioIdOrThrow(),
+            )
+            is DumbAction.DumbTaskerTask -> from.copy(
+                id = dumbActionsIdCreator.generateNewIdentifier(),
+                scenarioId = getEditedScenarioIdOrThrow(),
+            )
+            is DumbAction.DumbManualThrowletCatch -> from.copy(
                 id = dumbActionsIdCreator.generateNewIdentifier(),
                 scenarioId = getEditedScenarioIdOrThrow(),
             )

@@ -23,6 +23,9 @@ import android.util.Log
 import com.buzbuz.smartautoclicker.core.base.workarounds.UnblockGestureScheduler
 import com.buzbuz.smartautoclicker.core.base.workarounds.buildUnblockGesture
 import com.buzbuz.smartautoclicker.core.common.actions.AndroidActionExecutor
+import com.buzbuz.smartautoclicker.core.common.actions.ThrowletCatchControllers
+import com.buzbuz.smartautoclicker.core.common.actions.ThrowletCatchMode
+import com.buzbuz.smartautoclicker.core.common.actions.ThrowletCatchSession
 import com.buzbuz.smartautoclicker.core.common.actions.precision.PrecisionGestureExecutor
 import com.buzbuz.smartautoclicker.core.common.actions.precision.PrecisionTextExecutor
 import com.buzbuz.smartautoclicker.core.common.actions.gesture.buildSingleStroke
@@ -31,6 +34,9 @@ import com.buzbuz.smartautoclicker.core.common.actions.gesture.moveTo
 import com.buzbuz.smartautoclicker.core.common.actions.utils.getPauseDurationMs
 import com.buzbuz.smartautoclicker.core.dumb.domain.model.DumbAction
 import com.buzbuz.smartautoclicker.core.dumb.domain.model.Repeatable
+import com.buzbuz.smartautoclicker.core.tasker.TaskerClient
+import com.buzbuz.smartautoclicker.core.tasker.TaskerRunRequest
+import com.buzbuz.smartautoclicker.core.tasker.toTaskerVariables
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -44,6 +50,7 @@ class DumbActionExecutor @Inject constructor(
     private val androidExecutor: AndroidActionExecutor,
     private val precisionGestureExecutor: PrecisionGestureExecutor,
     private val precisionTextExecutor: PrecisionTextExecutor,
+    private val taskerClient: TaskerClient,
 ) {
 
     private val random: Random = Random(System.currentTimeMillis())
@@ -78,6 +85,8 @@ class DumbActionExecutor @Inject constructor(
             is DumbAction.DumbPause -> executeDumbPause(action)
             is DumbAction.DumbPrecisionGesture -> executeDumbPrecisionGesture(action)
             is DumbAction.DumbPrecisionText -> executeDumbPrecisionText(action)
+            is DumbAction.DumbTaskerTask -> executeDumbTaskerTask(action)
+            is DumbAction.DumbManualThrowletCatch -> executeDumbManualThrowletCatch(action)
         }
     }
 
@@ -132,6 +141,37 @@ class DumbActionExecutor @Inject constructor(
         precisionText.repeat {
             runCatching { precisionTextExecutor.typeText(precisionText.text, precisionText.mode) }
                 .onFailure { Log.w(TAG, "Precision text input failed", it) }
+        }
+    }
+
+    private suspend fun executeDumbTaskerTask(taskerTask: DumbAction.DumbTaskerTask) {
+        val taskName = taskerTask.taskName ?: return
+        taskerClient.runTask(
+            TaskerRunRequest(
+                taskName = taskName,
+                variables = taskerTask.variablesJson.toTaskerVariables(),
+                waitForCompletion = taskerTask.waitForCompletion,
+            )
+        )
+    }
+
+    private suspend fun executeDumbManualThrowletCatch(action: DumbAction.DumbManualThrowletCatch) {
+        val controller = ThrowletCatchControllers.instance
+        if (controller == null) {
+            Log.w(TAG, "Manual Throwlet Catch ignored: controller unavailable")
+            return
+        }
+
+        withContext(Dispatchers.Main) {
+            controller.execute(
+                action.operation,
+                ThrowletCatchSession(
+                    mode = ThrowletCatchMode.CATCH,
+                    lane = action.lane,
+                    pokemonNameOverride = action.pokemonNameOverride,
+                    manualSelectionOnly = true,
+                ),
+            )
         }
     }
 }

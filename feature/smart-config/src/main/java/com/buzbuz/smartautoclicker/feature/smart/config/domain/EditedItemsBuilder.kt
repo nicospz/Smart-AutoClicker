@@ -40,6 +40,7 @@ import com.buzbuz.smartautoclicker.core.domain.model.action.SetText
 import com.buzbuz.smartautoclicker.core.domain.model.action.StopScenario
 import com.buzbuz.smartautoclicker.core.domain.model.action.Swipe
 import com.buzbuz.smartautoclicker.core.domain.model.action.SystemAction
+import com.buzbuz.smartautoclicker.core.domain.model.action.TaskerTask
 import com.buzbuz.smartautoclicker.core.domain.model.action.ThrowletCatch
 import com.buzbuz.smartautoclicker.core.domain.model.action.ToggleEvent
 import com.buzbuz.smartautoclicker.core.domain.model.action.toggleevent.EventToggle
@@ -403,6 +404,14 @@ class EditedItemsBuilder internal constructor(
             priority = 0,
         )
 
+    fun createNewTaskerTask(context: Context): TaskerTask =
+        TaskerTask(
+            id = actionsIdCreator.generateNewIdentifier(),
+            eventId = getEditedEventIdOrThrow(),
+            name = defaultValues.taskerTaskName(context),
+            priority = 0,
+        )
+
     fun createNewActionFrom(from: Action, eventId: Identifier = getEditedEventIdOrThrow()): Action = when (from) {
         is Click -> createNewClickFrom(from, eventId)
         is Swipe -> createNewSwipeFrom(from, eventId)
@@ -417,6 +426,7 @@ class EditedItemsBuilder internal constructor(
         is SetText -> createNewSetTextFrom(from, eventId)
         is StopScenario -> createNewStopScenarioFrom(from, eventId)
         is ThrowletCatch -> createNewThrowletCatchFrom(from, eventId)
+        is TaskerTask -> createNewTaskerTaskFrom(from, eventId)
     }
 
     private fun createNewClickFrom(from: Click, eventId: Identifier): Click {
@@ -567,6 +577,16 @@ class EditedItemsBuilder internal constructor(
             eventId = eventId,
             name = "" + from.name,
             operation = from.operation,
+        )
+
+    private fun createNewTaskerTaskFrom(from: TaskerTask, eventId: Identifier): TaskerTask =
+        from.copy(
+            id = actionsIdCreator.generateNewIdentifier(),
+            eventId = eventId,
+            name = "" + from.name,
+            taskName = from.taskName,
+            waitForCompletion = from.waitForCompletion,
+            variablesJson = from.variablesJson,
         )
 
     private fun isEventIdValidInEditedScenario(eventId: Identifier): Boolean =

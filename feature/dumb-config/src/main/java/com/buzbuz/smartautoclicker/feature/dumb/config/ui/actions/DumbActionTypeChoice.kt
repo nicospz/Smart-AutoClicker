@@ -67,6 +67,20 @@ sealed class DumbActionTypeChoice(
         R.string.item_desc_dumb_pause,
         R.drawable.ic_wait,
     )
+
+    /** Tasker task Action choice. */
+    data object TaskerTask : DumbActionTypeChoice(
+        R.string.item_title_dumb_tasker_task,
+        R.string.item_desc_dumb_tasker_task,
+        R.drawable.ic_intent,
+    )
+
+    /** Manual Throwlet Catch action choice. */
+    data object ManualThrowletCatch : DumbActionTypeChoice(
+        R.string.item_title_dumb_manual_throwlet_catch,
+        R.string.item_desc_dumb_manual_throwlet_catch,
+        R.drawable.ic_intent,
+    )
 }
 
 fun allDumbActionChoices() = listOf(
@@ -76,4 +90,6 @@ fun allDumbActionChoices() = listOf(
     DumbActionTypeChoice.PrecisionGesture,
     DumbActionTypeChoice.PrecisionText,
     DumbActionTypeChoice.Pause,
+    DumbActionTypeChoice.TaskerTask,
+    DumbActionTypeChoice.ManualThrowletCatch,
 )
