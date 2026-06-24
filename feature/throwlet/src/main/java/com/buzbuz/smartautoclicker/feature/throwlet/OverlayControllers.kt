@@ -15,7 +15,6 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import android.widget.Toast
 import androidx.core.content.edit
 import kotlin.math.max
 
@@ -38,8 +37,11 @@ class AndroidRailController(
     private lateinit var saveButton: ImageButton
     private lateinit var berryThrowButton: ImageButton
     private lateinit var fastCatchButton: ImageButton
+    private lateinit var holdToThrowButton: ImageButton
+    private lateinit var throwSpeedButton: ImageButton
     private lateinit var stopButton: ImageButton
     private lateinit var actionButton: ImageButton
+    private var holdToThrowEnabled = false
     private var loadedSpriteName: String? = null
     private val splitPositions: SplitOverlayPositions? =
         splitLayout?.let { SplitOverlayPositions(context, mode, it) }
@@ -91,6 +93,29 @@ class AndroidRailController(
             "Fast catch on (berry hold + throw)"
         } else {
             "Fast catch off"
+        }
+    }
+
+    fun updateHoldToThrow(enabled: Boolean) {
+        holdToThrowEnabled = enabled
+        if (!::holdToThrowButton.isInitialized || mode != HelperMode.CATCH) return
+        holdToThrowButton.alpha = if (enabled) 0.95f else 0.45f
+        holdToThrowButton.contentDescription = if (enabled) {
+            "Hold-to-throw on"
+        } else {
+            "Hold-to-throw off"
+        }
+    }
+
+    fun updateThrowTuning(enabled: Boolean, tuning: ThrowGestureTuning) {
+        if (!::throwSpeedButton.isInitialized || mode != HelperMode.CATCH) return
+        val formattedSpeed = ThrowSpeedDialog.formatSpeed(tuning.speed)
+        val offsetSummary = ThrowSpeedDialog.formatOffsetSummary(tuning)
+        throwSpeedButton.alpha = if (enabled) 0.95f else 0.45f
+        throwSpeedButton.contentDescription = if (enabled) {
+            "Custom throw tuning $formattedSpeed$offsetSummary on. Long press to edit"
+        } else {
+            "Custom throw tuning $formattedSpeed$offsetSummary off. Long press to edit"
         }
     }
 
@@ -150,7 +175,7 @@ class AndroidRailController(
                 }
             }
             setOnLongClickListener {
-                callbacks.selectPokemon(lane)
+                callbacks.refresh(lane)
                 true
             }
         }
@@ -199,6 +224,22 @@ class AndroidRailController(
                 callbacks.toggleFastCatch(lane)
             }
             panel.addView(fastCatchButton)
+            throwSpeedButton = menuIconButton(R.drawable.ic_overlay_speed, "Custom throw speed off") {
+                callbacks.toggleThrowSpeed(lane)
+            }.apply {
+                alpha = 0.45f
+                isLongClickable = true
+                setOnLongClickListener {
+                    callbacks.openThrowSpeedDialog(lane)
+                    true
+                }
+            }
+            panel.addView(throwSpeedButton)
+            holdToThrowButton = menuIconButton(R.drawable.ic_overlay_play, "Hold-to-throw off") {
+                callbacks.toggleHoldToThrow(lane)
+            }
+            holdToThrowButton.alpha = 0.45f
+            panel.addView(holdToThrowButton)
         }
         stopButton = menuIconButton(R.drawable.ic_overlay_stop, "Stop ${lane.name.lowercase()} helper") { callbacks.stop(lane) }
         panel.addView(saveButton)
@@ -241,7 +282,28 @@ class AndroidRailController(
             val p = dp(if (isCatch) 14 else 10)
             setPadding(p, p, p, p)
             alpha = if (isCatch) 0.48f else 0.92f
-            setOnClickListener { callbacks.play(lane) }
+            setOnTouchListener { view, event ->
+                if (!isCatch || !holdToThrowEnabled) return@setOnTouchListener false
+                when (event.actionMasked) {
+                    MotionEvent.ACTION_DOWN -> {
+                        view.isPressed = true
+                        callbacks.startHeldThrow(lane)
+                        true
+                    }
+                    MotionEvent.ACTION_UP -> {
+                        view.isPressed = false
+                        callbacks.releaseHeldThrow(lane)
+                        true
+                    }
+                    MotionEvent.ACTION_CANCEL -> {
+                        view.isPressed = false
+                        callbacks.cancelHeldThrow(lane)
+                        true
+                    }
+                    else -> true
+                }
+            }
+            setOnClickListener { if (!holdToThrowEnabled) callbacks.play(lane) }
         }
         panel.addView(actionButton, LinearLayout.LayoutParams(dp(actionButtonDp), dp(actionButtonDp)))
         actionParams = overlayParams().apply {
@@ -487,7 +549,10 @@ interface RailCallbacks {
     fun openBerryMenu(lane: HelperLane, anchor: View)
     fun throwBerry(lane: HelperLane)
     fun toggleFastCatch(lane: HelperLane)
-    fun selectPokemon(lane: HelperLane)
+    fun toggleHoldToThrow(lane: HelperLane)
+    fun toggleThrowSpeed(lane: HelperLane)
+    fun openThrowSpeedDialog(lane: HelperLane)
+    fun startHeldThrow(lane: HelperLane)
+    fun releaseHeldThrow(lane: HelperLane)
+    fun cancelHeldThrow(lane: HelperLane)
 }
-
-fun Context.toast(message: String) = Toast.makeText(this, message, Toast.LENGTH_SHORT).show()

@@ -16,8 +16,10 @@
  */
 package com.buzbuz.smartautoclicker.feature.dumb.config.ui
 
+import android.content.Intent
 import android.view.KeyEvent
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 
 import androidx.lifecycle.Lifecycle
@@ -29,7 +31,9 @@ import com.buzbuz.smartautoclicker.core.base.isStopScenarioKey
 import com.buzbuz.smartautoclicker.core.common.overlays.base.viewModels
 import com.buzbuz.smartautoclicker.core.common.overlays.menu.OverlayMenu
 import com.buzbuz.smartautoclicker.core.ui.utils.AnimatedStatesImageButtonController
+import com.buzbuz.smartautoclicker.core.ui.utils.bindHoldActionMenuItem
 import com.buzbuz.smartautoclicker.feature.dumb.config.R
+import com.buzbuz.smartautoclicker.feature.dumb.config.databinding.OverlayDumbActionsPanelBinding
 import com.buzbuz.smartautoclicker.feature.dumb.config.databinding.OverlayDumbMainMenuBinding
 import com.buzbuz.smartautoclicker.feature.dumb.config.di.DumbConfigViewModelsEntryPoint
 import com.buzbuz.smartautoclicker.feature.dumb.config.ui.brief.DumbScenarioBriefMenu
@@ -40,7 +44,7 @@ import kotlinx.coroutines.launch
 class DumbMainMenu(
     private val dumbScenarioId: Identifier,
     private val onStopClicked: () -> Unit,
-) : OverlayMenu(theme = R.style.AppTheme) {
+) : OverlayMenu(theme = R.style.AppTheme, holdActionMenuEnabled = true) {
 
     /** The view model for this menu. */
     private val viewModel: DumbMainMenuModel by viewModels(
@@ -50,6 +54,8 @@ class DumbMainMenu(
 
     /** View binding for the content of the overlay. */
     private lateinit var viewBinding: OverlayDumbMainMenuBinding
+    /** View binding for the detached hold-action panel. */
+    private lateinit var actionsPanelBinding: OverlayDumbActionsPanelBinding
     /** Controls the animations of the play/pause button. */
     private lateinit var playPauseButtonController: AnimatedStatesImageButtonController
 
@@ -80,10 +86,35 @@ class DumbMainMenu(
         )
 
         viewBinding = OverlayDumbMainMenuBinding.inflate(layoutInflater).apply {
-            playPauseButtonController.attachView(btnPlay)
+            playPauseButtonController.attachView(btnHub)
         }
 
         return viewBinding.root
+    }
+
+    override fun onCreateHoldActionPanel(layoutInflater: LayoutInflater): ViewGroup {
+        actionsPanelBinding = OverlayDumbActionsPanelBinding.inflate(layoutInflater)
+        actionsPanelBinding.btnStop.bindHoldActionMenuItem(
+            iconRes = R.drawable.ic_stop,
+            labelRes = com.buzbuz.smartautoclicker.core.ui.R.string.menu_hold_action_stop,
+            contentDescriptionRes = com.buzbuz.smartautoclicker.core.ui.R.string.content_desc_stop_clicker,
+        )
+        actionsPanelBinding.btnShowActions.bindHoldActionMenuItem(
+            iconRes = R.drawable.ic_show_path,
+            labelRes = R.string.menu_hold_action_preview,
+            contentDescriptionRes = R.string.content_desc_show_actions,
+        )
+        actionsPanelBinding.btnActionList.bindHoldActionMenuItem(
+            iconRes = R.drawable.ic_settings_filled,
+            labelRes = R.string.menu_hold_action_configure,
+            contentDescriptionRes = R.string.content_desc_open_action_list,
+        )
+        actionsPanelBinding.btnFavoriteScenarios.bindHoldActionMenuItem(
+            iconRes = R.drawable.ic_favorite_outline,
+            labelRes = R.string.menu_hold_action_favorites,
+            contentDescriptionRes = R.string.content_desc_open_favorite_scenarios,
+        )
+        return actionsPanelBinding.root
     }
 
     override fun onDestroy() {
@@ -116,54 +147,66 @@ class DumbMainMenu(
 
     /** Refresh the play menu item according to the scenario state. */
     private fun updatePlayPauseButtonEnabledState(canStartDetection: Boolean) =
-        setMenuItemViewEnabled(viewBinding.btnPlay, canStartDetection)
+        setMenuItemViewEnabled(viewBinding.btnHub, canStartDetection)
 
     private fun updateMenuPlayingState(isPlaying: Boolean) {
-        val currentState = viewBinding.btnPlay.tag
+        val currentState = viewBinding.btnHub.tag
         if (currentState == isPlaying) return
 
-        viewBinding.btnPlay.tag = isPlaying
+        viewBinding.btnHub.tag = isPlaying
         if (isPlaying) {
+            setHoldActionMenuInteractionEnabled(false)
+            setHoldActionLipVisible(false)
             if (currentState == null) {
                 playPauseButtonController.toState2(false)
-                viewBinding.root.post {
-                    setMenuItemVisibility(viewBinding.btnStop, false)
-                    setMenuItemVisibility(viewBinding.btnShowActions, false)
-                    setMenuItemVisibility(viewBinding.btnActionList, false)
-                }
             } else {
-                animateLayoutChanges {
-                    setMenuItemVisibility(viewBinding.btnStop, false)
-                    setMenuItemVisibility(viewBinding.btnShowActions, false)
-                    setMenuItemVisibility(viewBinding.btnActionList, false)
-                    playPauseButtonController.toState2(true)
-                }
+                playPauseButtonController.toState2(true)
             }
+            setMenuItemVisibility(actionsPanelBinding.btnStop, true)
+            setMenuItemVisibility(actionsPanelBinding.btnShowActions, false)
+            setMenuItemVisibility(actionsPanelBinding.btnActionList, false)
+            setMenuItemVisibility(actionsPanelBinding.btnFavoriteScenarios, false)
         } else {
+            setHoldActionMenuInteractionEnabled(true)
+            setHoldActionLipVisible(true)
             if (currentState == null) {
                 playPauseButtonController.toState1(false)
             } else {
-                animateLayoutChanges {
-                    setMenuItemVisibility(viewBinding.btnStop, true)
-                    setMenuItemVisibility(viewBinding.btnShowActions, true)
-                    setMenuItemVisibility(viewBinding.btnActionList, true)
-                    playPauseButtonController.toState1(true)
-                }
+                playPauseButtonController.toState1(true)
             }
+            setMenuItemVisibility(actionsPanelBinding.btnStop, true)
+            setMenuItemVisibility(actionsPanelBinding.btnShowActions, true)
+            setMenuItemVisibility(actionsPanelBinding.btnActionList, true)
+            setMenuItemVisibility(actionsPanelBinding.btnFavoriteScenarios, true)
         }
+    }
+
+    private fun setHoldActionLipVisible(visible: Boolean) {
+        viewBinding.holdActionCorner.visibility = if (visible) View.VISIBLE else View.INVISIBLE
+    }
+
+    override fun onHubQuickTap() {
+        onPlayPauseClicked()
     }
 
     override fun onMenuItemClicked(viewId: Int) {
         when (viewId) {
-            R.id.btn_play -> onPlayPauseClicked()
             R.id.btn_stop -> onStopClicked()
             R.id.btn_show_actions -> onShowBriefClicked()
             R.id.btn_action_list -> onDumbScenarioConfigClicked()
+            R.id.btn_favorite_scenarios -> onFavoriteScenariosClicked()
         }
     }
 
     private fun onPlayPauseClicked() {
         viewModel.toggleScenarioPlay()
+    }
+
+    private fun onFavoriteScenariosClicked() {
+        context.sendBroadcast(
+            Intent(ACTION_SHOW_FAVORITE_SCENARIOS)
+                .setPackage(context.packageName)
+        )
     }
 
     private fun onShowBriefClicked() {
@@ -192,3 +235,5 @@ class DumbMainMenu(
     }
 
 }
+
+private const val ACTION_SHOW_FAVORITE_SCENARIOS = "com.buzbuz.smartautoclicker.action.SHOW_FAVORITE_SCENARIOS"

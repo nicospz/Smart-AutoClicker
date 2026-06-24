@@ -23,10 +23,13 @@ data class HelperSession(
     val railController: RailController,
     val detectionController: DetectionController,
     val gestureController: GestureController,
-    var manualSelectionOnly: Boolean = false,
     var detectionState: CatchDetectionState? = null,
     var selectedBerry: BerryAction = BerryAction.NONE,
     var fastCatchEnabled: Boolean = false,
+    var holdToThrowEnabled: Boolean = false,
+    var customThrowSpeedEnabled: Boolean = false,
+    var throwGestureTuning: ThrowGestureTuning = ThrowGestureTuning(),
+    var heldThrowActive: Boolean = false,
 )
 
 sealed class SaveGestureResult {

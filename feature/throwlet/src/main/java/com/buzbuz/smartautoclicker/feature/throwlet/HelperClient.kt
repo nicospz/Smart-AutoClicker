@@ -32,6 +32,18 @@ fun HelperReply.toExportedGesture(): ExportedGesture? {
 }
 
 class HelperClient(private val host: String = HelperProtocol.HOST, private val port: Int = HelperProtocol.PORT) {
+    suspend fun startHeldThrow(throwHex: String, timeoutMs: Int = 5_000): HelperReply = withContext(Dispatchers.IO) {
+        val importThrow = send("IMPORT_GESTURE $throwHex", timeoutMs = timeoutMs)
+        if (!importThrow.ok) return@withContext importThrow
+        send("START_HELD_LAST", timeoutMs = timeoutMs)
+    }
+
+    suspend fun releaseHeldThrow(timeoutMs: Int = 30_000): HelperReply =
+        send("RELEASE_HELD_LAST", timeoutMs = timeoutMs)
+
+    suspend fun cancelHeldThrow(timeoutMs: Int = 5_000): HelperReply =
+        send("CANCEL_HELD_LAST", timeoutMs = timeoutMs)
+
     suspend fun playConcurrent(
         holdHex: String,
         throwHex: String,

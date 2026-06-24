@@ -46,6 +46,8 @@ import com.buzbuz.smartautoclicker.core.common.overlays.R
 import com.buzbuz.smartautoclicker.core.common.overlays.base.BaseOverlay
 import com.buzbuz.smartautoclicker.core.common.overlays.di.OverlaysEntryPoint
 import com.buzbuz.smartautoclicker.core.common.overlays.manager.OverlayManager
+import com.buzbuz.smartautoclicker.core.common.overlays.menu.implementation.common.OverlayHoldActionMenuController
+import com.buzbuz.smartautoclicker.core.common.overlays.menu.implementation.common.OverlayHoldActionPanelWindow
 import com.buzbuz.smartautoclicker.core.common.overlays.menu.implementation.common.OverlayMenuAnimations
 import com.buzbuz.smartautoclicker.core.common.overlays.menu.implementation.common.OverlayMenuMoveTouchEventHandler
 import com.buzbuz.smartautoclicker.core.common.overlays.menu.implementation.common.OverlayMenuPositionDataSource
@@ -82,6 +84,7 @@ import java.io.PrintWriter
 abstract class OverlayMenu(
     @StyleRes theme: Int? = null,
     private val recreateOverlayViewOnRotation: Boolean = false,
+    private val holdActionMenuEnabled: Boolean = false,
 ) : BaseOverlay(theme = theme, recreateOnRotation = false) {
 
     /** The base layout parameters of the menu layout & overlay view. */
@@ -122,6 +125,16 @@ abstract class OverlayMenu(
     private lateinit var resizeController: OverlayMenuResizeController
     /** Handles the touch events on the move button. */
     private lateinit var moveTouchEventHandler: OverlayMenuMoveTouchEventHandler
+    /** Handles hold-to-open action menu on the hub button. */
+    private var holdActionMenuController: OverlayHoldActionMenuController? = null
+    /** When false, the hub only accepts quick tap and drag (hold menu is paused-only). */
+    private var holdActionMenuInteractionEnabled: Boolean = true
+    /** Detached overlay window for hold-action menu items. */
+    private var holdActionPanelWindow: OverlayHoldActionPanelWindow? = null
+    /** Root layout of the detached hold-action panel. */
+    private var holdActionPanelLayout: ViewGroup? = null
+    /** Layout parameters for the detached hold-action panel. */
+    private lateinit var holdActionPanelLayoutParams: WindowManager.LayoutParams
 
     /** Handles the save/load of the position of the menus. */
     private val positionDataSource: OverlayMenuPositionDataSource by lazy {
@@ -159,6 +172,12 @@ abstract class OverlayMenu(
      *         order for move and hide to work as expected.
      */
     protected abstract fun onCreateMenu(layoutInflater: LayoutInflater): ViewGroup
+
+    /**
+     * Creates the detached hold-action panel shown next to the rail.
+     * Required when [holdActionMenuEnabled] is true. The returned layout must contain [R.id.menu_items].
+     */
+    protected open fun onCreateHoldActionPanel(layoutInflater: LayoutInflater): ViewGroup? = null
 
     /**
      * Creates the view to be displayed between the current activity and the overlay menu.
@@ -205,14 +224,26 @@ abstract class OverlayMenu(
 
         // Set the clicks listener on the menu items
         menuBackground = menuLayout.findViewById(R.id.menu_background)
-        buttonsContainer = menuLayout.findViewById(R.id.menu_items)
+        if (holdActionMenuEnabled) {
+            holdActionPanelLayout = onCreateHoldActionPanel(context.getSystemService(LayoutInflater::class.java))
+                ?: error("Hold-action menu requires onCreateHoldActionPanel()")
+            buttonsContainer = holdActionPanelLayout!!.findViewById(R.id.menu_items)
+                ?: error("Hold-action panel requires a view with id menu_items")
+            holdActionPanelLayoutParams = WindowManager.LayoutParams().apply { copyFrom(baseLayoutParams) }
+        } else {
+            buttonsContainer = menuLayout.findViewById(R.id.menu_items)
+        }
 
         // Setup the touch event handler for dragging the menu.
         moveTouchEventHandler = OverlayMenuMoveTouchEventHandler(::updateMenuPosition)
-        setupButtons(buttonsContainer)
+        if (holdActionMenuEnabled) {
+            setupHoldActionMenu()
+        } else {
+            setupButtons(buttonsContainer)
+        }
         @SuppressLint("ClickableViewAccessibility")
         menuBackground.setOnTouchListener { view: View, event: MotionEvent ->
-            onMoveTouched(view, event) || event.actionMasked == MotionEvent.ACTION_DOWN
+            onMenuBackgroundTouched(view, event)
         }
 
         // Restore the last menu position, if any.
@@ -222,11 +253,19 @@ abstract class OverlayMenu(
         loadMenuPosition(displayConfigManager.displayConfig.orientation)
         canMoveMenu = !positionDataSource.isPositionLocked()
 
+        val resizeTarget = if (holdActionMenuEnabled) {
+            menuBackground
+        } else {
+            buttonsContainer
+        }
+
+        val maximumSize = getWindowMaximumSize(menuBackground)
+
         // Handle window resize animations
         resizeController = OverlayMenuResizeController(
             backgroundViewGroup = menuBackground,
-            resizedContainer = buttonsContainer,
-            maximumSize = getWindowMaximumSize(menuBackground),
+            resizedContainer = resizeTarget,
+            maximumSize = maximumSize,
             windowResizer = ::onNewWindowSize,
             onAllLayoutResizeAnimationsCompleted = ::onMenuLayoutResizeAnimationsCompleted,
         )
@@ -261,6 +300,10 @@ abstract class OverlayMenu(
             "onCreate complete ${javaClass.simpleName}#${hashCode()} " +
                 "hasScreenOverlay=${screenOverlayView != null} animateOverlayView=${animateOverlayView()}",
         )
+
+        if (holdActionMenuEnabled) {
+            menuLayout.doWhenMeasured { resizeHoldActionRailWindow() }
+        }
     }
 
     private fun setupButtons(buttonsContainer: ViewGroup) {
@@ -316,6 +359,7 @@ abstract class OverlayMenu(
         menuLayout.visibility = View.VISIBLE
         menuBackground.visibility = View.VISIBLE
         overlayViewToShow?.visibility = View.VISIBLE
+        if (holdActionMenuEnabled) resizeHoldActionRailWindow()
         Log.d(
             TAG,
             "start() showing menu ${javaClass.simpleName}#${hashCode()} " +
@@ -357,6 +401,8 @@ abstract class OverlayMenu(
         if (animations.hideAnimationIsRunning) return
         if (lifecycle.currentState == Lifecycle.State.RESUMED) pause()
 
+        if (holdActionMenuEnabled) closeHoldActionMenu()
+
         saveMenuPosition(displayConfigManager.displayConfig.orientation)
 
         // Start the hide animation for the menu
@@ -395,6 +441,9 @@ abstract class OverlayMenu(
         windowManager.removeView(menuLayout)
         screenOverlayView?.let { windowManager.removeView(it) }
         screenOverlayView = null
+        holdActionPanelWindow?.destroy()
+        holdActionPanelWindow = null
+        holdActionPanelLayout = null
 
         resizeController.release()
         super@OverlayMenu.destroy()
@@ -414,6 +463,7 @@ abstract class OverlayMenu(
 
         if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
             windowManager.safeUpdateViewLayout(menuLayout, menuLayoutParams)
+            holdActionPanelWindow?.takeIf { it.isVisible }?.updatePosition()
 
             val overlayView = screenOverlayView ?: return
             if (recreateOverlayViewOnRotation) {
@@ -464,6 +514,178 @@ abstract class OverlayMenu(
         lifecycleRegistry.currentState = previousState
 
         setOverlayViewVisibility(oldOverlayView.visibility == View.VISIBLE)
+    }
+
+    /**
+     * Called when the user quick-taps the hub button in hold-action menu mode.
+     */
+    protected open fun onHubQuickTap(): Unit = Unit
+
+    /** Open the hold-action menu programmatically. */
+    protected fun openHoldActionMenu() {
+        holdActionMenuController?.openMenu()
+    }
+
+    /** Close the hold-action menu programmatically. */
+    protected fun closeHoldActionMenu() {
+        holdActionMenuController?.closeMenu()
+    }
+
+    /**
+     * Enable or disable hold-to-open on the hub.
+     * When disabled, the hub only quick-taps and can be dragged.
+     */
+    protected fun setHoldActionMenuInteractionEnabled(enabled: Boolean) {
+        if (holdActionMenuInteractionEnabled == enabled) return
+        holdActionMenuInteractionEnabled = enabled
+        if (!enabled) closeHoldActionMenu()
+    }
+
+    private fun resizeHoldActionRailWindow() {
+        menuBackground.requestLayout()
+        onNewWindowSize(measureHoldActionRailWindowSize())
+        menuLayout.post {
+            onNewWindowSize(measureHoldActionRailWindowSize())
+        }
+    }
+
+    private fun measureHoldActionRailWindowSize(): Size {
+        val previousVisibility = menuBackground.visibility
+        if (previousVisibility == View.GONE) menuBackground.visibility = View.INVISIBLE
+
+        return try {
+            menuBackground.measure(MeasureSpec.UNSPECIFIED, MeasureSpec.UNSPECIFIED)
+            Size(
+                menuBackground.measuredWidth.coerceAtLeast(1),
+                menuBackground.measuredHeight.coerceAtLeast(1),
+            )
+        } finally {
+            if (previousVisibility == View.GONE) menuBackground.visibility = previousVisibility
+        }
+    }
+
+    private fun showHoldActionPanel() {
+        holdActionPanelWindow?.show()
+    }
+
+    private fun hideHoldActionPanel() {
+        holdActionPanelWindow?.hide()
+    }
+
+    private fun setupHoldActionMenu() {
+        val hub = menuLayout.findViewById<ImageButton>(R.id.btn_hub)
+            ?: error("Hold-action menu requires a view with id btn_hub")
+        val panelLayout = holdActionPanelLayout
+            ?: error("Hold-action menu requires a detached hold-action panel layout")
+
+        holdActionPanelWindow = OverlayHoldActionPanelWindow(
+            windowManager = windowManager,
+            panelLayout = panelLayout,
+            panelLayoutParams = holdActionPanelLayoutParams,
+            displaySizeProvider = { displayConfigManager.displayConfig.sizePx },
+            anchorPositionProvider = { hub.getPositionInMenuWindow() },
+            anchorSizeProvider = { hub.getMeasuredSize() },
+            panelGapPx = context.resources.getDimensionPixelSize(
+                com.buzbuz.smartautoclicker.core.ui.R.dimen.overlay_hold_action_panel_gap,
+            ),
+            onDismissRequested = { holdActionMenuController?.onOutsideTouch() },
+        )
+
+        holdActionMenuController = OverlayHoldActionMenuController(
+            hubView = hub,
+            menuItemsContainer = buttonsContainer,
+            onQuickTap = { onHubQuickTap() },
+            onItemSelected = { viewId -> onMenuItemClicked(viewId) },
+            onMenuVisibilityChanged = { isVisible ->
+                if (isVisible) showHoldActionPanel() else hideHoldActionPanel()
+            },
+            isInteractionBlocked = { false },
+            isHoldMenuEnabled = { holdActionMenuInteractionEnabled },
+            menuItemBoundsOnScreenProvider = { itemView ->
+                holdActionPanelWindow?.getItemBoundsOnScreen(itemView)
+            },
+        )
+
+        @SuppressLint("ClickableViewAccessibility")
+        hub.setOnTouchListener { touchedView, event ->
+            onHubTouched(touchedView, event)
+        }
+
+        setupHoldActionMenuItems(buttonsContainer)
+    }
+
+    private fun View.getPositionInMenuWindow(): Point {
+        var left = 0
+        var top = 0
+        var current: View? = this
+
+        while (current != null && current != menuLayout) {
+            left += current.left
+            top += current.top
+            current = current.parent as? View
+        }
+
+        return Point(menuLayoutParams.x + left, menuLayoutParams.y + top)
+    }
+
+    private fun View.getMeasuredSize(): Size =
+        Size(
+            width.takeIf { it > 0 } ?: measuredWidth.coerceAtLeast(1),
+            height.takeIf { it > 0 } ?: measuredHeight.coerceAtLeast(1),
+        )
+
+    private fun setupHoldActionMenuItems(buttonsContainer: ViewGroup) {
+        buttonsContainer.forEach { view ->
+            when (view.id) {
+                R.id.btn_move -> {
+                    moveButton = view
+                    view.visibility = View.GONE
+                }
+                R.id.btn_hide_overlay -> {
+                    hideOverlayButton = (view as ImageButton)
+                    setOverlayViewVisibility(true)
+                    view.setOnClickListener { onToggleOverlayVisibilityClicked() }
+                }
+                else -> view.setDebouncedOnClickListener { v ->
+                    if (resizeController.isAnimating) return@setDebouncedOnClickListener
+                    holdActionMenuController?.onMenuItemClicked(v.id)
+                }
+            }
+        }
+    }
+
+    private fun onHubTouched(touchedView: View, event: MotionEvent): Boolean {
+        val controller = holdActionMenuController ?: return false
+
+        if (moveTouchEventHandler.isDragInProgress) {
+            return moveTouchEventHandler.onTouchEvent(menuLayout, touchedView, event, canMoveMenu)
+        }
+
+        val holdHandled = controller.onHubTouch(event)
+        if (controller.isDragTakeoverRequested()) {
+            controller.clearDragTakeoverRequest()
+            if (!canMoveMenu || controller.isMenuOpen()) return false
+            moveTouchEventHandler.beginDragFromMove(menuLayout, event)
+            return true
+        }
+
+        return holdHandled || event.actionMasked == MotionEvent.ACTION_DOWN
+    }
+
+    private fun onMenuBackgroundTouched(view: View, event: MotionEvent): Boolean {
+        if (event.actionMasked == MotionEvent.ACTION_OUTSIDE) {
+            holdActionMenuController?.onOutsideTouch()
+            return true
+        }
+
+        if (holdActionMenuEnabled && holdActionMenuController?.isMenuOpen() == true) {
+            if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+                holdActionMenuController?.onOutsideTouch()
+            }
+            return true
+        }
+
+        return onMoveTouched(view, event) || event.actionMasked == MotionEvent.ACTION_DOWN
     }
 
     /**
@@ -519,7 +741,10 @@ abstract class OverlayMenu(
         Log.d(TAG, "setMenuItemVisibility for ${hashCode()}, $view to $visible")
         view.visibility = if (visible) View.VISIBLE else View.GONE
 
-        if (!resizeController.isAnimating) forceWindowResize()
+        when {
+            holdActionMenuEnabled -> holdActionPanelWindow?.takeIf { it.isVisible }?.updatePosition()
+            !resizeController.isAnimating -> forceWindowResize()
+        }
     }
 
     /**
@@ -536,17 +761,23 @@ abstract class OverlayMenu(
     /** Called after menu layout resize animations complete. Override to refresh child view state. */
     protected open fun onMenuLayoutResizeAnimationsCompleted() = Unit
 
-    private fun forceWindowResize() {
+    protected fun forceWindowResize() {
         Log.d(TAG, "Force window resize")
-        onNewWindowSize(resizeController.measureMenuSize())
+        if (holdActionMenuEnabled) {
+            resizeHoldActionRailWindow()
+        } else {
+            onNewWindowSize(resizeController.measureMenuSize())
+        }
     }
 
     private fun onNewWindowSize(size: Size) {
-        menuLayoutParams.width = size.width
-        menuLayoutParams.height = size.height
+        val width = size.width.coerceAtLeast(1)
+        val height = size.height.coerceAtLeast(1)
+        menuLayoutParams.width = width
+        menuLayoutParams.height = height
 
-        if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
-            Log.d(TAG, "Updating menu window size: ${size.width}/${size.height}")
+        if (::menuLayout.isInitialized && menuLayout.isAttachedToWindow) {
+            Log.d(TAG, "Updating menu window size: $width/$height")
             windowManager.safeUpdateViewLayout(menuLayout, menuLayoutParams)
         }
     }
@@ -644,6 +875,7 @@ abstract class OverlayMenu(
      */
     private fun onMoveTouched(touchedView: View, event: MotionEvent) : Boolean {
         if (resizeController.isAnimating) return false
+        if (holdActionMenuEnabled && holdActionMenuController?.isMenuOpen() == true) return false
 
         return moveTouchEventHandler.onTouchEvent(menuLayout, touchedView, event, canMoveMenu)
     }
@@ -660,6 +892,7 @@ abstract class OverlayMenu(
         if (lifecycle.currentState.isAtLeast(Lifecycle.State.CREATED)) {
             Log.d(TAG, "Updating menu window position: ${menuLayoutParams.x}/${menuLayoutParams.y}")
             windowManager.safeUpdateViewLayout(menuLayout, menuLayoutParams)
+            holdActionPanelWindow?.takeIf { it.isVisible }?.updatePosition()
         }
     }
 

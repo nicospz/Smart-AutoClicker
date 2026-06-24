@@ -44,7 +44,7 @@ class ScreenshotDetectionController(
                 null,
                 null,
                 false,
-                "Start a smart scenario with screen capture in Smart Auto Clicker, or enable Throwlet Accessibility for one-shot detection.",
+                "Screen capture unavailable. Start a smart scenario, or enable Smart Auto Clicker accessibility screenshots for one-shot detection.",
             )
         }
         val screenshotMs = elapsedMs(screenshotStartedAtNs)

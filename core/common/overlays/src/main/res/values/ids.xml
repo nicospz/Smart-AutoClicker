@@ -20,6 +20,14 @@
     <item name="menu_background" type="id"/>
     <!-- Id for view group containing the menu items in the OverlayMenuController -->
     <item name="menu_items" type="id"/>
+    <!-- Id for the hub button in hold-action overlay menus -->
+    <item name="btn_hub" type="id"/>
+    <!-- Id for the detached hold-action panel background -->
+    <item name="hold_action_panel_background" type="id"/>
+    <!-- Fullscreen touch catcher behind the detached hold-action panel -->
+    <item name="hold_action_dismiss_scrim" type="id"/>
+    <!-- Positioned container for the detached hold-action panel card -->
+    <item name="hold_action_panel_container" type="id"/>
     <!-- Id for the move button in the OverlayMenuController -->
     <item name="btn_move" type="id"/>
     <!-- Id for the hide button in the OverlayMenuController -->

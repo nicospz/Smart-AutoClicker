@@ -16,7 +16,6 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.TextView
-import android.widget.Toast
 import com.buzbuz.smartautoclicker.feature.throwlet.BuddyCropEntity
 import com.buzbuz.smartautoclicker.feature.throwlet.BuddyCropStorage
 import com.buzbuz.smartautoclicker.feature.throwlet.HelperLane
@@ -65,10 +64,12 @@ internal class BuddyCropSaveOverlay(
         val catalog = PokemonCatalog.get(context)
         val pokemonInput = AutoCompleteTextView(context).apply {
             setAdapter(ArrayAdapter(context, android.R.layout.simple_dropdown_item_1line, catalog.allNames()))
+            threshold = 1
             hint = "Pokémon name"
+            setSingleLine(true)
             setTextColor(Color.WHITE)
             setHintTextColor(Color.LTGRAY)
-            pokemonName?.let { setText(it) }
+            pokemonName?.let { setText(it, false) }
         }
         root.addView(pokemonInput)
 
@@ -110,17 +111,26 @@ internal class BuddyCropSaveOverlay(
             WindowManager.LayoutParams.WRAP_CONTENT,
             if (Build.VERSION.SDK_INT >= 26) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
             else WindowManager.LayoutParams.TYPE_PHONE,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+            0,
             PixelFormat.TRANSLUCENT,
         ).apply {
             gravity = Gravity.BOTTOM
+            softInputMode = WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE or
+                WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
         }
 
         runCatching { windowManager?.addView(root, params) }
-            .onSuccess { overlayView = root }
+            .onSuccess {
+                overlayView = root
+                pokemonInput.requestFocus()
+                pokemonInput.post {
+                    context.getSystemService(android.view.inputmethod.InputMethodManager::class.java)
+                        ?.showSoftInput(pokemonInput, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+                    pokemonInput.showDropDown()
+                }
+            }
             .onFailure {
                 cleanupTempCrop(sacCrop)
-                toast("Could not show buddy crop save UI: ${it.message}")
                 onDismiss()
             }
     }
@@ -139,10 +149,7 @@ internal class BuddyCropSaveOverlay(
         onDismiss: () -> Unit,
     ) {
         val match = PokemonCatalog.get(context).resolveExactName(pokemonInput.text?.toString().orEmpty())
-        if (match == null) {
-            toast("Select a valid Pokémon name from the catalog")
-            return
-        }
+        if (match == null) return
         val threshold = thresholdSpinner.selectedItem as Int
         val now = System.currentTimeMillis()
         scope.launch {
@@ -181,17 +188,12 @@ internal class BuddyCropSaveOverlay(
             }
             cleanupTempCrop(sacCrop)
             hide()
-            toast("Buddy crop saved")
             onDismiss()
         }
     }
 
     private fun cleanupTempCrop(sacCrop: SacCropResult) {
         runCatching { File(sacCrop.cropBitmapPath).delete() }
-    }
-
-    private fun toast(message: String) {
-        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
     }
 
     private fun dp(value: Int): Int = (value * context.resources.displayMetrics.density).roundToInt()

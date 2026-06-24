@@ -528,7 +528,11 @@
     <string name="content_desc_ignore_event">Ignore event during runs</string>
     <string name="content_desc_image_condition">The image to be detected</string>
     <string name="content_desc_open_event_list">Open the event list</string>
+    <string name="content_desc_open_favorite_scenarios">Open favorite scenarios</string>
     <string name="content_desc_touch_probe">Preview taps without clicking</string>
+    <string name="menu_hold_action_events">Events</string>
+    <string name="menu_hold_action_favorites">Favorites</string>
+    <string name="menu_hold_action_touch_probe">Touch probe</string>
     <string name="content_desc_application_icon">The icon of the application to start.</string>
 
 

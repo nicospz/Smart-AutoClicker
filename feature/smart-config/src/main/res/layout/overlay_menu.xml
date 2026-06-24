@@ -26,13 +26,13 @@
     <androidx.cardview.widget.CardView
         android:id="@+id/menu_background"
         style="@style/AppTheme.Overlay.FloatingMenu.CardView"
-        android:animateLayoutChanges="true"
+        android:animateLayoutChanges="false"
         tools:viewBindingIgnore="true">
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:animateLayoutChanges="true">
+            android:animateLayoutChanges="false">
 
             <ImageView
                 android:id="@+id/error_badge"
@@ -40,62 +40,45 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/margin_vertical_default"
                 android:layout_marginEnd="@dimen/margin_horizontal_small"
-                app:layout_constraintEnd_toEndOf="@id/menu_items"
-                app:layout_constraintTop_toTopOf="@id/menu_items"
+                app:layout_constraintEnd_toEndOf="@id/btn_hub"
+                app:layout_constraintTop_toTopOf="@id/btn_hub"
                 android:src="@drawable/ic_badge_error"
                 android:scaleType="fitCenter"
                 android:visibility="gone"
                 tools:visibility="visible"
                 tools:ignore="ContentDescription" />
 
-            <LinearLayout
-                android:id="@+id/menu_items"
-                style="@style/AppTheme.Overlay.FloatingMenu.LayoutButtons"
+            <ImageButton
+                android:id="@+id/btn_hub"
+                style="@style/AppTheme.Overlay.FloatingMenu.Buttons"
+                android:layout_marginStart="@dimen/overlay_menu_padding_horizontal"
+                android:layout_marginEnd="@dimen/overlay_menu_padding_horizontal"
+                android:layout_marginTop="@dimen/overlay_menu_padding_vertical"
+                android:layout_marginBottom="@dimen/overlay_menu_padding_vertical"
+                android:src="@drawable/ic_play_arrow"
+                android:contentDescription="@string/content_desc_scenario_menu_hub"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toStartOf="@id/layout_debug"
-                android:animateLayoutChanges="true">
+                app:layout_constraintBottom_toBottomOf="parent" />
 
-                <ImageButton
-                    android:id="@+id/btn_play"
-                    style="@style/AppTheme.Overlay.FloatingMenu.Buttons"
-                    android:src="@drawable/ic_play_arrow"
-                    android:contentDescription="@string/content_desc_play_pause_scenario" />
-
-                <ImageButton
-                    android:id="@+id/btn_stop"
-                    style="@style/AppTheme.Overlay.FloatingMenu.Buttons"
-                    android:src="@drawable/ic_stop"
-                    android:contentDescription="@string/content_desc_stop_clicker" />
-
-                <ImageButton
-                    android:id="@+id/btn_click_list"
-                    style="@style/AppTheme.Overlay.FloatingMenu.Buttons"
-                    android:src="@drawable/ic_settings_filled"
-                    android:contentDescription="@string/content_desc_open_event_list" />
-
-                <ImageButton
-                    android:id="@+id/btn_touch_probe"
-                    style="@style/AppTheme.Overlay.FloatingMenu.Buttons"
-                    android:src="@drawable/ic_click"
-                    android:visibility="gone"
-                    android:contentDescription="@string/content_desc_touch_probe" />
-
-                <ImageButton
-                    android:id="@+id/btn_move"
-                    style="@style/AppTheme.Overlay.FloatingMenu.Buttons"
-                    android:src="@drawable/ic_move"
-                    android:contentDescription="@string/content_desc_move_menu" />
-
-            </LinearLayout>
+            <ImageView
+                android:id="@+id/hold_action_corner"
+                android:layout_width="@dimen/overlay_hold_action_corner_size"
+                android:layout_height="@dimen/overlay_hold_action_corner_size"
+                android:clickable="false"
+                android:focusable="false"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_overlay_hold_action_corner"
+                app:layout_constraintEnd_toEndOf="@id/btn_hub"
+                app:layout_constraintBottom_toBottomOf="@id/btn_hub"
+                tools:ignore="ContentDescription" />
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/layout_debug"
                 android:layout_width="@dimen/overlay_debug_panel_width"
                 android:layout_height="@dimen/overlay_debug_panel_height"
                 android:visibility="gone"
-                app:layout_constraintStart_toEndOf="@id/menu_items"
+                app:layout_constraintStart_toEndOf="@id/btn_hub"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
                 tools:visibility="visible">

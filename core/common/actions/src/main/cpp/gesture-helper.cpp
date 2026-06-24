@@ -44,6 +44,8 @@ constexpr int kGestureWaitMs = 15000;
 constexpr int64_t kMinLatestSwipeMs = 50;
 constexpr int64_t kLatestSwipeFreshMs = 30000;
 constexpr int kBattleTapJitterPx = 6;
+constexpr int kHeldThrowWiggleRadius = 6;
+constexpr int64_t kHeldThrowWiggleStepUs = 12000;
 constexpr const char* kLogPath = "/data/local/tmp/sac-gesture-helper.log";
 constexpr int kBitsPerLong = static_cast<int>(sizeof(unsigned long) * 8);
 constexpr size_t kAbsBitsLongs = (ABS_MAX + kBitsPerLong) / kBitsPerLong;
@@ -1005,8 +1007,85 @@ struct SlotReplayState {
     std::vector<input_event> absEvents;
 };
 
+std::string replayEventsToFd(int fd, const std::vector<RecordedEvent>& events, const std::string& mode);
+
+std::mutex g_heldThrowMutex;
+bool g_heldThrowActive = false;
+std::vector<TimedTouchUpdate> g_heldThrowRemainingUpdates;
+int64_t g_heldThrowBaseUs = 0;
+std::vector<input_event> g_heldThrowStartAbsEvents;
+
 bool isSynReport(const input_event& ev) {
     return ev.type == EV_SYN && ev.code == SYN_REPORT;
+}
+
+bool hasReplayPosition(const std::vector<input_event>& events) {
+    bool hasX = false;
+    bool hasY = false;
+    for (const auto& ev : events) {
+        if (ev.type != EV_ABS) continue;
+        if (ev.code == ABS_MT_POSITION_X || ev.code == ABS_X) hasX = true;
+        if (ev.code == ABS_MT_POSITION_Y || ev.code == ABS_Y) hasY = true;
+    }
+    return hasX && hasY;
+}
+
+input_event* findAbsEvent(std::vector<input_event>& events, int code) {
+    auto it = std::find_if(events.begin(), events.end(), [&](const input_event& ev) {
+        return ev.type == EV_ABS && ev.code == code;
+    });
+    return it == events.end() ? nullptr : &(*it);
+}
+
+int absValueOr(const std::vector<input_event>& events, int code, int fallback) {
+    auto it = std::find_if(events.begin(), events.end(), [&](const input_event& ev) {
+        return ev.type == EV_ABS && ev.code == code;
+    });
+    return it == events.end() ? fallback : it->value;
+}
+
+std::vector<TimedTouchUpdate> buildHeldStartWiggle(const std::vector<input_event>& startAbsEvents) {
+    std::vector<TimedTouchUpdate> wiggle;
+    wiggle.reserve(6);
+
+    auto addUpdate = [&](int64_t timeUs, bool fingerDown, const std::vector<input_event>& absEvents) {
+        TimedTouchUpdate update{};
+        update.timeUs = timeUs;
+        update.fingerDown = fingerDown;
+        update.absEvents = absEvents;
+        wiggle.push_back(update);
+    };
+
+    addUpdate(0, true, startAbsEvents);
+
+    const int x = absValueOr(startAbsEvents, ABS_MT_POSITION_X, absValueOr(startAbsEvents, ABS_X, 0));
+    const int y = absValueOr(startAbsEvents, ABS_MT_POSITION_Y, absValueOr(startAbsEvents, ABS_Y, 0));
+    const int offsets[][2] = {
+        { kHeldThrowWiggleRadius, 0 },
+        { 0, kHeldThrowWiggleRadius },
+        { -kHeldThrowWiggleRadius, 0 },
+        { 0, -kHeldThrowWiggleRadius },
+        { 0, 0 },
+    };
+
+    for (int i = 0; i < 5; ++i) {
+        std::vector<input_event> moved = startAbsEvents;
+        if (auto* ev = findAbsEvent(moved, ABS_MT_POSITION_X)) {
+            ev->value = x + offsets[i][0];
+        }
+        if (auto* ev = findAbsEvent(moved, ABS_X)) {
+            ev->value = x + offsets[i][0];
+        }
+        if (auto* ev = findAbsEvent(moved, ABS_MT_POSITION_Y)) {
+            ev->value = y + offsets[i][1];
+        }
+        if (auto* ev = findAbsEvent(moved, ABS_Y)) {
+            ev->value = y + offsets[i][1];
+        }
+        addUpdate(kHeldThrowWiggleStepUs * (i + 1), false, moved);
+    }
+
+    return wiggle;
 }
 
 bool isIgnoredReplayKey(const input_event& ev) {
@@ -1173,15 +1252,15 @@ std::vector<RecordedEvent> buildMergedConcurrentReplay(
             }
         }
 
-        input_event syn{};
-        syn.type = EV_SYN;
-        syn.code = SYN_REPORT;
-        frame.push_back(syn);
         input_event btn{};
         btn.type = EV_KEY;
         btn.code = BTN_TOUCH;
         btn.value = anyActive ? 1 : 0;
         frame.push_back(btn);
+        input_event syn{};
+        syn.type = EV_SYN;
+        syn.code = SYN_REPORT;
+        frame.push_back(syn);
 
         for (size_t index = 0; index < frame.size(); ++index) {
             RecordedEvent recorded{};
@@ -1213,6 +1292,213 @@ std::vector<RecordedEvent> buildMergedConcurrentReplay(
     }
 
     return merged;
+}
+
+std::vector<RecordedEvent> buildSingleSlotReplay(
+    const std::vector<TimedTouchUpdate>& updates,
+    int64_t baseTimeUs,
+    bool initiallyActive,
+    const std::vector<input_event>& initialAbsEvents,
+    bool liftIfStillActive) {
+    constexpr int kTrackingHeldThrow = 201;
+
+    SlotReplayState slot;
+    slot.active = initiallyActive;
+    slot.trackingId = kTrackingHeldThrow;
+    slot.absEvents = initialAbsEvents;
+
+    std::vector<RecordedEvent> replay;
+    int64_t lastTimeUs = 0;
+
+    auto emitFrame = [&](int64_t frameTimeUs, bool lift) {
+        int64_t deltaUs = std::max<int64_t>(0, frameTimeUs - lastTimeUs);
+        lastTimeUs = frameTimeUs;
+
+        std::vector<input_event> frame;
+        input_event slotEv{};
+        slotEv.type = EV_ABS;
+        slotEv.code = ABS_MT_SLOT;
+        slotEv.value = 0;
+        frame.push_back(slotEv);
+
+        input_event trackingEv{};
+        trackingEv.type = EV_ABS;
+        trackingEv.code = ABS_MT_TRACKING_ID;
+        trackingEv.value = lift ? -1 : slot.trackingId;
+        frame.push_back(trackingEv);
+
+        if (!lift) {
+            for (const auto& absEvent : slot.absEvents) {
+                frame.push_back(absEvent);
+            }
+        }
+
+        input_event btn{};
+        btn.type = EV_KEY;
+        btn.code = BTN_TOUCH;
+        btn.value = lift ? 0 : 1;
+        frame.push_back(btn);
+        input_event syn{};
+        syn.type = EV_SYN;
+        syn.code = SYN_REPORT;
+        frame.push_back(syn);
+
+        for (size_t index = 0; index < frame.size(); ++index) {
+            RecordedEvent recorded{};
+            recorded.event = frame[index];
+            recorded.deltaUs = index == 0 ? deltaUs : 0;
+            replay.push_back(recorded);
+        }
+    };
+
+    for (const auto& update : updates) {
+        int64_t frameTimeUs = std::max<int64_t>(0, update.timeUs - baseTimeUs);
+        if (update.fingerDown) slot.active = true;
+        if (!update.absEvents.empty()) {
+            applyAbsEvents(slot.absEvents, update.absEvents);
+        }
+        if (update.fingerUp) {
+            emitFrame(frameTimeUs, true);
+            slot.active = false;
+            slot.absEvents.clear();
+        } else if (slot.active) {
+            emitFrame(frameTimeUs, false);
+        }
+    }
+
+    if (liftIfStillActive && slot.active) {
+        emitFrame(lastTimeUs + 1000, true);
+    }
+
+    return replay;
+}
+
+int openHeldReplayFd(bool& closeFd, std::string& error) {
+    closeFd = false;
+    if (g_selectedDevice.path.empty()) {
+        error = "no selected input device";
+        return -1;
+    }
+
+    int fd = open(g_selectedDevice.path.c_str(), O_WRONLY | O_CLOEXEC);
+    if (fd >= 0) {
+        closeFd = true;
+        return fd;
+    }
+    int saved = errno;
+    std::string directError = "direct open_write errno=" + std::to_string(saved) +
+                              " message=\"" + strerror(saved) + "\"";
+
+    std::string uinputError;
+    int ufd = ensureUinputTouchDevice(uinputError);
+    if (ufd >= 0) {
+        return ufd;
+    }
+
+    error = directError + "; uinput " + uinputError;
+    return -1;
+}
+
+std::string replayHeldEvents(const std::vector<RecordedEvent>& events, const std::string& mode) {
+    if (events.empty()) {
+        return "ERROR code=held_empty errno=0 message=\"held throw produced no events\"";
+    }
+    bool closeFd = false;
+    std::string openError;
+    int fd = openHeldReplayFd(closeFd, openError);
+    if (fd < 0) {
+        g_lastError = openError;
+        return "ERROR code=replay_unavailable errno=0 message=\"" + openError + "\"";
+    }
+    std::string reply = replayEventsToFd(fd, events, mode);
+    if (closeFd) close(fd);
+    return reply;
+}
+
+std::string startHeldLast() {
+    if (g_recordedEvents.empty()) {
+        return "ERROR code=no_throw errno=0 message=\"no throw gesture imported\"";
+    }
+
+    auto updates = decodeGestureFrames(g_recordedEvents);
+    bool sawDown = false;
+    std::vector<input_event> absEvents;
+    TimedTouchUpdate startUpdate{};
+    size_t startIndex = updates.size();
+    for (size_t i = 0; i < updates.size(); ++i) {
+        const auto& update = updates[i];
+        if (update.fingerDown) sawDown = true;
+        if (!update.absEvents.empty()) {
+            applyAbsEvents(absEvents, update.absEvents);
+        }
+        if (sawDown && hasReplayPosition(absEvents)) {
+            startUpdate.timeUs = 0;
+            startUpdate.fingerDown = true;
+            startUpdate.absEvents = absEvents;
+            startIndex = i;
+            break;
+        }
+    }
+    if (startIndex == updates.size()) {
+        return "ERROR code=bad_throw errno=0 message=\"throw gesture has no start position\"";
+    }
+
+    std::vector<TimedTouchUpdate> startUpdates = buildHeldStartWiggle(startUpdate.absEvents);
+    auto startEvents = buildSingleSlotReplay(startUpdates, 0, false, {}, false);
+    std::string reply = replayHeldEvents(startEvents, "held-start");
+    if (reply.rfind("ERROR", 0) == 0) return reply;
+
+    std::lock_guard<std::mutex> lock(g_heldThrowMutex);
+    g_heldThrowRemainingUpdates.assign(updates.begin() + static_cast<long>(startIndex) + 1, updates.end());
+    g_heldThrowBaseUs = updates[startIndex].timeUs;
+    g_heldThrowStartAbsEvents = absEvents;
+    g_heldThrowActive = true;
+    logLine("held throw started remaining=%zu baseUs=%" PRId64, g_heldThrowRemainingUpdates.size(), g_heldThrowBaseUs);
+    return "HELD_STARTED remaining=" + std::to_string(g_heldThrowRemainingUpdates.size());
+}
+
+std::string releaseHeldLast() {
+    std::vector<TimedTouchUpdate> updates;
+    std::vector<input_event> absEvents;
+    int64_t baseUs = 0;
+    {
+        std::lock_guard<std::mutex> lock(g_heldThrowMutex);
+        if (!g_heldThrowActive) {
+            return "ERROR code=no_held errno=0 message=\"no held throw active\"";
+        }
+        updates = g_heldThrowRemainingUpdates;
+        absEvents = g_heldThrowStartAbsEvents;
+        baseUs = g_heldThrowBaseUs;
+        g_heldThrowActive = false;
+        g_heldThrowRemainingUpdates.clear();
+        g_heldThrowStartAbsEvents.clear();
+        g_heldThrowBaseUs = 0;
+    }
+
+    auto replay = buildSingleSlotReplay(updates, baseUs, true, absEvents, true);
+    logLine("held throw release updates=%zu events=%zu", updates.size(), replay.size());
+    return replayHeldEvents(replay, "held-release");
+}
+
+std::string cancelHeldLast() {
+    std::vector<TimedTouchUpdate> updates;
+    std::vector<input_event> absEvents;
+    {
+        std::lock_guard<std::mutex> lock(g_heldThrowMutex);
+        if (!g_heldThrowActive) return "OK held_cancelled active=false";
+        TimedTouchUpdate lift{};
+        lift.timeUs = 0;
+        lift.fingerUp = true;
+        updates.push_back(lift);
+        absEvents = g_heldThrowStartAbsEvents;
+        g_heldThrowActive = false;
+        g_heldThrowRemainingUpdates.clear();
+        g_heldThrowStartAbsEvents.clear();
+        g_heldThrowBaseUs = 0;
+    }
+    auto replay = buildSingleSlotReplay(updates, 0, true, absEvents, false);
+    std::string reply = replayHeldEvents(replay, "held-cancel");
+    return reply.rfind("ERROR", 0) == 0 ? reply : "OK held_cancelled active=false";
 }
 
 std::string replayEventsToFd(int fd, const std::vector<RecordedEvent>& events, const std::string& mode) {
@@ -1562,6 +1848,12 @@ void handleClient(int clientFd) {
         sendReply(clientFd, stopLatestSwipeCapture());
     } else if (command == "PLAY_LAST") {
         sendReply(clientFd, playLast());
+    } else if (command == "START_HELD_LAST") {
+        sendReply(clientFd, startHeldLast());
+    } else if (command == "RELEASE_HELD_LAST") {
+        sendReply(clientFd, releaseHeldLast());
+    } else if (command == "CANCEL_HELD_LAST") {
+        sendReply(clientFd, cancelHeldLast());
     } else if (command.rfind("START_TAP_LOOP ", 0) == 0) {
         sendReply(clientFd, startTapLoop(command.substr(strlen("START_TAP_LOOP "))));
     } else if (command.rfind("START_MULTI_TAP_LOOP ", 0) == 0) {

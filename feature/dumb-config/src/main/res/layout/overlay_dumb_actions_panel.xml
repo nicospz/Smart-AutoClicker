@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content">
+
+    <FrameLayout
+        android:id="@id/hold_action_panel_container"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|start"
+        tools:viewBindingIgnore="true">
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/hold_action_panel_background"
+            style="@style/AppTheme.Overlay.FloatingMenu.CardView"
+            tools:viewBindingIgnore="true">
+
+            <LinearLayout
+                android:id="@+id/menu_items"
+                style="@style/AppTheme.Overlay.FloatingMenu.HoldAction.LayoutItems">
+
+                <include
+                    android:id="@+id/btn_stop"
+                    layout="@layout/overlay_hold_action_menu_item" />
+
+                <include
+                    android:id="@+id/btn_show_actions"
+                    layout="@layout/overlay_hold_action_menu_item" />
+
+                <include
+                    android:id="@+id/btn_action_list"
+                    layout="@layout/overlay_hold_action_menu_item" />
+
+                <include
+                    android:id="@+id/btn_favorite_scenarios"
+                    layout="@layout/overlay_hold_action_menu_item" />
+
+            </LinearLayout>
+
+        </androidx.cardview.widget.CardView>
+
+    </FrameLayout>
+
+</FrameLayout>

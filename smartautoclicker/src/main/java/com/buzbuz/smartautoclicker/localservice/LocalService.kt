@@ -33,6 +33,7 @@ import com.buzbuz.smartautoclicker.core.common.actions.ThrowletCatchMode
 import com.buzbuz.smartautoclicker.core.common.actions.ThrowletCatchOperation
 import com.buzbuz.smartautoclicker.core.common.actions.ThrowletCatchSession
 import com.buzbuz.smartautoclicker.core.common.overlays.manager.OverlayManager
+import com.buzbuz.smartautoclicker.core.display.recorder.AccessibilityScreenshotProvider
 import com.buzbuz.smartautoclicker.core.display.recorder.DisplayRecorder
 import com.buzbuz.smartautoclicker.core.domain.model.scenario.ScreenCaptureMode
 import com.buzbuz.smartautoclicker.core.display.recorder.ThrowletCropPicker
@@ -88,6 +89,7 @@ class LocalService(
     private val throwletSyncRepository: SupabaseSyncRepository,
     private val sacSyncCoordinator: SacSyncCoordinator,
     private val displayRecorder: DisplayRecorder,
+    private val accessibilityScreenshotProvider: AccessibilityScreenshotProvider,
     private val throwletCropPicker: ThrowletCropPicker,
     private val revenueRepository: IRevenueRepository,
     private val debuggingRepository: DebuggingRepository,
@@ -134,7 +136,11 @@ class LocalService(
             gestureStore = gestureStore,
             syncRepository = throwletSyncRepository,
             actionExecutor = actionExecutor,
-            screenshotSource = ThrowletDisplayScreenshotSource(displayRecorder),
+            screenshotSource = ThrowletDisplayScreenshotSource(
+                displayRecorder = displayRecorder,
+                accessibilityScreenshotProvider = accessibilityScreenshotProvider,
+                useDisplayRecorder = { state.screenCaptureMode == ScreenCaptureMode.MEDIA_PROJECTION },
+            ),
             cropPicker = throwletCropPicker,
             buddyCropSaver = BuddyCropSaveOverlay(
                 context = context,
@@ -182,7 +188,7 @@ class LocalService(
     }
 
     override fun startDumbScenario(dumbScenario: DumbScenario) {
-        if (state.isStarted) return
+        if (state.isStarted) prepareScenarioSwitch()
         autoStartJob?.cancel()
         state = LocalServiceState(isStarted = true, isSmartLoaded = false)
         onStart(dumbScenario.id.databaseId, false, null)
@@ -228,26 +234,7 @@ class LocalService(
 
     override fun startThrowletOverlay() {
         Log.i(THROWLET_CATCH_TAG, "startThrowletOverlay isStarted=${state.isStarted}")
-        if (state.isStarted) {
-            showThrowletOverlay()
-            return
-        }
-
-        autoStartJob?.cancel()
-        state = LocalServiceState(isStarted = true, isSmartLoaded = false, isThrowletOverlayLoaded = true)
-        val notification = notificationController.createNotification(
-            context = context,
-            scenarioName = context.getString(R.string.activity_throwlet_overlay_title),
-            isRunning = false,
-            isMenuVisible = true,
-        )
-        notificationController.showNotification(context, notification)
-        onStart(null, null, null)
-
-        startJob = serviceScope.launch {
-            delay(250)
-            showThrowletOverlay()
-        }
+        showManualThrowletOverlay()
     }
 
     /**
@@ -265,9 +252,13 @@ class LocalService(
      * @param scenario the identifier of the scenario of clicks to be used for detection.
      */
     override fun startSmartScenario(resultCode: Int, data: Intent?, scenario: Scenario) {
-        if (isStarted) return
+        if (isStarted) prepareScenarioSwitch()
         autoStartJob?.cancel()
-        state = LocalServiceState(isStarted = true, isSmartLoaded = true)
+        state = LocalServiceState(
+            isStarted = true,
+            isSmartLoaded = true,
+            screenCaptureMode = scenario.screenCaptureMode,
+        )
 
         onStart(
             scenario.id.databaseId,
@@ -365,10 +356,24 @@ class LocalService(
 
     override fun showThrowletOverlay() {
         Log.i(THROWLET_CATCH_TAG, "showThrowletOverlay")
+        executeThrowletOverlay(operation = ThrowletCatchOperation.SHOW)
+    }
+
+    private fun showManualThrowletOverlay() {
+        Log.i(THROWLET_CATCH_TAG, "showManualThrowletOverlay")
+        executeThrowletOverlay(operation = ThrowletCatchOperation.SHOW)
+    }
+
+    private fun executeThrowletOverlay(
+        operation: ThrowletCatchOperation,
+    ) {
         serviceScope.launch {
             throwletHelperController.execute(
-                ThrowletCatchOperation.SHOW,
-                ThrowletCatchSession(ThrowletCatchMode.CATCH, ThrowletCatchLane.FULL),
+                operation,
+                ThrowletCatchSession(
+                    mode = ThrowletCatchMode.CATCH,
+                    lane = ThrowletCatchLane.FULL,
+                ),
             )
         }
     }
@@ -462,6 +467,22 @@ class LocalService(
         }
     }
 
+    private fun prepareScenarioSwitch() {
+        startJob?.cancel()
+        startJob = null
+        autoStartJob?.cancel()
+        autoStartJob = null
+
+        dumbEngine.release()
+        overlayManager.closeAll(context)
+        buttonOverlayController.hideAll()
+        throwletHelperController.hideAll()
+        smartProcessingRepository.stopScreenRecord()
+        notificationController.destroyNotification()
+        onStop()
+        state = LocalServiceState(isStarted = false, isSmartLoaded = false)
+    }
+
     private fun hideMenu() {
         overlayManager.hideAll()
     }
@@ -474,6 +495,7 @@ class LocalService(
 private data class LocalServiceState(
     val isStarted: Boolean,
     val isSmartLoaded: Boolean,
+    val screenCaptureMode: ScreenCaptureMode? = null,
     val isButtonOverlayLoaded: Boolean = false,
     val isThrowletOverlayLoaded: Boolean = false,
 )

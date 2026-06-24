@@ -70,6 +70,14 @@
     <dimen name="overlay_menu_padding_horizontal">3dp</dimen>
     <dimen name="overlay_menu_padding_vertical">3dp</dimen>
     <dimen name="overlay_menu_corner_radius">7dp</dimen>
+    <dimen name="overlay_hold_action_panel_gap">6dp</dimen>
+    <dimen name="overlay_hold_action_corner_size">8dp</dimen>
+    <dimen name="overlay_hold_action_item_min_width">148dp</dimen>
+    <dimen name="overlay_hold_action_item_padding_horizontal">10dp</dimen>
+    <dimen name="overlay_hold_action_item_padding_vertical">8dp</dimen>
+    <dimen name="overlay_hold_action_item_icon_size">28dp</dimen>
+    <dimen name="overlay_hold_action_item_corner_radius">5dp</dimen>
+    <dimen name="overlay_hold_action_label_text_size">14sp</dimen>
 
     <dimen name="overlay_position_selector_thickness">4dp</dimen>
     <dimen name="overlay_position_selector_radius">20dp</dimen>

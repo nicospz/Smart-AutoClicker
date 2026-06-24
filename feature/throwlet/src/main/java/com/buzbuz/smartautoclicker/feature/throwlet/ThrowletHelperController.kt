@@ -4,7 +4,6 @@
 package com.buzbuz.smartautoclicker.feature.throwlet
 
 import android.content.Context
-import android.graphics.Bitmap
 import android.graphics.Rect
 import android.util.Log
 import android.view.View
@@ -49,10 +48,12 @@ class ThrowletHelperController(
     private val calibrationStore = SplitCalibrationStore(database, context)
     private val berryStore = BerryStore(context)
     private val fastCatchStore = FastCatchStore(context)
+    private val holdToThrowStore = HoldToThrowStore(context)
+    private val throwSpeedStore = ThrowSpeedStore(context)
+    private val deviceThrowTuningStore = DeviceThrowTuningStore(context)
     private lateinit var berryAutomation: BerryAutomationCoordinator
     private lateinit var buddyAutomation: BuddyAutomationCoordinator
     private var berryMenuPopup: PopupWindow? = null
-    private val pokemonPickerOverlay = ManualPokemonPickerOverlay(context)
 
     private val manager = HelperSessionManager { mode, lane ->
         val splitLayout = if (lane == HelperLane.FULL) {
@@ -90,7 +91,6 @@ class ThrowletHelperController(
             scope = scope,
             helperClient = helperClient,
             berryForLane = { lane -> manager.activeSessions[lane]?.selectedBerry ?: BerryAction.NONE },
-            onFlowStatus = { _, message -> toast(message) },
         )
         buddyAutomation = BuddyAutomationCoordinator(
             context = context,
@@ -113,7 +113,6 @@ class ThrowletHelperController(
                 withContext(Dispatchers.IO) { gestureStore.find(pokemonKey, storageMode) != null }
             },
             playGestureForLane = { lane -> playBuddyGesture(lane) },
-            onFlowStatus = { _, message -> toast(message) },
         )
     }
 
@@ -122,11 +121,11 @@ class ThrowletHelperController(
         val lane = session.lane.toHelperLane()
         when (operation) {
             ThrowletCatchOperation.SHOW ->
-                startSession(mode, lane, session.pokemonNameOverride, session.manualSelectionOnly)
+                startSession(mode, lane, session.pokemonNameOverride)
             ThrowletCatchOperation.HIDE -> stopSession(lane)
             ThrowletCatchOperation.TOGGLE -> {
                 if (manager.activeSessions.containsKey(lane)) stopSession(lane)
-                else startSession(mode, lane, session.pokemonNameOverride, session.manualSelectionOnly)
+                else startSession(mode, lane, session.pokemonNameOverride)
             }
         }
     }
@@ -134,7 +133,6 @@ class ThrowletHelperController(
     fun hideAll() {
         berryMenuPopup?.dismiss()
         berryMenuPopup = null
-        pokemonPickerOverlay.hide()
         manager.stopAll()
     }
 
@@ -142,25 +140,16 @@ class ThrowletHelperController(
         mode: HelperMode,
         lane: HelperLane,
         pokemonNameOverride: String? = null,
-        manualSelectionOnly: Boolean = false,
     ) {
         Log.i(TAG, "startSession mode=$mode lane=$lane override=${pokemonNameOverride ?: "<none>"}")
         scope.launch { onThrowletSyncRequested() }
         val session = manager.start(
             mode = mode,
             lane = lane,
-            detectOnStart = !manualSelectionOnly,
-            pokemonName = pokemonNameOverride,
+            detectOnStart = false,
         )
-        session.manualSelectionOnly = manualSelectionOnly
-        if (manualSelectionOnly) {
-            session.detectionState = manualPokemonState(pokemonNameOverride)
-        }
         scope.launch {
-            session.detectionState?.let { session.detectionState = enrichDetectionState(session, it) }
-            applyBerrySelection(session)
-            applyFastCatchSelection(session)
-            renderSessionRail(session, "session-start")
+            detectAndRender(session, "session-start", pokemonNameOverride)
             if (mode == HelperMode.BUDDY) {
                 buddyAutomation.onBuddySessionStarted(lane)
             }
@@ -175,43 +164,36 @@ class ThrowletHelperController(
 
     override fun refresh(lane: HelperLane) {
         val session = manager.activeSessions[lane] ?: return
-        if (session.manualSelectionOnly) {
-            selectPokemon(lane)
-            return
+        scope.launch { detectAndRender(session, "refresh") }
+    }
+
+    private suspend fun detectAndRender(
+        session: HelperSession,
+        reason: String,
+        pokemonNameOverride: String? = null,
+    ) {
+        session.railController.hide()
+        delay(300)
+        val raw = withContext(Dispatchers.IO) {
+            session.detectionController.detectOnce(session.mode, session.lane, pokemonNameOverride)
         }
-        scope.launch {
-            session.railController.hide()
-            delay(300)
-            val raw = withContext(Dispatchers.IO) {
-                session.detectionController.detectOnce(session.mode, lane)
-            }
-            val state = enrichDetectionState(session, raw)
-            session.detectionState = state
-            applyBerrySelection(session)
-            applyFastCatchSelection(session)
-            session.railController.show()
-            renderSessionRail(session, "refresh")
-        }
+        val state = enrichDetectionState(session, raw)
+        session.detectionState = state
+        applyBerrySelection(session)
+        applyFastCatchSelection(session)
+        session.railController.show()
+        renderSessionRail(session, reason)
     }
 
     override fun saveLatest(lane: HelperLane) {
         val session = manager.activeSessions[lane] ?: return
         scope.launch {
-            if (session.manualSelectionOnly && session.detectionState?.pokemonKey == null) {
-                toast("Choose a Pokémon first")
-                selectPokemon(lane)
-                return@launch
-            }
             ensureLatestSwipeCapture("before-save-$lane")
             val export = GestureHelperSession.runExclusive {
                 helperClient.send("EXPORT_LATEST_SWIPE").toExportedGesture()
-            } ?: run {
-                toast("No latest swipe exported")
-                return@launch
-            }
+            } ?: return@launch
             val decoded = RawGestureCodec.decode(export.payloadHex).getOrElse { error ->
                 Log.e(TAG, "record decode failed lane=$lane", error)
-                toast("Gesture export unreadable")
                 return@launch
             }
             val display = displaySize()
@@ -219,10 +201,7 @@ class ThrowletHelperController(
             val laneOffsetTouch = calibration.topToBottomTouchDy
             if (session.mode == HelperMode.CATCH && lane != HelperLane.FULL) {
                 val dominant = decoded.dominantLane(laneOffsetTouch)
-                if (dominant != lane) {
-                    toast("latest swipe was not in this lane")
-                    return@launch
-                }
+                if (dominant != lane) return@launch
             }
             val storageMode = GestureModes.storageMode(session.mode, lane)
             val normalized = when (lane) {
@@ -251,10 +230,6 @@ class ThrowletHelperController(
             }
             session.detectionState = session.detectionState?.let { enrichDetectionState(session, it) }
             session.detectionState?.let { renderSessionRail(session, "save") }
-            toast(
-                if (session.mode == HelperMode.CATCH) "Saved throw gesture"
-                else "Saved buddy gesture for $pokemonName",
-            )
         }
     }
 
@@ -262,21 +237,16 @@ class ThrowletHelperController(
         val session = manager.activeSessions[lane] ?: return
         scope.launch {
             if (session.mode == HelperMode.BUDDY) {
-                val ok = playBuddyGesture(lane)
-                toast(if (ok) "Played once" else "Buddy play failed")
+                playBuddyGesture(lane)
                 return@launch
             }
             val state = session.detectionState
             val pokemonKey = state?.pokemonKey ?: "unknown"
             val storageMode = GestureModes.storageMode(session.mode, lane)
             val entity = gestureStore.find(pokemonKey, storageMode)
-            if (entity == null) {
-                toast("No saved gesture for ${state?.pokemonName ?: "this Pokémon"}")
-                return@launch
-            }
+            if (entity == null) return@launch
             val decoded = RawGestureCodec.decode(entity.payloadHex).getOrElse { error ->
                 Log.e(TAG, "replay decode failed lane=$lane", error)
-                toast("Saved gesture unreadable")
                 return@launch
             }
             val calibration = calibration()
@@ -286,23 +256,18 @@ class ThrowletHelperController(
                 targetLane = lane,
                 laneOffsetTouch = calibration.topToBottomTouchDy,
             )
-            val throwHex = replay.encodeHex()
-            val playReply = if (session.fastCatchEnabled) {
+            val throwHex = replay.withCustomThrowTuning(session)
+                .withThrowTuning(deviceThrowTuningStore.load())
+                .encodeHex()
+            if (session.fastCatchEnabled) {
                 playCatchWithFastHold(throwHex, lane, calibration.topToBottomTouchDy)
             } else {
                 GestureHelperSession.runExclusive {
                     val importReply = helperClient.send("IMPORT_GESTURE $throwHex")
-                    if (!importReply.ok) return@runExclusive importReply
+                    if (!importReply.ok) return@runExclusive
                     helperClient.send("PLAY_LAST")
                 }
             }
-            toast(
-                when {
-                    playReply.ok && session.fastCatchEnabled -> "Fast catch played"
-                    playReply.ok -> "Played once"
-                    else -> playReply.displayText
-                },
-            )
         }
     }
 
@@ -322,7 +287,6 @@ class ThrowletHelperController(
             val frame = screenshotSource.captureBlocking()
             if (frame == null) {
                 session.railController.show()
-                toast("Start a smart scenario with screen capture first")
                 return@launch
             }
             val frameSize = SizeI(frame.width, frame.height)
@@ -364,7 +328,7 @@ class ThrowletHelperController(
         }
         val state = session.detectionState
         if (state?.pokemonName == null) {
-            if (session.manualSelectionOnly) selectPokemon(lane) else refresh(lane)
+            refresh(lane)
             return
         }
         if (!state.hasGesture) return
@@ -381,7 +345,6 @@ class ThrowletHelperController(
             if (!saved) {
                 session.detectionState = previous
                 renderSessionRail(session, "cycle-throw-score-revert")
-                toast("Could not save throw score")
             } else {
                 withContext(Dispatchers.IO) { gestureStore.find(pokemonKey, storageMode) }?.let { gesture ->
                     logSupabaseSync("throw score push", withContext(Dispatchers.IO) { syncRepository.pushGesture(gesture) })
@@ -404,17 +367,13 @@ class ThrowletHelperController(
             session.selectedBerry = berry
             berryStore.save(session.detectionState?.pokemonName, berry)
             renderBerryIcon(lane)
-            toast(if (berry == BerryAction.NONE) "Berry cleared" else "Selected ${berry.label}")
         }
     }
 
     override fun throwBerry(lane: HelperLane) {
         val session = manager.activeSessions[lane] ?: return
         if (session.mode != HelperMode.CATCH) return
-        if (session.selectedBerry == BerryAction.NONE) {
-            toast("Choose a berry first")
-            return
-        }
+        if (session.selectedBerry == BerryAction.NONE) return
         berryAutomation.throwBerryNow(lane)
     }
 
@@ -423,33 +382,75 @@ class ThrowletHelperController(
         if (session.mode != HelperMode.CATCH) return
         session.fastCatchEnabled = fastCatchStore.toggle(lane)
         renderFastCatchIcon(lane)
-        toast(if (session.fastCatchEnabled) "Fast catch on" else "Fast catch off")
     }
 
-    override fun selectPokemon(lane: HelperLane) {
+    override fun toggleHoldToThrow(lane: HelperLane) {
         val session = manager.activeSessions[lane] ?: return
-        if (session.mode != HelperMode.CATCH) {
-            refresh(lane)
-            return
-        }
+        if (session.mode != HelperMode.CATCH) return
+        session.holdToThrowEnabled = holdToThrowStore.toggle(lane)
+        renderHoldToThrowIcon(lane)
+    }
+
+    override fun toggleThrowSpeed(lane: HelperLane) {
+        val session = manager.activeSessions[lane] ?: return
+        if (session.mode != HelperMode.CATCH) return
+        session.customThrowSpeedEnabled = throwSpeedStore.toggle(lane)
+        renderThrowSpeedIcon(lane)
+    }
+
+    override fun openThrowSpeedDialog(lane: HelperLane) {
+        val session = manager.activeSessions[lane] ?: return
+        if (session.mode != HelperMode.CATCH) return
+        ThrowSpeedDialog.show(
+            context = context,
+            initialTuning = session.throwGestureTuning,
+            onTuningConfirmed = { tuning ->
+                session.throwGestureTuning = throwSpeedStore.saveTuning(lane, tuning)
+                session.customThrowSpeedEnabled = true
+                throwSpeedStore.saveEnabled(lane, true)
+                renderThrowSpeedIcon(lane)
+            },
+            onSaveAndTransform = { tuning ->
+                scope.launch {
+                    saveAndTransformThrowGesture(session, lane, tuning)
+                }
+            },
+        )
+    }
+
+    override fun startHeldThrow(lane: HelperLane) {
+        val session = manager.activeSessions[lane] ?: return
+        if (session.mode != HelperMode.CATCH || !session.holdToThrowEnabled || session.heldThrowActive) return
         scope.launch {
-            session.railController.hide()
-            pokemonPickerOverlay.show(
-                initialPokemonName = session.detectionState?.pokemonName,
-                onPokemonSelected = { pokemonName ->
-                    scope.launch {
-                        session.detectionState = enrichDetectionState(session, manualPokemonState(pokemonName))
-                        applyBerrySelection(session)
-                        applyFastCatchSelection(session)
-                        session.railController.show()
-                        renderSessionRail(session, "manual-pokemon-selected")
-                    }
-                },
-                onDismiss = {
-                    session.railController.show()
-                    renderSessionRail(session, "manual-pokemon-dismiss")
-                },
-            )
+            val throwHex = storedThrowPayloadForReplay(session, lane) ?: return@launch
+            val reply = GestureHelperSession.runExclusive {
+                helperClient.startHeldThrow(throwHex)
+            }
+            if (reply.ok) {
+                session.heldThrowActive = true
+            }
+        }
+    }
+
+    override fun releaseHeldThrow(lane: HelperLane) {
+        val session = manager.activeSessions[lane] ?: return
+        if (session.mode != HelperMode.CATCH || !session.holdToThrowEnabled) return
+        scope.launch {
+            GestureHelperSession.runExclusive {
+                helperClient.releaseHeldThrow()
+            }
+            session.heldThrowActive = false
+        }
+    }
+
+    override fun cancelHeldThrow(lane: HelperLane) {
+        val session = manager.activeSessions[lane] ?: return
+        if (session.mode != HelperMode.CATCH || !session.holdToThrowEnabled) return
+        scope.launch {
+            GestureHelperSession.runExclusive {
+                helperClient.cancelHeldThrow()
+            }
+            session.heldThrowActive = false
         }
     }
 
@@ -468,6 +469,70 @@ class ThrowletHelperController(
 
             playFastCatchFinishTap(lane) ?: playReply
         }
+    }
+
+    private suspend fun storedThrowPayloadForReplay(session: HelperSession, lane: HelperLane): String? {
+        val state = session.detectionState
+        val pokemonKey = state?.pokemonKey ?: "unknown"
+        val storageMode = GestureModes.storageMode(session.mode, lane)
+        val entity = gestureStore.find(pokemonKey, storageMode)
+        if (entity == null) return null
+        val decoded = RawGestureCodec.decode(entity.payloadHex).getOrElse { error ->
+            Log.e(TAG, "held replay decode failed lane=$lane", error)
+            return null
+        }
+        val calibration = calibration()
+        return SplitLaneTransforms.forReplayStored(
+            payload = decoded,
+            sourceLane = entity.sourceLane,
+            targetLane = lane,
+            laneOffsetTouch = calibration.topToBottomTouchDy,
+        ).withCustomThrowTuning(session)
+            .withThrowTuning(deviceThrowTuningStore.load())
+            .encodeHex()
+    }
+
+    private suspend fun saveAndTransformThrowGesture(
+        session: HelperSession,
+        lane: HelperLane,
+        tuning: ThrowGestureTuning,
+    ) {
+        if (session.mode != HelperMode.CATCH) return
+        val state = session.detectionState ?: return
+        val pokemonKey = state.pokemonKey ?: return
+        val pokemonName = state.pokemonName ?: return
+        val storageMode = GestureModes.storageMode(session.mode, lane)
+        val entity = withContext(Dispatchers.IO) { gestureStore.find(pokemonKey, storageMode) } ?: return
+        val decoded = RawGestureCodec.decode(entity.payloadHex).getOrElse { error ->
+            Log.e(TAG, "transform decode failed lane=$lane", error)
+            return
+        }
+        val calibration = calibration()
+        val transformed = SplitLaneTransforms.forReplayStored(
+            payload = decoded,
+            sourceLane = entity.sourceLane,
+            targetLane = lane,
+            laneOffsetTouch = calibration.topToBottomTouchDy,
+        ).withThrowTuning(tuning)
+        val saved = withContext(Dispatchers.IO) {
+            gestureStore.save(
+                pokemonKey = pokemonKey,
+                pokemonName = pokemonName,
+                gestureMode = storageMode,
+                payloadHex = transformed.encodeHex(),
+                eventCount = transformed.events.size,
+                durationMs = transformed.durationMs,
+                helperMode = session.mode,
+                sourceLane = lane,
+                display = displaySize(),
+                laneOffsetTouch = calibration.topToBottomTouchDy,
+            )
+        }
+        logSupabaseSync("gesture transform push", withContext(Dispatchers.IO) { syncRepository.pushGesture(saved) })
+        session.throwGestureTuning = throwSpeedStore.resetTuning(lane)
+        session.customThrowSpeedEnabled = false
+        session.detectionState = session.detectionState?.let { enrichDetectionState(session, it) }
+        renderSessionRail(session, "save-transform")
     }
 
     private suspend fun playFastCatchFinishTap(lane: HelperLane): HelperReply? {
@@ -526,6 +591,8 @@ class ThrowletHelperController(
             updateRail(state)
             updateBerry(session.selectedBerry)
             updateFastCatch(session.fastCatchEnabled)
+            updateHoldToThrow(session.holdToThrowEnabled)
+            updateThrowTuning(session.customThrowSpeedEnabled, session.throwGestureTuning)
         }
     }
 
@@ -539,6 +606,17 @@ class ThrowletHelperController(
         (session.railController as? AndroidRailController)?.updateFastCatch(session.fastCatchEnabled)
     }
 
+    private fun renderHoldToThrowIcon(lane: HelperLane) {
+        val session = manager.activeSessions[lane] ?: return
+        (session.railController as? AndroidRailController)?.updateHoldToThrow(session.holdToThrowEnabled)
+    }
+
+    private fun renderThrowSpeedIcon(lane: HelperLane) {
+        val session = manager.activeSessions[lane] ?: return
+        (session.railController as? AndroidRailController)
+            ?.updateThrowTuning(session.customThrowSpeedEnabled, session.throwGestureTuning)
+    }
+
     private fun applyBerrySelection(session: HelperSession) {
         session.selectedBerry = berryStore.load(session.detectionState?.pokemonName)
     }
@@ -546,6 +624,9 @@ class ThrowletHelperController(
     private fun applyFastCatchSelection(session: HelperSession) {
         if (session.mode != HelperMode.CATCH) return
         session.fastCatchEnabled = fastCatchStore.load(session.lane)
+        session.holdToThrowEnabled = holdToThrowStore.load(session.lane)
+        session.customThrowSpeedEnabled = throwSpeedStore.loadEnabled(session.lane)
+        session.throwGestureTuning = throwSpeedStore.loadTuning(session.lane)
     }
 
     private suspend fun enrichDetectionState(session: HelperSession, state: CatchDetectionState): CatchDetectionState {
@@ -555,30 +636,6 @@ class ThrowletHelperController(
         return state.copy(
             hasGesture = entity != null,
             throwScore = ThrowScore.fromStored(entity?.throwScore),
-        )
-    }
-
-    private fun manualPokemonState(pokemonName: String?): CatchDetectionState {
-        val clean = pokemonName?.trim().orEmpty()
-        if (clean.isBlank()) {
-            return CatchDetectionState(
-                pokemonKey = null,
-                pokemonName = null,
-                confidencePercent = null,
-                hasGesture = false,
-                message = "Choose a Pokémon",
-            )
-        }
-
-        val match = PokemonCatalog.get(context).resolveExactName(clean)
-        val name = match?.name ?: clean
-        val key = match?.key ?: clean.lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-')
-        return CatchDetectionState(
-            pokemonKey = key,
-            pokemonName = name,
-            confidencePercent = 100,
-            hasGesture = false,
-            message = "Using manually selected Pokémon",
         )
     }
 
@@ -601,8 +658,6 @@ class ThrowletHelperController(
         Log.i(TAG, "supabase $label ${result.statusText()}")
     }
 
-    private fun toast(message: String) = context.toast(message)
-
     private fun elapsedMs(startedAtNs: Long): Long =
         (System.nanoTime() - startedAtNs) / 1_000_000
 
@@ -616,6 +671,17 @@ class ThrowletHelperController(
         private const val FAST_CATCH_FINISH_BOTTOM_TAP_X = 150
         private const val FAST_CATCH_FINISH_BOTTOM_TAP_Y = 1780
     }
+}
+
+private fun RawGesturePayload.withCustomThrowTuning(session: HelperSession): RawGesturePayload {
+    if (!session.customThrowSpeedEnabled) return this
+    return withThrowTuning(session.throwGestureTuning)
+}
+
+private fun RawGesturePayload.withThrowTuning(tuning: ThrowGestureTuning): RawGesturePayload {
+    val powered = if (tuning.power == 1.0) this else powered(tuning.power)
+    val translated = powered.translated(tuning.dx, tuning.dy)
+    return if (tuning.speed == 1.0) translated else translated.withPlaybackSpeed(tuning.speed)
 }
 
 fun interface ThrowletBuddyCropSaver {

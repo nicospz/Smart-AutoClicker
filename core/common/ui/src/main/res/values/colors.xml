@@ -25,6 +25,7 @@
 
     <color name="overlayMenuBackground">#77000000</color>
     <color name="overlayMenuButtons">#FFFFFF</color>
+    <color name="overlayHoldActionItemHoverBackground">#55FFFFFF</color>
     <color name="overlayViewPrimary">#FFFFFF</color>
     <color name="overlayViewAccentPrimary">@color/primary</color>
     <color name="overlayViewAccentSecondary">@color/accent</color>

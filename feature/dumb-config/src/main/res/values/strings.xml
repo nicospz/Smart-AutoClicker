@@ -162,6 +162,10 @@
     <string name="content_desc_add_action">Add a new action to the scenario</string>
     <string name="content_desc_show_actions">Show or hide the actions created</string>
     <string name="content_desc_open_action_list">Open the list of actions</string>
+    <string name="content_desc_open_favorite_scenarios">Open favorite scenarios</string>
+    <string name="menu_hold_action_preview">Preview</string>
+    <string name="menu_hold_action_configure">Configure</string>
+    <string name="menu_hold_action_favorites">Favorites</string>
 
     <!--
       - The following strings should be kept the same in all languages.

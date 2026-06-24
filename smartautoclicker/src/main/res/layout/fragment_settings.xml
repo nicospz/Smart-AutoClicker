@@ -98,6 +98,17 @@
             android:layout_height="1dp"/>
 
         <include layout="@layout/include_field_selector"
+            android:id="@+id/field_throwlet_device_tuning"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginVertical="@dimen/margin_vertical_default"/>
+
+        <com.google.android.material.divider.MaterialDivider
+            style="@style/AppTheme.Widget.Divider.Horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"/>
+
+        <include layout="@layout/include_field_selector"
             android:id="@+id/field_shizuku_helper_status"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

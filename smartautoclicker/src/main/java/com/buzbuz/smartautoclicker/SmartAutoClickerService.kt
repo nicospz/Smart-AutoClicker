@@ -150,6 +150,7 @@ class SmartAutoClickerService : AccessibilityService() {
                 throwletSyncRepository = throwletSyncRepository,
                 sacSyncCoordinator = sacSyncCoordinator,
                 displayRecorder = displayRecorder,
+                accessibilityScreenshotProvider = accessibilityScreenshotProvider,
                 throwletCropPicker = throwletCropPicker,
                 revenueRepository = revenueRepository,
                 settingsRepository = settingsRepository,

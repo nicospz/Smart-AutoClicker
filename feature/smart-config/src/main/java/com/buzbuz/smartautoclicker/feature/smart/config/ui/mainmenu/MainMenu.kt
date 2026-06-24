@@ -17,6 +17,7 @@
 package com.buzbuz.smartautoclicker.feature.smart.config.ui.mainmenu
 
 import android.content.DialogInterface
+import android.content.Intent
 import android.util.Log
 import android.util.Size
 import android.view.KeyEvent
@@ -36,9 +37,12 @@ import com.buzbuz.smartautoclicker.core.common.overlays.base.viewModels
 import com.buzbuz.smartautoclicker.core.common.overlays.manager.OverlayManager.Companion.showAsOverlay
 import com.buzbuz.smartautoclicker.core.common.overlays.menu.OverlayMenu
 import com.buzbuz.smartautoclicker.core.ui.utils.AnimatedStatesImageButtonController
+import com.buzbuz.smartautoclicker.core.ui.utils.bindHoldActionMenuItem
 import com.buzbuz.smartautoclicker.core.ui.utils.getDynamicColorsContext
+import com.buzbuz.smartautoclicker.core.ui.utils.holdActionMenuItemIcon
 import com.buzbuz.smartautoclicker.core.ui.views.touchprobe.TouchProbeOverlayView
 import com.buzbuz.smartautoclicker.feature.smart.config.R
+import com.buzbuz.smartautoclicker.feature.smart.config.databinding.OverlayMenuActionsPanelBinding
 import com.buzbuz.smartautoclicker.feature.smart.config.databinding.OverlayMenuBinding
 import com.buzbuz.smartautoclicker.feature.smart.config.di.ScenarioConfigViewModelsEntryPoint
 import com.buzbuz.smartautoclicker.feature.smart.config.ui.common.starters.newRestartMediaProjectionStarterOverlay
@@ -62,7 +66,10 @@ import kotlinx.coroutines.launch
  * When the debug view setting is enabled, a touch probe overlay can be toggled to preview taps and swipes without
  * forwarding them to the application below.
  */
-class MainMenu(private val onStopClicked: () -> Unit) : OverlayMenu() {
+class MainMenu(private val onStopClicked: () -> Unit) : OverlayMenu(
+    theme = R.style.ScenarioConfigTheme,
+    holdActionMenuEnabled = true,
+) {
 
     /** The view model for this menu. */
     private val viewModel: MainMenuModel by viewModels(
@@ -80,6 +87,8 @@ class MainMenu(private val onStopClicked: () -> Unit) : OverlayMenu() {
 
     /** View binding for the content of the overlay. */
     private lateinit var viewBinding: OverlayMenuBinding
+    /** View binding for the detached hold-action panel. */
+    private lateinit var actionsPanelBinding: OverlayMenuActionsPanelBinding
     /** Controls the animations of the play/pause button. */
     private lateinit var playPauseButtonController: AnimatedStatesImageButtonController
     /** Adapter upon actions being executed while in live debugging. */
@@ -106,9 +115,34 @@ class MainMenu(private val onStopClicked: () -> Unit) : OverlayMenu() {
             state2to1AnimationRes = R.drawable.anim_pause_play,
         )
         viewBinding = OverlayMenuBinding.inflate(layoutInflater)
-        playPauseButtonController.attachView(viewBinding.btnPlay)
+        playPauseButtonController.attachView(viewBinding.btnHub)
 
         return viewBinding.root
+    }
+
+    override fun onCreateHoldActionPanel(layoutInflater: LayoutInflater): ViewGroup {
+        actionsPanelBinding = OverlayMenuActionsPanelBinding.inflate(layoutInflater)
+        actionsPanelBinding.btnStop.bindHoldActionMenuItem(
+            iconRes = R.drawable.ic_stop,
+            labelRes = com.buzbuz.smartautoclicker.core.ui.R.string.menu_hold_action_stop,
+            contentDescriptionRes = com.buzbuz.smartautoclicker.core.ui.R.string.content_desc_stop_clicker,
+        )
+        actionsPanelBinding.btnClickList.bindHoldActionMenuItem(
+            iconRes = R.drawable.ic_settings_filled,
+            labelRes = R.string.menu_hold_action_events,
+            contentDescriptionRes = R.string.content_desc_open_event_list,
+        )
+        actionsPanelBinding.btnFavoriteScenarios.bindHoldActionMenuItem(
+            iconRes = R.drawable.ic_favorite_outline,
+            labelRes = R.string.menu_hold_action_favorites,
+            contentDescriptionRes = R.string.content_desc_open_favorite_scenarios,
+        )
+        actionsPanelBinding.btnTouchProbe.bindHoldActionMenuItem(
+            iconRes = R.drawable.ic_click,
+            labelRes = R.string.menu_hold_action_touch_probe,
+            contentDescriptionRes = R.string.content_desc_touch_probe,
+        )
+        return actionsPanelBinding.root
     }
 
     override fun onCreate() {
@@ -150,8 +184,8 @@ class MainMenu(private val onStopClicked: () -> Unit) : OverlayMenu() {
         if (isTouchProbeActive) restoreTouchProbeOverlay()
 
         viewModel.monitorViews(
-            playMenuButton = viewBinding.btnPlay,
-            configMenuButton = viewBinding.btnClickList,
+            playMenuButton = viewBinding.btnHub,
+            configMenuButton = actionsPanelBinding.btnClickList,
         )
 
         // Start loading advertisement if needed
@@ -203,20 +237,26 @@ class MainMenu(private val onStopClicked: () -> Unit) : OverlayMenu() {
         return false
     }
 
+    override fun onHubQuickTap() {
+        onPlayPauseClicked()
+    }
+
     override fun onMenuItemClicked(viewId: Int) {
         when (viewId) {
-            R.id.btn_play -> onPlayPauseClicked()
             R.id.btn_click_list -> onConfigureClicked()
+            R.id.btn_favorite_scenarios -> onFavoriteScenariosClicked()
             R.id.btn_stop -> onStopClicked()
             R.id.btn_touch_probe -> onTouchProbeClicked()
         }
     }
 
     override fun getWindowMaximumSize(backgroundView: ViewGroup): Size {
-        val bgSize = super.getWindowMaximumSize(backgroundView)
+        val railSize = super.getWindowMaximumSize(backgroundView)
+        val debugPanelWidth = context.resources.getDimensionPixelSize(R.dimen.overlay_debug_panel_width)
+        val debugPanelHeight = context.resources.getDimensionPixelSize(R.dimen.overlay_debug_panel_height)
         return Size(
-            bgSize.width + context.resources.getDimensionPixelSize(R.dimen.overlay_debug_panel_width),
-            bgSize.height,
+            railSize.width + debugPanelWidth,
+            maxOf(railSize.height, debugPanelHeight),
         )
     }
 
@@ -252,6 +292,14 @@ class MainMenu(private val onStopClicked: () -> Unit) : OverlayMenu() {
         }
 
         viewModel.toggleDetection(context)
+    }
+
+    private fun onFavoriteScenariosClicked() {
+        Log.i(TAG, "onFavoriteScenariosClicked")
+        context.sendBroadcast(
+            Intent(ACTION_SHOW_FAVORITE_SCENARIOS)
+                .setPackage(context.packageName)
+        )
     }
 
     private fun onTouchProbeClicked() {
@@ -298,11 +346,11 @@ class MainMenu(private val onStopClicked: () -> Unit) : OverlayMenu() {
         val enabled = viewModel.isTouchProbeFeatureEnabled()
         Log.d(TAG, "updateTouchProbeFeatureVisibility enabled=$enabled touchProbeActive=$isTouchProbeActive")
         if (enabled) {
-            setMenuItemVisibility(viewBinding.btnTouchProbe, true)
+            setMenuItemVisibility(actionsPanelBinding.btnTouchProbe, true)
             refreshTouchProbeButtonState()
         } else {
             if (isTouchProbeActive) disableTouchProbe()
-            setMenuItemVisibility(viewBinding.btnTouchProbe, false)
+            setMenuItemVisibility(actionsPanelBinding.btnTouchProbe, false)
         }
     }
 
@@ -312,60 +360,67 @@ class MainMenu(private val onStopClicked: () -> Unit) : OverlayMenu() {
     }
 
     private fun refreshTouchProbeButtonState() {
-        if (viewBinding.btnTouchProbe.visibility != View.VISIBLE) return
+        if (actionsPanelBinding.btnTouchProbe.visibility != View.VISIBLE) return
         updateTouchProbeButtonState(isActive = isTouchProbeActive)
     }
 
     private fun updateTouchProbeButtonState(isActive: Boolean) {
-        setMenuItemViewEnabled(viewBinding.btnTouchProbe, enabled = isActive, clickable = true)
+        setMenuItemViewEnabled(actionsPanelBinding.btnTouchProbe, enabled = isActive, clickable = true)
+        val icon = actionsPanelBinding.btnTouchProbe.holdActionMenuItemIcon()
         if (isActive) {
-            viewBinding.btnTouchProbe.setColorFilter(
+            icon.setColorFilter(
                 ContextCompat.getColor(context, com.buzbuz.smartautoclicker.core.ui.R.color.overlayViewPrimary),
             )
         } else {
-            viewBinding.btnTouchProbe.clearColorFilter()
+            icon.clearColorFilter()
+            icon.imageTintList = ContextCompat.getColorStateList(
+                context,
+                com.buzbuz.smartautoclicker.core.ui.R.color.overlayMenuButtons,
+            )
         }
     }
 
     /** Refresh the play menu item according to the scenario state. */
     private fun updatePlayPauseButtonEnabledState(canStartDetection: Boolean) =
-        setMenuItemViewEnabled(viewBinding.btnPlay, canStartDetection)
+        setMenuItemViewEnabled(viewBinding.btnHub, canStartDetection)
 
     /** Refresh the menu layout according to the detection state. */
     private fun updateDetectionState(newState: UiState) {
-        val currentState = viewBinding.btnPlay.tag
+        val currentState = viewBinding.btnHub.tag
         if (currentState == newState) return
 
-        viewBinding.btnPlay.tag = newState
+        viewBinding.btnHub.tag = newState
         when (newState) {
             UiState.Idle -> {
+                setHoldActionMenuInteractionEnabled(true)
+                setHoldActionLipVisible(true)
                 if (currentState == null) {
                     playPauseButtonController.toState1(false)
                 } else {
-                    animateLayoutChanges {
-                        setMenuItemVisibility(viewBinding.btnStop, true)
-                        setMenuItemVisibility(viewBinding.btnClickList, true)
-                        playPauseButtonController.toState1(true)
-                    }
+                    playPauseButtonController.toState1(true)
                 }
+                setMenuItemVisibility(actionsPanelBinding.btnStop, true)
+                setMenuItemVisibility(actionsPanelBinding.btnClickList, true)
+                setMenuItemVisibility(actionsPanelBinding.btnFavoriteScenarios, true)
             }
 
             UiState.Detecting -> {
+                setHoldActionMenuInteractionEnabled(false)
+                setHoldActionLipVisible(false)
                 if (currentState == null) {
                     playPauseButtonController.toState2(false)
-                    viewBinding.root.post {
-                        setMenuItemVisibility(viewBinding.btnStop, false)
-                        setMenuItemVisibility(viewBinding.btnClickList, false)
-                    }
                 } else {
-                    animateLayoutChanges {
-                        setMenuItemVisibility(viewBinding.btnStop, false)
-                        setMenuItemVisibility(viewBinding.btnClickList, false)
-                        playPauseButtonController.toState2(true)
-                    }
+                    playPauseButtonController.toState2(true)
                 }
+                setMenuItemVisibility(actionsPanelBinding.btnStop, true)
+                setMenuItemVisibility(actionsPanelBinding.btnClickList, false)
+                setMenuItemVisibility(actionsPanelBinding.btnFavoriteScenarios, false)
             }
         }
+    }
+
+    private fun setHoldActionLipVisible(visible: Boolean) {
+        viewBinding.holdActionCorner.visibility = if (visible) View.VISIBLE else View.INVISIBLE
     }
 
     private fun updateVisibilityForPaywall(isHidden: Boolean) {
@@ -399,6 +454,8 @@ class MainMenu(private val onStopClicked: () -> Unit) : OverlayMenu() {
             updateLiveDebugUiState(null)
             viewBinding.layoutDebug.visibility = View.GONE
         }
+
+        forceWindowResize()
     }
 
     /**
@@ -489,5 +546,7 @@ class MainMenu(private val onStopClicked: () -> Unit) : OverlayMenu() {
 
     private companion object {
         private const val TAG = "MainMenu"
+        private const val ACTION_SHOW_FAVORITE_SCENARIOS =
+            "com.buzbuz.smartautoclicker.action.SHOW_FAVORITE_SCENARIOS"
     }
 }

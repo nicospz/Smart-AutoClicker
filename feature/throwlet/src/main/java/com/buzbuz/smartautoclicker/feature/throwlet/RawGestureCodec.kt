@@ -2,6 +2,8 @@ package com.buzbuz.smartautoclicker.feature.throwlet
 
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import kotlin.math.roundToInt
+import kotlin.math.roundToLong
 
 private const val GESTURE_MAGIC = "PGCG"
 private const val GESTURE_VERSION = 1
@@ -80,6 +82,52 @@ data class RawGesturePayload(val durationMs: Long, val events: List<RawGestureEv
                 if (!event.isY) return@map event
                 val shifted = event.value + dy
                 event.copy(value = shifted.coerceIn(bounds.minY, bounds.maxY))
+            },
+        )
+    }
+
+    fun translated(dx: Int, dy: Int): RawGesturePayload {
+        if (dx == 0 && dy == 0) return this
+        ThrowletLog.i("gesture translate dx=$dx dy=$dy events=${events.size}")
+        return copy(
+            events = events.map { event ->
+                when {
+                    event.isX -> event.copy(value = event.value + dx)
+                    event.isY -> event.copy(value = event.value + dy)
+                    else -> event
+                }
+            },
+        )
+    }
+
+    fun powered(power: Double): RawGesturePayload {
+        require(power.isFinite() && power > 0.0) { "power must be a positive finite number" }
+        if (power == 1.0) return this
+        val anchorX = events.firstOrNull { it.isX }?.value
+        val anchorY = events.firstOrNull { it.isY }?.value
+        if (anchorX == null && anchorY == null) return this
+        ThrowletLog.i("gesture power scale power=$power anchorX=$anchorX anchorY=$anchorY events=${events.size}")
+        return copy(
+            events = events.map { event ->
+                when {
+                    event.isX && anchorX != null ->
+                        event.copy(value = anchorX + ((event.value - anchorX) * power).roundToInt())
+                    event.isY && anchorY != null ->
+                        event.copy(value = anchorY + ((event.value - anchorY) * power).roundToInt())
+                    else -> event
+                }
+            },
+        )
+    }
+
+    fun withPlaybackSpeed(speed: Double): RawGesturePayload {
+        require(speed.isFinite() && speed > 0.0) { "speed must be a positive finite number" }
+        if (speed == 1.0) return this
+        ThrowletLog.i("gesture speed scale speed=$speed events=${events.size} durationMs=$durationMs")
+        return copy(
+            durationMs = (durationMs.toDouble() / speed).roundToLong().coerceAtLeast(0L),
+            events = events.map { event ->
+                event.copy(deltaUs = (event.deltaUs.toDouble() / speed).roundToLong().coerceAtLeast(0L))
             },
         )
     }

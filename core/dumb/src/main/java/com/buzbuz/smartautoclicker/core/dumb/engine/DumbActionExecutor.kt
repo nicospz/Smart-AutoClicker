@@ -169,7 +169,6 @@ class DumbActionExecutor @Inject constructor(
                     mode = ThrowletCatchMode.CATCH,
                     lane = action.lane,
                     pokemonNameOverride = action.pokemonNameOverride,
-                    manualSelectionOnly = true,
                 ),
             )
         }

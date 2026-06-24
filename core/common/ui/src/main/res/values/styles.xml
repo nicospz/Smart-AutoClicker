@@ -245,6 +245,33 @@
         <item name="android:tint">@color/overlayMenuButtons</item>
         <item name="android:scaleType">fitCenter</item>
     </style>
+    <style name="AppTheme.Overlay.FloatingMenu.HoldAction" />
+    <style name="AppTheme.Overlay.FloatingMenu.HoldAction.LayoutItems">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:paddingStart">@dimen/overlay_menu_padding_horizontal</item>
+        <item name="android:paddingEnd">@dimen/overlay_menu_padding_horizontal</item>
+        <item name="android:paddingTop">0dp</item>
+        <item name="android:paddingBottom">0dp</item>
+    </style>
+    <style name="AppTheme.Overlay.FloatingMenu.HoldAction.Item">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minWidth">@dimen/overlay_hold_action_item_min_width</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:paddingStart">@dimen/overlay_hold_action_item_padding_horizontal</item>
+        <item name="android:paddingEnd">@dimen/overlay_hold_action_item_padding_horizontal</item>
+        <item name="android:paddingTop">@dimen/overlay_hold_action_item_padding_vertical</item>
+        <item name="android:paddingBottom">@dimen/overlay_hold_action_item_padding_vertical</item>
+        <item name="android:background">@android:color/transparent</item>
+    </style>
+    <style name="AppTheme.Overlay.FloatingMenu.HoldAction.Label">
+        <item name="android:textColor">@color/overlayMenuButtons</item>
+        <item name="android:textSize">@dimen/overlay_hold_action_label_text_size</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
 
     <!-- Style for the click/swipe position(s) overlay selector view. -->
     <style name="AppTheme.Overlay.PositionSelector">

@@ -35,6 +35,8 @@ import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setEnabled
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setOnClickListener
 import com.buzbuz.smartautoclicker.core.ui.bindings.fields.setTitle
 import com.buzbuz.smartautoclicker.feature.sync.data.SacSyncStatus
+import com.buzbuz.smartautoclicker.feature.throwlet.ThrowGestureTuning
+import com.buzbuz.smartautoclicker.feature.throwlet.ThrowSpeedDialog
 
 import com.buzbuz.smartautoclicker.databinding.FragmentSettingsBinding
 
@@ -84,6 +86,12 @@ class SettingsFragment : Fragment() {
             setDescription(requireContext().getString(R.string.field_input_block_workaround_desc))
             setOnClickListener(viewModel::toggleInputBlockWorkaround)
         }
+
+        viewBinding.fieldThrowletDeviceTuning.apply {
+            setTitle(requireContext().getString(R.string.field_throwlet_device_tuning_title))
+            setOnClickListener { openThrowletDeviceTuningDialog() }
+        }
+        updateThrowletDeviceTuningSummary()
 
         viewBinding.fieldCloudSync.apply {
             setTitle(requireContext().getString(R.string.field_cloud_sync_title))
@@ -139,6 +147,36 @@ class SettingsFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         viewModel.refreshPrecisionGestureHelperStatus()
+        updateThrowletDeviceTuningSummary()
+    }
+
+    private fun openThrowletDeviceTuningDialog() {
+        ThrowSpeedDialog.show(
+            context = requireContext(),
+            initialTuning = viewModel.loadThrowletDeviceTuning(),
+            title = getString(R.string.dialog_title_throwlet_device_tuning),
+            message = getString(R.string.dialog_message_throwlet_device_tuning),
+            useOverlayWindow = false,
+            onTuningConfirmed = { tuning ->
+                val saved = viewModel.saveThrowletDeviceTuning(tuning)
+                viewBinding.fieldThrowletDeviceTuning.setDescription(formatThrowletDeviceTuningSummary(saved))
+            },
+        )
+    }
+
+    private fun updateThrowletDeviceTuningSummary() {
+        viewBinding.fieldThrowletDeviceTuning.setDescription(
+            formatThrowletDeviceTuningSummary(viewModel.loadThrowletDeviceTuning()),
+        )
+    }
+
+    private fun formatThrowletDeviceTuningSummary(tuning: ThrowGestureTuning): String {
+        val extras = ThrowSpeedDialog.formatOffsetSummary(tuning).trim()
+        val summary = buildString {
+            append(ThrowSpeedDialog.formatSpeed(tuning.speed))
+            if (extras.isNotBlank()) append(' ').append(extras)
+        }
+        return getString(R.string.field_throwlet_device_tuning_desc, summary)
     }
 
     private fun updatePrecisionGestureHelperStatus(status: PrecisionGestureSetupResult?) {

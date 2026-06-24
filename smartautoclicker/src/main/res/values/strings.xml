@@ -205,6 +205,11 @@
     <string name="field_input_block_workaround_title">Unblock touch screen</string>
     <string name="field_input_block_workaround_desc">On Pixel Devices With Android 15, using an auto clicker can block the touch screen.\nTo unblock it, you need to touch the screen with multiple fingers at the same time. This setting tries to simulate this every 10s.</string>
 
+    <string name="field_throwlet_device_tuning_title" translatable="false">Throwlet device tuning</string>
+    <string name="field_throwlet_device_tuning_desc" translatable="false">Replay tuning: %1$s</string>
+    <string name="dialog_title_throwlet_device_tuning" translatable="false">Throwlet device tuning</string>
+    <string name="dialog_message_throwlet_device_tuning" translatable="false">Applied only on this device when replaying throws. It does not change saved gestures.</string>
+
     <string name="field_cloud_sync_title">Cloud sync</string>
     <string name="field_cloud_sync_not_configured">Supabase sync is not configured in this build.</string>
     <string name="field_cloud_sync_status_never">Not synced yet</string>

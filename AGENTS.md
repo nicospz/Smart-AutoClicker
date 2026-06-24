@@ -5,16 +5,15 @@
 Run these before handing off changes that affect Smart Auto Clicker, overlays, MediaProjection, the frame broker, or the integrated Throwlet helper:
 
 1. `JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ./gradlew :smartautoclicker:assembleFDroidDebug`
-2. Emulator smoke test with Smart Auto Clicker installed.
 
 Smart Auto Clicker requires Java 21 or newer for local builds.
 
 ## Emulator Setup
 
-Use the local Android SDK emulator when available:
+Only run emulator checks when the user explicitly asks for them. When requested, use the local Pixel Android SDK emulator:
 
 ```sh
-~/Library/Android/sdk/emulator/emulator -avd SmartPoGoTestApi36
+~/Library/Android/sdk/emulator/emulator -avd Pixel_7_Pro
 adb wait-for-device
 ```
 

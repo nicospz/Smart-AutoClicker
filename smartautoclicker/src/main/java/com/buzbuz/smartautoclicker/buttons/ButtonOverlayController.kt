@@ -2,9 +2,8 @@ package com.buzbuz.smartautoclicker.buttons
 
 import android.content.Context
 import android.content.res.Configuration
-import android.graphics.Color
 import android.graphics.Point
-import android.graphics.drawable.GradientDrawable
+import android.text.TextUtils
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -43,6 +42,10 @@ class ButtonOverlayController(
 ) {
 
     private val windowManager: WindowManager = context.getSystemService(WindowManager::class.java)
+    private val menuBtnSize: Int =
+        context.resources.getDimensionPixelSize(R.dimen.overlay_menu_btn_size)
+    private val menuBtnColor: Int =
+        ContextCompat.getColor(context, R.color.overlayMenuButtons)
     private val shownButtons = mutableMapOf<Long, ButtonWindow>()
     private var railWindow: RailWindow? = null
     private var collectJob: Job? = null
@@ -165,14 +168,14 @@ class ButtonOverlayController(
     private fun addButton(rail: RailWindow, button: SavedOverlayButton) {
         val textView = TextView(context).apply {
             text = button.overlayText
-            setTextColor(Color.WHITE)
+            setTextColor(menuBtnColor)
             textSize = button.textSizeSp()
             gravity = Gravity.CENTER
-            minWidth = dp(48)
-            minHeight = dp(48)
-            setPadding(dp(10))
-            background = buttonBackground(isActive = false, isPaused = false, enabled = button.enabled)
-            alpha = buttonOpacity(isActive = false, isPaused = false, enabled = button.enabled)
+            maxLines = 1
+            ellipsize = TextUtils.TruncateAt.END
+            background = null
+            layoutParams = LinearLayout.LayoutParams(menuBtnSize, menuBtnSize)
+            alpha = buttonOpacity(isPaused = false, enabled = button.enabled)
         }
         val window = ButtonWindow(button, textView)
         textView.setOnTouchListener(ButtonTouchHandler(window))
@@ -227,10 +230,8 @@ class ButtonOverlayController(
 
     private fun updateButtonStates() {
         shownButtons.values.forEach { window ->
-            val isActive = window.button.id == activeButtonId && dumbEngine.isRunning.value
             val isPaused = window.button.id == activeButtonId && dumbEngine.isPaused.value
-            window.view.background = buttonBackground(isActive, isPaused, window.button.enabled)
-            window.view.alpha = buttonOpacity(isActive, isPaused, window.button.enabled)
+            window.view.alpha = buttonOpacity(isPaused, window.button.enabled)
             window.view.textSize = window.button.textSizeSp()
             window.view.text = window.button.overlayText
         }
@@ -316,29 +317,14 @@ class ButtonOverlayController(
             portraitXPercent to portraitYPercent
         }
 
-    private fun buttonBackground(isActive: Boolean, isPaused: Boolean, enabled: Boolean): GradientDrawable =
-        GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = dp(18).toFloat()
-            setColor(when {
-                !enabled -> Color.argb(185, 90, 90, 90)
-                isActive -> Color.argb(235, 36, 126, 80)
-                isPaused -> Color.argb(235, 191, 128, 31)
-                else -> Color.argb(225, 35, 35, 40)
-            })
-            setStroke(dp(1), Color.argb(220, 255, 255, 255))
-        }
-
-    private fun buttonOpacity(isActive: Boolean, isPaused: Boolean, enabled: Boolean): Float =
+    private fun buttonOpacity(isPaused: Boolean, enabled: Boolean): Float =
         when {
-            !enabled -> 0.35f
-            isActive -> 1f
-            isPaused -> 0.82f
-            else -> 0.58f
+            !enabled || isPaused -> 0.35f
+            else -> 1f
         }
 
     private fun SavedOverlayButton.textSizeSp(): Float =
-        if (iconGlyph.isNullOrBlank()) 14f else 24f
+        if (iconGlyph.isNullOrBlank()) 9f else 18f
 
     private fun displaySize(): Point {
         val metrics = context.resources.displayMetrics
@@ -347,7 +333,4 @@ class ButtonOverlayController(
 
     private fun isLandscape(): Boolean =
         context.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-
-    private fun dp(value: Int): Int =
-        (value * context.resources.displayMetrics.density).toInt()
 }

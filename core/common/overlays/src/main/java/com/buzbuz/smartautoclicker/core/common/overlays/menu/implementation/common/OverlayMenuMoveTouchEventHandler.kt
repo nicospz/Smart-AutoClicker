@@ -33,6 +33,9 @@ internal class OverlayMenuMoveTouchEventHandler(
 
     private var isMoving: Boolean = false
 
+    val isDragInProgress: Boolean
+        get() = isMoving
+
     fun onTouchEvent(viewToMove: View, touchView: View, event: MotionEvent, canMove: Boolean): Boolean {
         if (!canMove) {
             cancelMove()
@@ -88,6 +91,12 @@ internal class OverlayMenuMoveTouchEventHandler(
         val deltaY = event.rawY.toInt() - moveInitialTouchPosition.y
 
         return (deltaX * deltaX) + (deltaY * deltaY) > touchSlop * touchSlop
+    }
+
+    fun beginDragFromMove(viewToMove: View, event: MotionEvent) {
+        onDownEvent(viewToMove, event)
+        isMoving = true
+        onMoveEvent(event)
     }
 
     private fun cancelMove() {

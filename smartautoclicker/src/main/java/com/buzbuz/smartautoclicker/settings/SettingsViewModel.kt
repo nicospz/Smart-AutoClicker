@@ -34,6 +34,8 @@ import com.buzbuz.smartautoclicker.feature.sync.data.SacSyncPreferences
 import com.buzbuz.smartautoclicker.feature.sync.data.SacSyncStatus
 import com.buzbuz.smartautoclicker.feature.sync.domain.SacSyncCoordinator
 import com.buzbuz.smartautoclicker.feature.sync.domain.SacSyncEngine
+import com.buzbuz.smartautoclicker.feature.throwlet.DeviceThrowTuningStore
+import com.buzbuz.smartautoclicker.feature.throwlet.ThrowGestureTuning
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
@@ -57,6 +59,8 @@ class SettingsViewModel @Inject constructor(
     private val sacSyncCoordinator: SacSyncCoordinator,
     private val sacSyncPreferences: SacSyncPreferences,
 ) : ViewModel() {
+
+    private val deviceThrowTuningStore = DeviceThrowTuningStore(context)
 
     val sacSyncStatus: Flow<SacSyncStatus> = sacSyncPreferences.statusFlow
     val isSacSyncConfigured: Boolean get() = sacSyncEngine.isConfigured
@@ -143,6 +147,12 @@ class SettingsViewModel @Inject constructor(
     fun syncNow() {
         sacSyncCoordinator.requestFullSync()
     }
+
+    fun loadThrowletDeviceTuning(): ThrowGestureTuning =
+        deviceThrowTuningStore.load()
+
+    fun saveThrowletDeviceTuning(tuning: ThrowGestureTuning): ThrowGestureTuning =
+        deviceThrowTuningStore.save(tuning)
 
     fun showPrivacySettings(activity: Activity) {
         revenueRepository.startPrivacySettingUiFlow(activity)
